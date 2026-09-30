@@ -1,12 +1,11 @@
 """Router raíz de la API versionada ``/api/v1``.
 
-Vacío a propósito: no hay endpoints de dominio todavía.
-Cada HU agregará su router, por ejemplo::
-
-    from app.api.v1.endpoints import inventario
-    api_router.include_router(inventario.router, prefix="/inventario", tags=["inventario"])
+Cada HU agrega su router con ``api_router.include_router(...)``.
 """
 
 from fastapi import APIRouter
 
+from app.api.v1.endpoints import movements
+
 api_router = APIRouter()
+api_router.include_router(movements.router, prefix="/movements", tags=["movimientos"])
