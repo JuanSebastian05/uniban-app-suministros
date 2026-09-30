@@ -123,7 +123,7 @@ Ningún secreto (contraseñas, cadenas de conexión, claves) debe subirse al rep
 - [x] Lectura local de inventario y movimientos como soporte de HU_04.
 - [x] Esqueleto backend FastAPI con `/health`, `/api/v1` y configuración por entorno.
 - [ ] HU_01: autenticación y separación de datos por sesión.
-- [ ] HU_03: integración del inventario con la sesión y el catálogo real.
+- [x] HU_03: consulta de inventario y movimientos recientes sin conexión, con saldo consistente con su historial (RT_10). Ver [`docs/hu03.md`](docs/hu03.md). Falta integrarlo con la sesión y el catálogo real (depende de HU_01).
 - [x] HU_06: sincronización de movimientos con PostgreSQL (Neon) vía FastAPI, WorkManager y `SYNCED/ERROR`. Ver [`docs/hu06.md`](docs/hu06.md).
 
 La guía de implementación y demostración está en [`docs/hu04.md`](docs/hu04.md).

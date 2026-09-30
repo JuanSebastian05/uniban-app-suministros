@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import co.edu.udea.uniban.suministros.data.Quantity
+import co.edu.udea.uniban.suministros.data.local.MovementType
 import co.edu.udea.uniban.suministros.data.local.SyncStatus
 import java.time.LocalDate
 
@@ -21,7 +22,7 @@ fun InventoryDetailScreen(
     onNewEntry: () -> Unit,
 ) {
     val item = state.items.find { it.id == inventoryId }
-    val movements = state.movements.filter { it.inventoryId == inventoryId }
+    val movements = if (state.detailId == inventoryId) state.detailMovements else emptyList()
     InventoryScaffold(
         title = item?.name ?: "Detalle del insumo",
         pendingCount = state.pendingCount,
@@ -59,8 +60,8 @@ fun InventoryDetailScreen(
                 items(movements, key = { it.id }) { movement ->
                     OutlinedCard(shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("+ Entrada · ${Quantity.format(movement.quantity)} ${item.unit}",
-                                color = MaterialTheme.colorScheme.primary,
+                            Text(movementHeadline(movement.type, movement.quantity, item.unit),
+                                color = movementColor(movement.type),
                                 style = MaterialTheme.typography.titleSmall)
                             Text(displayDate(LocalDate.parse(movement.date)), style = MaterialTheme.typography.bodySmall)
                             if (movement.observation.isNotBlank()) Text(movement.observation)
@@ -73,6 +74,35 @@ fun InventoryDetailScreen(
             }
         }
     }
+}
+
+/** Símbolos y colores por tipo según los mockups del equipo; el tipo se lee del movimiento. */
+private fun movementHeadline(type: String, quantity: Float, unit: String) =
+    "${movementSymbol(type)} ${movementLabel(type)} · ${Quantity.format(quantity)} $unit"
+
+/** Un ajuste puede sumar o restar, por eso «±» y no el signo de RT_10. */
+private fun movementSymbol(type: String) = when (type) {
+    MovementType.ENTRADA -> "+"
+    MovementType.AJUSTE -> "±"
+    MovementType.SALIDA, MovementType.CONSUMO, MovementType.PERDIDA -> "−"
+    else -> "·"
+}
+
+@Composable
+private fun movementColor(type: String) = when (type) {
+    MovementType.PERDIDA -> MaterialTheme.colorScheme.error
+    MovementType.SALIDA, MovementType.CONSUMO -> MaterialTheme.colorScheme.onTertiaryContainer
+    MovementType.AJUSTE -> MaterialTheme.colorScheme.onSurfaceVariant
+    else -> MaterialTheme.colorScheme.primary
+}
+
+private fun movementLabel(type: String) = when (type) {
+    MovementType.ENTRADA -> "Entrada"
+    MovementType.SALIDA -> "Salida"
+    MovementType.CONSUMO -> "Consumo"
+    MovementType.PERDIDA -> "Pérdida"
+    MovementType.AJUSTE -> "Ajuste"
+    else -> type
 }
 
 private fun syncLabel(status: String) = when (status) {

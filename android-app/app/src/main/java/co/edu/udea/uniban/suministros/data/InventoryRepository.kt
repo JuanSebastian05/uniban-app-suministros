@@ -21,6 +21,11 @@ class InventoryRepository(
     private val dao = database.inventoryDao()
     val inventory = dao.observeInventory()
     val movements = dao.observeMovements()
+    val pendingCount = dao.observePendingCount()
+
+    /** Movimientos recientes de un insumo, para el detalle del inventario (HU_03). */
+    fun recentMovements(inventoryId: String, limit: Int = RECENT_MOVEMENTS) =
+        dao.observeRecentMovements(inventoryId, limit)
 
     suspend fun initializeDemo() = database.withTransaction {
         if (!dao.hasProducer(DemoInventory.producer.id)) {
@@ -69,6 +74,10 @@ class InventoryRepository(
         }
         onMovementSaved()
         return saved
+    }
+
+    companion object {
+        const val RECENT_MOVEMENTS = 20
     }
 }
 
