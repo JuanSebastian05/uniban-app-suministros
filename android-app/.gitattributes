@@ -1,0 +1,4 @@
+# Finales de línea correctos para los scripts del wrapper de Gradle
+gradlew       text eol=lf
+*.bat         text eol=crlf
+*.jar         binary

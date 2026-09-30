@@ -1,0 +1,12 @@
+# Específico del proyecto Android (complementa el .gitignore raíz)
+.gradle/
+/build/
+/app/build/
+/local.properties
+/app/google-services.json
+/.idea/
+/.kotlin/
+*.iml
+/captures
+.externalNativeBuild
+.cxx

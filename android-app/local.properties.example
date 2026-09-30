@@ -1,0 +1,9 @@
+# Copiar como local.properties (NO se versiona) y ajustar.
+# Android Studio suele crear sdk.dir automáticamente.
+# sdk.dir=C\:\\Users\\<usuario>\\AppData\\Local\\Android\\Sdk
+
+# URL base del backend FastAPI (terminar en "/"). La app agrega "api/v1/".
+# Emulador -> backend en el mismo PC:
+api.baseUrl=http://10.0.2.2:8000/
+# Dispositivo físico en la misma red: usar la IP local del PC, p. ej. http://192.168.1.50:8000/
+# (en ese caso agregar la IP a app/src/debug/res/xml/network_security_config.xml)

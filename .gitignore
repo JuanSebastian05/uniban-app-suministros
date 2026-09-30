@@ -1,0 +1,68 @@
+# ==========================================================
+# .gitignore raíz – uniban-app-suministros (Equipo 3)
+# ==========================================================
+
+# ---------- Secretos y configuración local (RT_14) ----------
+.env
+.env.*
+!.env.example
+*.env
+local.properties
+google-services.json
+GoogleService-Info.plist
+*.keystore
+*.jks
+*.p12
+*.pem
+*.key
+secrets.properties
+**/serviceAccount*.json
+**/*-firebase-adminsdk-*.json
+
+# ---------- IDEs ----------
+# Nota: .idea/ tenía archivos versionados antes de este cambio. Se ignoran
+# los archivos locales/volátiles; si el equipo decide dejar de versionar .idea
+# por completo, ejecutar: git rm -r --cached .idea
+.idea/workspace.xml
+.idea/caches/
+.idea/shelf/
+.idea/libraries/
+.idea/deviceManager.xml
+.idea/deploymentTargetSelector.xml
+.idea/androidTestResultsUserPreferences.xml
+.idea/other.xml
+.idea/appInsightsSettings.xml
+.idea/studiobot.xml
+*.iml
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---------- Android / Gradle ----------
+.gradle/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+android-app/.kotlin/
+android-app/app/release/
+
+# ---------- Python / backend ----------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+*.log
