@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import co.edu.udea.uniban.suministros.data.InventoryRepository
 import co.edu.udea.uniban.suministros.data.local.InventoryItem
 import co.edu.udea.uniban.suministros.data.local.MovementEntity
+import co.edu.udea.uniban.suministros.data.local.SyncStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +19,7 @@ data class InventoryUiState(
     val movements: List<MovementEntity> = emptyList(),
     val error: String? = null,
 ) {
-    val pendingCount: Int get() = movements.count { it.syncStatus == "PENDING" }
+    val pendingCount: Int get() = movements.count { it.syncStatus != SyncStatus.SYNCED }
 }
 
 class InventoryViewModel(private val repository: InventoryRepository) : ViewModel() {
