@@ -3,8 +3,9 @@
 API central del sistema. La app Android solo se comunica con este backend (RT_11);
 cualquier integración con los Equipos 1 y 2 pasará por aquí en el futuro.
 
-**Estado actual:** arquitectura base/configuración inicial. Solo existe el endpoint técnico
-`GET /health`. No hay endpoints de dominio ni tablas creadas.
+**Estado actual:** `GET /health` y `POST /api/v1/movements` (HU_06: recepción idempotente de
+movimientos). Las tablas se crean con Alembic: `alembic upgrade head` (requiere `DATABASE_URL`).
+Ver [`docs/hu06.md`](../docs/hu06.md).
 
 ## Estructura
 
@@ -12,15 +13,16 @@ cualquier integración con los Equipos 1 y 2 pasará por aquí en el futuro.
 backend/
 ├── app/
 │   ├── main.py            # crea la app FastAPI, CORS, /health e incluye /api/v1
-│   ├── api/v1/router.py   # router raíz de /api/v1 (vacío)
+│   ├── api/v1/            # router raíz y endpoints (movements: HU_06)
 │   ├── core/config.py     # configuración por variables de entorno (pydantic-settings)
 │   ├── db/
 │   │   ├── base.py        # Base declarativa de SQLAlchemy
 │   │   └── session.py     # engine perezoso + dependencia get_db()
-│   ├── models/            # modelos ORM (vacío)
-│   ├── schemas/           # esquemas Pydantic / contratos OpenAPI (vacío)
-│   └── (HU_03/04/06: endpoints y lógica mínima de inventario)
-├── tests/test_health.py   # PyTest: /health y /openapi.json
+│   ├── models/            # modelos ORM (productor, ubicación, insumo, inventario, movimiento)
+│   ├── schemas/           # esquemas Pydantic / contratos OpenAPI
+│   └── services/          # lógica de sincronización idempotente (HU_06)
+├── migrations/            # Alembic (0001: tablas de inventario y movimientos)
+├── tests/                 # PyTest: /health, /openapi.json y movimientos
 ├── requirements.txt
 ├── pytest.ini
 └── .env.example
@@ -73,5 +75,4 @@ pytest
 
 ## Decisiones pendientes
 
-- Migraciones (Alembic) al crear la primera tabla de inventario.
 - Verificación de tokens de Firebase en el backend (HU_01 / RT_13).

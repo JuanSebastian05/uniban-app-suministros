@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import co.edu.udea.uniban.suministros.data.Quantity
+import co.edu.udea.uniban.suministros.data.local.SyncStatus
 import java.time.LocalDate
 
 @Composable
@@ -63,8 +64,9 @@ fun InventoryDetailScreen(
                                 style = MaterialTheme.typography.titleSmall)
                             Text(displayDate(LocalDate.parse(movement.date)), style = MaterialTheme.typography.bodySmall)
                             if (movement.observation.isNotBlank()) Text(movement.observation)
-                            Text("Pendiente de sincronización", style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer)
+                            Text(syncLabel(movement.syncStatus), style = MaterialTheme.typography.labelSmall,
+                                color = if (movement.syncStatus == SyncStatus.ERROR) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.onTertiaryContainer)
                         }
                     }
                 }
@@ -73,3 +75,9 @@ fun InventoryDetailScreen(
     }
 }
 
+private fun syncLabel(status: String) = when (status) {
+    SyncStatus.SYNCED -> "Sincronizado"
+    SyncStatus.SYNCING -> "Sincronizando…"
+    SyncStatus.ERROR -> "Error al sincronizar · se reintentará"
+    else -> "Pendiente de sincronización"
+}

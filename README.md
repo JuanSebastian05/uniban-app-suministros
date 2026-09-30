@@ -124,15 +124,14 @@ Ningún secreto (contraseñas, cadenas de conexión, claves) debe subirse al rep
 - [x] Esqueleto backend FastAPI con `/health`, `/api/v1` y configuración por entorno.
 - [ ] HU_01: autenticación y separación de datos por sesión.
 - [ ] HU_03: integración del inventario con la sesión y el catálogo real.
-- [ ] HU_06: envío de movimientos al servidor. Por ahora permanecen `PENDING`.
+- [x] HU_06: sincronización de movimientos con PostgreSQL (Neon) vía FastAPI, WorkManager y `SYNCED/ERROR`. Ver [`docs/hu06.md`](docs/hu06.md).
 
 La guía de implementación y demostración está en [`docs/hu04.md`](docs/hu04.md).
 
 ## Próximos pasos
 
 - Conectar HU_01 y reemplazar el productor demo por la sesión autorizada.
-- Implementar HU_06 con envío idempotente y reintentos de los movimientos locales.
-- Incorporar migraciones al cambiar el esquema Room y crear las primeras tablas PostgreSQL.
+- Incorporar migraciones Room al cambiar el esquema local (las tablas PostgreSQL ya se gestionan con Alembic).
 
 ## Equipo
 
