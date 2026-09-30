@@ -168,6 +168,19 @@ class MovementSyncRepositoryTest {
     }
 
     @Test
+    fun savingAnEntryRequestsASyncOncePerMovement() = runBlocking {
+        var requests = 0
+        val observed = InventoryRepository(database, onMovementSaved = { requests++ })
+        val item = observed.inventory.first().first()
+        observed.registerEntry(UUID.randomUUID().toString(), item.id, "1", LocalDate.now(), "")
+        assertEquals(1, requests)
+        assertTrue(runCatching {
+            observed.registerEntry(UUID.randomUUID().toString(), item.id, "0", LocalDate.now(), "")
+        }.isFailure)
+        assertEquals(1, requests)
+    }
+
+    @Test
     fun syncedMovementsAreNotSentAgain() = runBlocking {
         register()
         sync.syncPending()

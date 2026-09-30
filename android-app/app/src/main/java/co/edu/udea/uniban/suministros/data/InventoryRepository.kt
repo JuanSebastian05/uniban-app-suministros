@@ -10,7 +10,14 @@ import java.util.UUID
 
 data class SavedEntry(val id: String, val supplyName: String, val quantity: Float, val unit: String)
 
-class InventoryRepository(private val database: InventoryDatabase) {
+/**
+ * [onMovementSaved] se invoca después de confirmar la transacción de un registro; la app lo
+ * usa para pedir la sincronización. La UI no conoce la red (RT_08).
+ */
+class InventoryRepository(
+    private val database: InventoryDatabase,
+    private val onMovementSaved: () -> Unit = {},
+) {
     private val dao = database.inventoryDao()
     val inventory = dao.observeInventory()
     val movements = dao.observeMovements()
@@ -40,7 +47,7 @@ class InventoryRepository(private val database: InventoryDatabase) {
         UUID.fromString(id)
         val quantity = Quantity.parse(quantityText)
         require(observation.length <= 500) { "La observación admite hasta 500 caracteres." }
-        return database.withTransaction {
+        val saved = database.withTransaction {
             val item = requireNotNull(dao.findInventory(inventoryId)) { "Selecciona un insumo del catálogo." }
             val existing = dao.findMovement(id)
             if (existing != null) {
@@ -60,6 +67,8 @@ class InventoryRepository(private val database: InventoryDatabase) {
             }
             SavedEntry(id, item.name, quantity, item.unit)
         }
+        onMovementSaved()
+        return saved
     }
 }
 
