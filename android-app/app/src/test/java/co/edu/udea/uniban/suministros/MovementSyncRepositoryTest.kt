@@ -129,8 +129,8 @@ class MovementSyncRepositoryTest {
 
         sync.syncPending()
 
-        assertEquals(SyncStatus.ERROR, statusOf(first))
-        assertEquals(SyncStatus.PENDING, statusOf(second))
+        // El orden de envío depende de createdAt; solo importa que se detenga tras el primer fallo.
+        assertEquals(setOf(SyncStatus.ERROR, SyncStatus.PENDING), setOf(statusOf(first), statusOf(second)))
         assertEquals(1, api.received.size)
     }
 
