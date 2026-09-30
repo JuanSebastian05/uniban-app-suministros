@@ -56,6 +56,20 @@ data class MovementEntity(
     val syncStatus: String = "PENDING",
 )
 
+/** Contexto de un inventario que se envía junto con su primer movimiento (HU_06). */
+data class InventorySyncContext(
+    val inventoryId: String,
+    val initialQuantity: Float,
+    val supplyId: String,
+    val supplyName: String,
+    val supplyCategory: String,
+    val supplyUnit: String,
+    val locationId: String,
+    val locationName: String,
+    val producerId: String,
+    val producerName: String,
+)
+
 data class InventoryItem(
     val id: String,
     val name: String,
