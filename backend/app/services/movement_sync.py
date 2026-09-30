@@ -8,6 +8,7 @@ Reglas:
   sobrescriben. La existencia = inicial + movimientos recibidos, en la misma transacción.
 """
 
+import logging
 from decimal import Decimal
 
 from sqlalchemy.exc import IntegrityError
@@ -15,6 +16,8 @@ from sqlalchemy.orm import Session
 
 from app.models import Inventory, Location, Movement, Producer, Supply
 from app.schemas.movements import InventoryIn, MovementIn
+
+logger = logging.getLogger(__name__)
 
 MAX_QUANTITY = Decimal("99999.99")
 SUPPORTED_TYPES = {"ENTRADA"}
@@ -35,13 +38,17 @@ def _same_content(existing: Movement, data: MovementIn) -> bool:
 
 
 def _ensure_inventory(db: Session, data: InventoryIn) -> Inventory:
+    # Sin relationship() SQLAlchemy no conoce el orden entre tablas: se hace flush tras cada
+    # padre para que PostgreSQL vea productor → ubicación → insumo → inventario en ese orden.
     if db.get(Producer, data.location.producer.id) is None:
         db.add(Producer(id=data.location.producer.id, name=data.location.producer.name))
+        db.flush()
     if db.get(Location, data.location.id) is None:
         db.add(Location(id=data.location.id, producer_id=data.location.producer.id, name=data.location.name))
+        db.flush()
     if db.get(Supply, data.supply.id) is None:
         db.add(Supply(id=data.supply.id, name=data.supply.name, category=data.supply.category, unit=data.supply.unit))
-    db.flush()
+        db.flush()
 
     inventory = db.get(Inventory, data.id)
     if inventory is None:
@@ -96,6 +103,7 @@ def sync_movement(db: Session, data: MovementIn) -> str:
             db.flush()
     except IntegrityError:
         # Carrera: otra petición insertó el mismo UUID entre la lectura y la escritura.
+        logger.warning("IntegrityError al guardar el movimiento %s", data.id, exc_info=True)
         db.rollback()
         existing = db.get(Movement, data.id)
         if existing is None:
