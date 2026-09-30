@@ -1,6 +1,7 @@
 package co.edu.udea.uniban.suministros.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -43,6 +44,7 @@ fun AppNavHost(repository: InventoryRepository, modifier: Modifier = Modifier) {
             arguments = listOf(navArgument("inventoryId") { type = NavType.StringType }),
         ) { entry ->
             val id = requireNotNull(entry.arguments?.getString("inventoryId"))
+            LaunchedEffect(id) { inventoryViewModel.select(id) }
             InventoryDetailScreen(
                 inventoryId = id, state = state,
                 onBack = { navController.popBackStack() },

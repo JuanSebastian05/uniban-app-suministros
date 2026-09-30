@@ -27,6 +27,18 @@ interface InventoryDao {
     @Query("SELECT * FROM movements WHERE id = :id")
     suspend fun findMovement(id: String): MovementEntity?
 
+    // --- Consulta del inventario (HU_03) ---
+
+    /** Movimientos más recientes de un solo insumo: el detalle no carga el historial completo. */
+    @Query("""
+        SELECT * FROM movements WHERE inventoryId = :inventoryId
+        ORDER BY date DESC, createdAt DESC LIMIT :limit
+    """)
+    fun observeRecentMovements(inventoryId: String, limit: Int): Flow<List<MovementEntity>>
+
+    @Query("SELECT COUNT(*) FROM movements WHERE syncStatus <> 'SYNCED'")
+    fun observePendingCount(): Flow<Int>
+
     @Query("SELECT EXISTS(SELECT 1 FROM producers WHERE id = :id)")
     suspend fun hasProducer(id: String): Boolean
 
