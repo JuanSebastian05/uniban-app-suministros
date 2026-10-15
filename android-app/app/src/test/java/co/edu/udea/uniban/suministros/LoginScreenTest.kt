@@ -34,6 +34,7 @@ class LoginScreenTest {
                     onTogglePassword = { state = state.copy(passwordVisible = !state.passwordVisible) },
                     onSubmit = {},
                     onContinueDemo = {},
+                    onCreateAccount = {},
                 )
             }
         }

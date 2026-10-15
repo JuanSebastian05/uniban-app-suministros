@@ -5,7 +5,8 @@ Cada HU agrega su router con ``api_router.include_router(...)``.
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import movements
+from app.api.v1.endpoints import movements, users
 
 api_router = APIRouter()
 api_router.include_router(movements.router, prefix="/movements", tags=["movimientos"])
+api_router.include_router(users.router, prefix="/users", tags=["usuarios"])

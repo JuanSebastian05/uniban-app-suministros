@@ -8,12 +8,17 @@ import co.edu.udea.uniban.suministros.data.auth.AuthRepository
 import co.edu.udea.uniban.suministros.data.auth.FirebaseAuthRepository
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
 import co.edu.udea.uniban.suministros.data.remote.MovementApi
+import co.edu.udea.uniban.suministros.data.remote.UserApi
 import co.edu.udea.uniban.suministros.sync.SyncScheduler
 
 class UnibanApplication : Application() {
     private val database: InventoryDatabase by lazy { InventoryDatabase.create(this) }
 
-    val authRepository: AuthRepository by lazy { FirebaseAuthRepository(this) }
+    private val retrofit by lazy { NetworkModule.createRetrofit() }
+
+    val authRepository: AuthRepository by lazy {
+        FirebaseAuthRepository(this, retrofit.create(UserApi::class.java))
+    }
 
     val inventoryRepository: InventoryRepository by lazy {
         // Cada movimiento guardado pide una sincronización; se ejecuta cuando haya red.
@@ -21,7 +26,7 @@ class UnibanApplication : Application() {
     }
 
     val movementSyncRepository: MovementSyncRepository by lazy {
-        MovementSyncRepository(database, NetworkModule.createRetrofit().create(MovementApi::class.java))
+        MovementSyncRepository(database, retrofit.create(MovementApi::class.java))
     }
 
     override fun onCreate() {

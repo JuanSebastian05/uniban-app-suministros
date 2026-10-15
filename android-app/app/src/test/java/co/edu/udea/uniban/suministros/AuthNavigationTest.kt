@@ -86,6 +86,37 @@ class AuthNavigationTest {
     }
 
     @Test
+    fun createAccountOpensRegistrationAndBackReturnsToLogin() {
+        launch(FakeAuthRepository())
+        awaitTag("login-submit")
+        compose.onNodeWithTag("login-register").performClick()
+        awaitTag("register-submit")
+        compose.onNodeWithTag("register-back").performScrollTo().performClick()
+        awaitTag("login-submit")
+        assertAbsent("register-submit")
+    }
+
+    @Test
+    fun registeringMovesToInventoryAndAuthScreensLeaveTheBackStack() {
+        val auth = FakeAuthRepository()
+        launch(auth)
+        awaitTag("login-submit")
+        compose.onNodeWithTag("login-register").performClick()
+        awaitTag("register-submit")
+        compose.onNodeWithTag("register-name").performTextInput("Ana Pérez")
+        compose.onNodeWithTag("register-document").performTextInput("1020304050")
+        compose.onNodeWithTag("register-email").performTextInput("ana@unibanagro.com")
+        compose.onNodeWithTag("register-password").performTextInput("secreto1")
+        compose.onNodeWithTag("register-confirm").performTextInput("secreto1")
+        compose.onNodeWithTag("register-submit").performScrollTo().performClick()
+        awaitTag("inventory-list")
+        assertEquals("ana@unibanagro.com", auth.registerCalls.single().first.email)
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        assertAbsent("register-submit")
+        assertAbsent("login-submit")
+    }
+
+    @Test
     fun logoutAfterConfirmationReturnsToLoginAndBackDoesNotReopenInventory() {
         val auth = FakeAuthRepository(SessionState.Authenticated("uid-1", "ana@unibanagro.com"))
         launch(auth)

@@ -29,8 +29,8 @@ import co.edu.udea.uniban.suministros.R
 import co.edu.udea.uniban.suministros.data.auth.AuthError
 import co.edu.udea.uniban.suministros.ui.theme.UnibanGreenMedium
 
-private val CardOverlap = 24.dp
-private val FieldShape = RoundedCornerShape(12.dp)
+internal val CardOverlap = 24.dp
+internal val FieldShape = RoundedCornerShape(12.dp)
 
 @Composable
 fun LoginScreen(
@@ -40,17 +40,18 @@ fun LoginScreen(
     onTogglePassword: () -> Unit,
     onSubmit: () -> Unit,
     onContinueDemo: () -> Unit,
+    onCreateAccount: () -> Unit,
 ) {
     Column(
         Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
             .imePadding().verticalScroll(rememberScrollState()),
     ) {
-        LoginHeader()
+        AuthHeader()
         Column(
             Modifier.padding(horizontal = 20.dp).pullUp(CardOverlap),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            LoginCard(state, onEmailChange, onPasswordChange, onTogglePassword, onSubmit, onContinueDemo)
+            LoginCard(state, onEmailChange, onPasswordChange, onTogglePassword, onSubmit, onContinueDemo, onCreateAccount)
             Spacer(Modifier.height(24.dp))
             Text(
                 stringResource(R.string.login_help),
@@ -63,8 +64,9 @@ fun LoginScreen(
     }
 }
 
+/** Banda verde con el logotipo y el nombre de la app; la comparten el login y el registro. */
 @Composable
-private fun LoginHeader() {
+internal fun AuthHeader() {
     Column(
         Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.primary)
             .statusBarsPadding().padding(top = 48.dp, bottom = 48.dp, start = 24.dp, end = 24.dp),
@@ -94,6 +96,7 @@ private fun LoginCard(
     onTogglePassword: () -> Unit,
     onSubmit: () -> Unit,
     onContinueDemo: () -> Unit,
+    onCreateAccount: () -> Unit,
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -107,19 +110,7 @@ private fun LoginCard(
                 fontSize = 18.sp, fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            if (!state.firebaseConfigured) {
-                Surface(
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                    shape = FieldShape,
-                ) {
-                    Text(
-                        stringResource(R.string.login_error_not_configured),
-                        Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
+            if (!state.firebaseConfigured) NotConfiguredBanner()
             LabeledField(
                 label = stringResource(R.string.login_email_label),
                 value = state.email,
@@ -173,6 +164,11 @@ private fun LoginCard(
                     fontWeight = FontWeight.SemiBold,
                 )
             }
+            TextButton(
+                onClick = onCreateAccount,
+                enabled = !state.isLoading,
+                modifier = Modifier.fillMaxWidth().testTag("login-register"),
+            ) { Text(stringResource(R.string.login_create_account)) }
             if (state.demoAvailable) {
                 TextButton(
                     onClick = onContinueDemo,
@@ -185,7 +181,7 @@ private fun LoginCard(
 }
 
 @Composable
-private fun LabeledField(
+internal fun LabeledField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
@@ -232,12 +228,31 @@ private fun LoginError.messageRes(): Int = when (this) {
         AuthError.TooManyRequests -> R.string.login_error_too_many
         AuthError.AccountDisabled -> R.string.login_error_disabled
         AuthError.NotConfigured -> R.string.login_error_not_configured
+        AuthError.EmailInUse -> R.string.register_error_email_in_use
+        AuthError.WeakPassword -> R.string.register_error_weak_password
+        AuthError.Server -> R.string.register_error_server
         AuthError.Unknown -> R.string.login_error_unknown
     }
 }
 
+/** Aviso de que falta `google-services.json`. */
+@Composable
+internal fun NotConfiguredBanner() {
+    Surface(
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        shape = FieldShape,
+    ) {
+        Text(
+            stringResource(R.string.login_error_not_configured),
+            Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+}
+
 /** Sube el contenido [amount] sobre el elemento anterior (efecto «-mt-6» del mockup). */
-private fun Modifier.pullUp(amount: androidx.compose.ui.unit.Dp): Modifier = layout { measurable, constraints ->
+internal fun Modifier.pullUp(amount: androidx.compose.ui.unit.Dp): Modifier = layout { measurable, constraints ->
     val placeable = measurable.measure(constraints)
     val offset = amount.roundToPx()
     layout(placeable.width, placeable.height - offset) { placeable.place(0, -offset) }

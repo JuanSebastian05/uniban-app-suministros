@@ -70,9 +70,9 @@ Android SDK 35, emulador o dispositivo con Android 8.0 (API 26) o superior.
 1. En Android Studio: **File → Open** → seleccionar la carpeta `android-app/`.
 2. (Opcional) Copiar `android-app/local.properties.example` a `android-app/local.properties` y ajustar `api.baseUrl`.
    Por defecto se usa `http://10.0.2.2:8000/` (backend local visto desde el emulador).
-3. Para iniciar sesión, colocar `google-services.json` (consola de Firebase) en `android-app/app/` y
-   crear un usuario en **Authentication → Users → Add user** (no hay registro público; ver
-   [`docs/hu01.md`](docs/hu01.md)). El proyecto compila sin el archivo, que **no se sube** al repositorio.
+3. Para iniciar sesión, colocar `google-services.json` (consola de Firebase) en `android-app/app/`.
+   Las cuentas se crean desde la app con **Crear cuenta** (requiere el backend con `FIREBASE_PROJECT_ID`
+   y la migración `0002`); ver [`docs/hu01.md`](docs/hu01.md#registro-de-usuarios). El proyecto compila sin el archivo, que **no se sube** al repositorio.
    Sin él, el build **debug** muestra el aviso de Firebase sin configurar y el botón
    «Continuar en modo demo», que no existe en release.
 4. Sincronizar Gradle y ejecutar la configuración `app`. La primera pantalla es el **inicio de sesión**;
@@ -105,7 +105,7 @@ Más detalles en [`backend/README.md`](backend/README.md).
 
 | Dónde | Archivo (no versionado) | Plantilla | Claves |
 |-------|-------------------------|-----------|--------|
-| Backend | `backend/.env` | `backend/.env.example` | `DATABASE_URL`, `CORS_ORIGINS`, `ENVIRONMENT`, `API_V1_PREFIX`, `APP_NAME` |
+| Backend | `backend/.env` | `backend/.env.example` | `DATABASE_URL`, `FIREBASE_PROJECT_ID`, `CORS_ORIGINS`, `ENVIRONMENT`, `API_V1_PREFIX`, `APP_NAME` |
 | Android | `android-app/local.properties` | `android-app/local.properties.example` | `sdk.dir`, `api.baseUrl` |
 | Firebase | `android-app/app/google-services.json` | — (se descarga de la consola de Firebase) | — |
 
@@ -126,6 +126,7 @@ Ningún secreto (contraseñas, cadenas de conexión, claves) debe subirse al rep
 - [x] Lectura local de inventario y movimientos como soporte de HU_04.
 - [x] Esqueleto backend FastAPI con `/health`, `/api/v1` y configuración por entorno.
 - [x] HU_01: inicio y cierre de sesión con Firebase Authentication (ver [`docs/hu01.md`](docs/hu01.md)).
+- [x] Registro de usuarios: cuenta en Firebase y perfil de productor en PostgreSQL (`/api/v1/users/register`).
 - [x] HU_03: consulta de inventario y movimientos recientes sin conexión, con saldo consistente con su historial (RT_10). Ver [`docs/hu03.md`](docs/hu03.md). Falta separar los datos locales por sesión y usar el catálogo real.
 - [x] HU_06: sincronización de movimientos con PostgreSQL (Neon) vía FastAPI, WorkManager y `SYNCED/ERROR`. Ver [`docs/hu06.md`](docs/hu06.md).
 
