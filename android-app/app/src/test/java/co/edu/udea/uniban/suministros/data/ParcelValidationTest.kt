@@ -1,6 +1,7 @@
 package co.edu.udea.uniban.suministros.data
 
 import java.math.BigDecimal
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -39,5 +40,18 @@ class ParcelValidationTest {
         assertEquals("2,4 ha", ParcelValidation.formatArea("2.40"))
         assertEquals("3 ha", ParcelValidation.formatArea("3.00"))
         assertEquals("1,25 ha", ParcelValidation.formatArea("1.25"))
+    }
+
+    @Test fun diaDelCiclo() {
+        val today = LocalDate.of(2024, 1, 24)
+        assertEquals(1L, ParcelValidation.cycleDay("2024-01-24", today))
+        assertEquals(10L, ParcelValidation.cycleDay("2024-01-15", today))
+        assertNull(ParcelValidation.cycleDay("2024-02-01", today)) // aún no comienza
+        assertNull(ParcelValidation.cycleDay("no-es-fecha", today))
+    }
+
+    @Test fun formatoDeFecha() {
+        assertEquals("15/01/2024", ParcelValidation.formatDate("2024-01-15"))
+        assertEquals("raro", ParcelValidation.formatDate("raro"))
     }
 }

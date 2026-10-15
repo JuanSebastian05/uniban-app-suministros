@@ -8,12 +8,15 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 data class ParcelsUiState(
     val loading: Boolean = true,
     val parcels: List<ParcelSummary> = emptyList(),
     val error: String? = null,
+    /** No se pudo actualizar con el servidor: se muestran los datos guardados en el dispositivo. */
+    val offline: Boolean = false,
 )
 
 /**
@@ -24,16 +27,20 @@ class ParcelsViewModel(private val repository: ParcelRepository) : ViewModel() {
     private val mutableState = MutableStateFlow(ParcelsUiState())
     val state = mutableState.asStateFlow()
     private var loadJob: Job? = null
+    private val refreshFailed = MutableStateFlow(false)
 
     init { load() }
 
     fun load() {
         loadJob?.cancel()
         mutableState.value = ParcelsUiState()
+        refreshFailed.value = false
         loadJob = viewModelScope.launch {
-            launch { repository.refresh() }
+            launch { refreshFailed.value = !repository.refresh() && !repository.localOnly }
             try {
-                repository.parcels.collect { mutableState.value = ParcelsUiState(loading = false, parcels = it) }
+                combine(repository.parcels, refreshFailed) { parcels, failed ->
+                    ParcelsUiState(loading = false, parcels = parcels, offline = failed)
+                }.collect { mutableState.value = it }
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {
