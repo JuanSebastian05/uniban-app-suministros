@@ -14,6 +14,11 @@ object AppDestinations {
     const val PARCELS = "parcels"
     const val PARCEL_NEW = "parcels/new"
 
+    /** Detalle de parcela (HU_02). Prefijo distinto de `parcels/` para no chocar con `parcels/new`. */
+    const val PARCEL_DETAIL = "parcel/{parcelId}"
+
+    fun parcelDetail(id: String) = "parcel/$id"
+
     fun detail(id: String) = "inventory/$id"
     fun entry(id: String = "") = "entry?inventoryId=$id"
 }

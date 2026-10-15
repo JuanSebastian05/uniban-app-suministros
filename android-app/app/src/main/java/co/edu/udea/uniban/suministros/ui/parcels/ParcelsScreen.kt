@@ -15,6 +15,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,8 +40,8 @@ import co.edu.udea.uniban.suministros.ui.theme.UnibanPending
 import co.edu.udea.uniban.suministros.ui.theme.UnibanPendingText
 
 /**
- * «Mis parcelas» (HU_14). Lista sencilla con nombre, área y ciclo activo; el detalle y el diseño
- * completo corresponden a HU_02.
+ * «Mis parcelas» (HU_14 y HU_02): nombre, área y ciclo activo de cada parcela. Se lee de la copia
+ * local, así que funciona sin conexión; [ParcelsUiState.offline] avisa que no se pudo actualizar.
  */
 @Composable
 fun ParcelsScreen(
@@ -45,6 +49,7 @@ fun ParcelsScreen(
     pendingCount: Int,
     onRetry: () -> Unit,
     onNewParcel: () -> Unit,
+    onSelect: (String) -> Unit,
     navigationBar: @Composable () -> Unit,
 ) {
     InventoryScaffold(
@@ -70,6 +75,7 @@ fun ParcelsScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                if (state.offline) item { OfflineNotice(onRetry) }
                 item {
                     Text(
                         "${state.parcels.size} ${if (state.parcels.size == 1) "parcela registrada" else "parcelas registradas"}",
@@ -87,16 +93,31 @@ fun ParcelsScreen(
                         )
                     }
                 }
-                items(state.parcels, key = { it.id }) { parcel -> ParcelCard(parcel) }
+                items(state.parcels, key = { it.id }) { parcel -> ParcelCard(parcel, onClick = { onSelect(parcel.id) }) }
             }
         }
     }
 }
 
 @Composable
-private fun ParcelCard(parcel: ParcelSummary) {
+private fun OfflineNotice(onRetry: () -> Unit) {
+    Surface(color = UnibanPending, contentColor = UnibanPendingText, shape = RoundedCornerShape(12.dp)) {
+        Row(Modifier.fillMaxWidth().padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "Sin conexión: se muestran las parcelas guardadas en este dispositivo.",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.weight(1f).padding(vertical = 10.dp),
+            )
+            TextButton(onClick = onRetry) { Text("Actualizar") }
+        }
+    }
+}
+
+@Composable
+private fun ParcelCard(parcel: ParcelSummary, onClick: () -> Unit) {
     OutlinedCard(
-        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().testTag("parcel-${parcel.id}"),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
@@ -109,17 +130,18 @@ private fun ParcelCard(parcel: ParcelSummary) {
                     color = UnibanGreen,
                 )
                 parcel.cycleStartDate?.let {
-                    Text("Inicio: $it", style = MaterialTheme.typography.bodySmall,
+                    Text("Inicio: ${ParcelValidation.formatDate(it)}", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             StatusChip(CycleStatus.fromCode(parcel.cycleStatus))
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
         }
     }
 }
 
 @Composable
-private fun StatusChip(status: CycleStatus?) {
+internal fun StatusChip(status: CycleStatus?) {
     val (container, content) = when (status) {
         CycleStatus.PRODUCCION -> UnibanGreenLight to UnibanGreen
         CycleStatus.EN_PREPARACION -> UnibanPending to UnibanPendingText

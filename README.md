@@ -2,7 +2,7 @@
 
 Repositorio para la realización del proyecto **Uniban – Proyecto Integrador 1 de la Universidad de Antioquia (UdeA)**.
 
-> **Estado actual: HU_01 (inicio de sesión y registro), HU_03, HU_04, HU_06 y HU_14 (registro de parcelas) implementadas.**
+> **Estado actual: HU_01 (inicio de sesión y registro), HU_02 (consulta de parcelas), HU_03, HU_04, HU_06 y HU_14 (registro de parcelas) implementadas.**
 > La primera entrega se limita a **HU_01, HU_03, HU_04 y HU_06**.
 
 ## Objetivo
@@ -131,13 +131,13 @@ Ningún secreto (contraseñas, cadenas de conexión, claves) debe subirse al rep
 - [x] Registro de usuarios: cuenta en Firebase y perfil de productor en PostgreSQL (`/api/v1/users/register`).
 - [x] HU_03: consulta de inventario y movimientos recientes sin conexión, con saldo consistente con su historial (RT_10). Ver [`docs/hu03.md`](docs/hu03.md). Falta separar los datos locales por sesión y usar el catálogo real.
 - [x] HU_06: sincronización de movimientos con PostgreSQL (Neon) vía FastAPI, WorkManager y `SYNCED/ERROR`. Ver [`docs/hu06.md`](docs/hu06.md).
+- [x] HU_02: lista de parcelas y detalle con su ciclo activo (fechas y etapa) o aviso sin ciclo; funciona sin conexión. Ver [`docs/hu02.md`](docs/hu02.md).
 - [x] HU_14: registro de parcelas con ciclo productivo opcional (`/api/v1/parcels`), copia local en Room (versión 2) y barra inferior Parcelas / Inventario. Ver [`docs/hu14.md`](docs/hu14.md).
 
 La guía de implementación y demostración está en [`docs/hu04.md`](docs/hu04.md).
 
 ## Próximos pasos
 
-- HU_02: detalle de parcela y ciclo activo (reutiliza las tablas y la API de HU_14).
 - HU_05: salidas, consumos y pérdidas asociados a parcela y ciclo.
 - Pendientes de HU_14 (ver [`docs/hu14.md`](docs/hu14.md#pendientes-del-equipo)): actualizar el MER y acordar `id_parcela` con el Equipo 1.
 - Cada cambio del esquema local exige subir la versión de Room y versionar el nuevo `app/schemas/.../N.json` (HU_14 usa `AutoMigration` 1 → 2).

@@ -16,6 +16,8 @@ import java.io.IOException
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 import kotlinx.coroutines.CancellationException
 import retrofit2.Response
@@ -85,6 +87,22 @@ object ParcelValidation {
         val plain = if (value.signum() == 0) "0" else value.stripTrailingZeros().toPlainString()
         return "${plain.replace('.', ',')} ha"
     }
+
+    private val DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+
+    /** «15/01/2024» a partir de la fecha ISO guardada; si no se puede leer, la devuelve tal cual. */
+    fun formatDate(isoDate: String): String =
+        runCatching { LocalDate.parse(isoDate).format(DATE_FORMAT) }.getOrDefault(isoDate)
+
+    /**
+     * Día del ciclo en [today] (el día de inicio es el día 1). Nulo si el ciclo aún no empieza o la
+     * fecha no se puede leer (HU_02).
+     */
+    fun cycleDay(startIsoDate: String, today: LocalDate = LocalDate.now()): Long? {
+        val start = runCatching { LocalDate.parse(startIsoDate) }.getOrNull() ?: return null
+        val days = ChronoUnit.DAYS.between(start, today)
+        return if (days < 0) null else days + 1
+    }
 }
 
 /**
@@ -105,6 +123,9 @@ class ParcelRepository(
     val parcels = dao.observeParcels()
 
     private val isDemo get() = ownerUid == StarterInventory.DEMO_OWNER
+
+    /** Verdadero en la sesión de demostración: no hay servidor con el cual actualizar. */
+    val localOnly: Boolean get() = isDemo
 
     /**
      * Registra la parcela [id]. Reintentar con el mismo [id] y los mismos datos no la duplica:

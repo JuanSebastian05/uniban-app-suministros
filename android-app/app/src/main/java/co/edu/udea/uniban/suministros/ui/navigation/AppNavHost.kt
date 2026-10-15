@@ -36,6 +36,7 @@ import co.edu.udea.uniban.suministros.ui.auth.LoginViewModel
 import co.edu.udea.uniban.suministros.ui.auth.RegisterScreen
 import co.edu.udea.uniban.suministros.ui.auth.RegisterViewModel
 import co.edu.udea.uniban.suministros.ui.inventory.*
+import co.edu.udea.uniban.suministros.ui.parcels.ParcelDetailScreen
 import co.edu.udea.uniban.suministros.ui.parcels.ParcelFormScreen
 import co.edu.udea.uniban.suministros.ui.parcels.ParcelFormViewModel
 import co.edu.udea.uniban.suministros.ui.parcels.ParcelsScreen
@@ -191,7 +192,26 @@ fun AppNavHost(
                         pendingCount = inventoryState.pendingCount,
                         onRetry = parcelsViewModel::load,
                         onNewParcel = { navController.navigate(AppDestinations.PARCEL_NEW) { launchSingleTop = true } },
+                        onSelect = { navController.navigate(AppDestinations.parcelDetail(it)) { launchSingleTop = true } },
                         navigationBar = { MainBottomBar(MainTab.PARCELS, openTab) },
+                    )
+                }
+                composable(
+                    AppDestinations.PARCEL_DETAIL,
+                    arguments = listOf(navArgument("parcelId") { type = NavType.StringType }),
+                ) { entry ->
+                    val id = requireNotNull(entry.arguments?.getString("parcelId"))
+                    val inventoryViewModel = mainViewModel(navController, entry, inventoryFactory)
+                    val inventoryState by inventoryViewModel.state.collectAsStateWithLifecycle()
+                    // Mismo ViewModel que la lista: el detalle no vuelve a consultar ni al servidor ni a Room.
+                    val parcelsViewModel = mainScopedViewModel<ParcelsViewModel>(navController, entry, parcelsFactory)
+                    val state by parcelsViewModel.state.collectAsStateWithLifecycle()
+                    ParcelDetailScreen(
+                        parcelId = id,
+                        state = state,
+                        pendingCount = inventoryState.pendingCount,
+                        onBack = { navController.popBackStack() },
+                        onRetry = parcelsViewModel::load,
                     )
                 }
                 composable(AppDestinations.PARCEL_NEW) { entry ->
