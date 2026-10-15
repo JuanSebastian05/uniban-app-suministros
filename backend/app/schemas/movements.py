@@ -10,7 +10,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 
 
@@ -44,6 +44,9 @@ class InventoryIn(CamelModel):
     supply: SupplyIn
 
 
+LossReason = Literal["DESPERDICIO", "MAL_MANEJO", "CLIMA", "OTRO"]
+
+
 class MovementIn(CamelModel):
     id: uuid.UUID
     type: str = Field(min_length=1, max_length=20)
@@ -53,6 +56,25 @@ class MovementIn(CamelModel):
     created_at: datetime
     updated_at: datetime
     inventory: InventoryIn
+    # HU_05: un CONSUMO exige parcela (el ciclo es opcional); una PERDIDA exige motivo.
+    parcel_id: uuid.UUID | None = None
+    cycle_id: uuid.UUID | None = None
+    loss_reason: LossReason | None = None
+
+    @model_validator(mode="after")
+    def _check_type_fields(self) -> "MovementIn":
+        if self.type == "CONSUMO" and self.parcel_id is None:
+            raise ValueError("Un consumo debe indicar la parcela.")
+        if self.type == "PERDIDA":
+            if self.loss_reason is None:
+                raise ValueError("Una pérdida debe indicar el motivo.")
+            if self.loss_reason == "OTRO" and not self.observation.strip():
+                raise ValueError("El motivo «Otro» exige una observación.")
+        if self.type != "CONSUMO" and (self.parcel_id is not None or self.cycle_id is not None):
+            raise ValueError("Solo los consumos llevan parcela y ciclo.")
+        if self.type != "PERDIDA" and self.loss_reason is not None:
+            raise ValueError("Solo las pérdidas llevan motivo.")
+        return self
 
 
 class MovementSyncOut(CamelModel):

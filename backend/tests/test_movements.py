@@ -170,7 +170,8 @@ def test_cantidad_invalida_es_rechazada(client, session_factory, quantity):
 
 
 def test_tipo_no_soportado_es_conflicto(client, session_factory):
-    response = client.post(URL, json=payload(1, type="CONSUMO"))
+    # SALIDA y AJUSTE aún no se aceptan (HU_05 solo agrega CONSUMO y PERDIDA).
+    response = client.post(URL, json=payload(1, type="SALIDA"))
     assert response.status_code == 409
     assert count(session_factory, Movement) == 0
 

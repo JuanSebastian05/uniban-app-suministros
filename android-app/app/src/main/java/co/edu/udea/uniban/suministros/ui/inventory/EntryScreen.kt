@@ -16,7 +16,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import co.edu.udea.uniban.suministros.data.ParcelValidation
 import co.edu.udea.uniban.suministros.data.Quantity
+import co.edu.udea.uniban.suministros.data.local.LossReason
+import co.edu.udea.uniban.suministros.data.local.MovementType
+import co.edu.udea.uniban.suministros.data.local.ParcelSummary
 import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,6 +31,8 @@ fun EntryScreen(
     onBack: () -> Unit,
     onDone: () -> Unit,
     onRetryInventory: () -> Unit,
+    // HU_05: parcelas de la cuenta para asociar un consumo (copia local; funciona sin conexión).
+    parcels: List<ParcelSummary> = emptyList(),
 ) {
     val state = viewModel.state
     state.saved?.let {
@@ -36,19 +42,22 @@ fun EntryScreen(
     BackHandler(enabled = state.saving) {}
     val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
+    var parcelExpanded by remember { mutableStateOf(false) }
+    val selectedParcel = parcels.find { it.id == state.parcelId }
+    val typeLabel = MovementType.label(state.type)
     var showCatalogInfo by rememberSaveable { mutableStateOf(false) }
     val selected = inventoryState.items.find { it.id == state.inventoryId }
     val ready = !state.restoring && !inventoryState.loading && inventoryState.error == null
     val editable = ready && !state.saving
 
     InventoryScaffold(
-        title = "Registrar entrada",
+        title = "Registrar ${typeLabel.lowercase()}",
         pendingCount = inventoryState.pendingCount,
         onBack = onBack,
         backEnabled = !state.saving,
         bottomBar = {
             BottomAction(
-                label = if (state.saving) "Guardando…" else "Guardar entrada",
+                label = if (state.saving) "Guardando…" else "Guardar ${typeLabel.lowercase()}",
                 enabled = editable && inventoryState.items.isNotEmpty(),
                 onClick = viewModel::save,
             )
@@ -94,11 +103,18 @@ fun EntryScreen(
                         }
                     }
                     selected?.let {
+                        // De dónde sale o a dónde entra el insumo: el stock es de la bodega del
+                        // productor (ubicación de inventario), no de la parcela.
+                        Text(
+                            "${if (state.type == MovementType.ENTRADA) "Entra a" else "Sale de"}: ${it.location}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
                         Text(
                             "Stock actual: ${Quantity.format(it.quantity)} ${it.unit}",
                             color = MaterialTheme.colorScheme.primary,
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(top = 8.dp),
                         )
                     }
                     TextButton(onClick = { showCatalogInfo = true }, enabled = editable) {
@@ -107,11 +123,71 @@ fun EntryScreen(
                 }
                 Column {
                     Text("Tipo de movimiento", style = MaterialTheme.typography.labelMedium)
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.padding(top = 8.dp),
-                    ) { Text("Entrada", Modifier.padding(horizontal = 18.dp, vertical = 8.dp)) }
+                    Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        MovementType.REGISTRABLE.forEach { type ->
+                            FilterChip(
+                                selected = state.type == type,
+                                onClick = { viewModel.changeType(type) },
+                                label = { Text(MovementType.label(type)) },
+                                enabled = editable,
+                            )
+                        }
+                    }
+                }
+                if (state.type == MovementType.CONSUMO) {
+                    Column {
+                        ExposedDropdownMenuBox(
+                            expanded = parcelExpanded,
+                            onExpandedChange = { if (editable && parcels.isNotEmpty()) parcelExpanded = !parcelExpanded },
+                        ) {
+                            OutlinedTextField(
+                                value = selectedParcel?.name ?: "", onValueChange = {}, readOnly = true,
+                                enabled = editable && parcels.isNotEmpty(), label = { Text("Parcela donde se usó") },
+                                placeholder = { Text("Seleccionar parcela") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(parcelExpanded) },
+                                isError = state.parcelError != null,
+                                supportingText = {
+                                    Text(state.parcelError ?: when {
+                                        parcels.isEmpty() -> "Aún no tienes parcelas. Regístralas en la pestaña Parcelas."
+                                        selectedParcel == null -> "¿Dónde se usó el insumo?"
+                                        selectedParcel.cycleId == null -> "Sin ciclo activo: el consumo se asocia solo a la parcela."
+                                        else -> "Se asocia al ciclo activo (inicio ${ParcelValidation.formatDate(selectedParcel.cycleStartDate.orEmpty())})."
+                                    })
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = editable)
+                                    .fillMaxWidth(),
+                            )
+                            ExposedDropdownMenu(expanded = parcelExpanded, onDismissRequest = { parcelExpanded = false }) {
+                                parcels.forEach { parcel ->
+                                    DropdownMenuItem(
+                                        text = { Text(parcel.name) },
+                                        onClick = { viewModel.selectParcel(parcel.id); parcelExpanded = false },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                if (state.type == MovementType.PERDIDA) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Motivo de la pérdida", style = MaterialTheme.typography.labelMedium)
+                        LossReason.entries.chunked(2).forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                row.forEach { reason ->
+                                    FilterChip(
+                                        selected = state.lossReason == reason,
+                                        onClick = { viewModel.selectLossReason(reason) },
+                                        label = { Text(reason.label) },
+                                        enabled = editable,
+                                    )
+                                }
+                            }
+                        }
+                        state.reasonError?.let {
+                            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
                 }
                 OutlinedTextField(
                     value = state.quantity,
@@ -145,7 +221,10 @@ fun EntryScreen(
                 }
                 OutlinedTextField(
                     value = state.observation, onValueChange = viewModel::changeObservation,
-                    label = { Text("Observación (opcional)") },
+                    label = {
+                        Text(if (state.type == MovementType.PERDIDA && state.lossReason == LossReason.OTRO)
+                            "Observación (obligatoria)" else "Observación (opcional)")
+                    },
                     placeholder = { Text("Observaciones adicionales…") },
                     enabled = editable, minLines = 2, maxLines = 5,
                     supportingText = { Text("${state.observation.length}/500") },
@@ -156,7 +235,10 @@ fun EntryScreen(
                     Text(it, color = MaterialTheme.colorScheme.error)
                 }
                 Text(
-                    "La entrada se guardará en este dispositivo y quedará pendiente de sincronización.",
+                    if (state.type == MovementType.ENTRADA)
+                        "La entrada se guardará en este dispositivo y quedará pendiente de sincronización."
+                    else "${if (state.type == MovementType.PERDIDA) "La pérdida" else "El consumo"} se guardará en " +
+                        "este dispositivo, descontará la existencia y quedará pendiente de sincronización.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

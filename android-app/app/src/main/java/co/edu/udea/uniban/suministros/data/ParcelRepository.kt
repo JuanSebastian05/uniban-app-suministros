@@ -122,6 +122,9 @@ class ParcelRepository(
     private val dao = database.parcelDao()
     val parcels = dao.observeParcels()
 
+    /** Consumos registrados en la parcela [parcelId] (HU_05). Se leen del dispositivo: funcionan sin conexión. */
+    fun consumptions(parcelId: String) = database.inventoryDao().observeParcelConsumptions(parcelId)
+
     private val isDemo get() = ownerUid == StarterInventory.DEMO_OWNER
 
     /** Verdadero en la sesión de demostración: no hay servidor con el cual actualizar. */

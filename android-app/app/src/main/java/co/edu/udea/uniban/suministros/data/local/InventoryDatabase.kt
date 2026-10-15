@@ -7,16 +7,19 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 /**
- * Versión 2 (HU_14): agrega las tablas `parcels` y `production_cycles`. La migración 1 → 2 la
- * genera Room a partir de `app/schemas/.../1.json` (solo crea tablas nuevas; no toca datos).
- * Al compilar, Room escribe `2.json` en la misma carpeta: debe versionarse junto con este cambio.
+ * Versión 2 (HU_14): agrega las tablas `parcels` y `production_cycles`.
+ * Versión 3 (HU_05): agrega a `movements` las columnas nulas `parcelId`, `cycleId` y `lossReason`.
+ *
+ * Room genera cada migración a partir de los esquemas exportados en `app/schemas/...` (`1.json`,
+ * `2.json`); no se borran ni modifican datos. Al compilar, Room escribe el esquema de la versión
+ * nueva (`3.json`) en la misma carpeta: debe versionarse junto con el cambio.
  */
 @Database(
     entities = [ProducerEntity::class, LocationEntity::class, SupplyEntity::class,
         InventoryEntity::class, MovementEntity::class, ParcelEntity::class, ProductionCycleEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
 )
 abstract class InventoryDatabase : RoomDatabase() {
     abstract fun inventoryDao(): InventoryDao

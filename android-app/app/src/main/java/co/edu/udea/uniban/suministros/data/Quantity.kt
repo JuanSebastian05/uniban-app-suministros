@@ -4,6 +4,10 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.Locale
 
+/** La cantidad de una salida supera la existencia disponible (HU_05, criterio 3). */
+class InsufficientStockException(val available: Float) :
+    IllegalArgumentException("La cantidad supera la existencia disponible (${Quantity.format(available)}).")
+
 object Quantity {
     private val maximum = BigDecimal("99999.99")
     private val inputPattern = Regex("""(?:\d+(?:[.,]\d{1,2})?|[.,]\d{1,2})""")
@@ -26,6 +30,20 @@ object Quantity {
             .setScale(2, RoundingMode.HALF_UP)
         require(total <= maximum) { "La existencia resultante supera 99.999,99." }
         return total.toFloat()
+    }
+
+    /**
+     * Existencia después de una salida, consumo o pérdida (HU_05). Nunca queda negativa: si
+     * [outgoing] supera [current], lanza [InsufficientStockException].
+     */
+    fun subtract(current: Float, outgoing: Float): Float {
+        require(current.isFinite() && outgoing.isFinite() && current >= 0 && outgoing > 0) {
+            "La cantidad no es válida."
+        }
+        val result = current.toString().toBigDecimal().subtract(outgoing.toString().toBigDecimal())
+            .setScale(2, RoundingMode.HALF_UP)
+        if (result.signum() < 0) throw InsufficientStockException(current)
+        return result.toFloat()
     }
 
     fun format(value: Float): String = String.format(Locale.forLanguageTag("es-CO"), "%.2f", value)

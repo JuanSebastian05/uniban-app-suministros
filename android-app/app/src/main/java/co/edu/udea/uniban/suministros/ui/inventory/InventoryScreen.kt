@@ -44,7 +44,7 @@ fun InventoryScreen(
         bottomBar = {
             Column {
                 BottomAction(
-                    "+ Registrar entrada",
+                    "+ Registrar movimiento",
                     enabled = !state.loading && state.error == null && state.items.isNotEmpty(),
                     applyNavigationBarsPadding = navigationBar == null,
                     onClick = onNewEntry,

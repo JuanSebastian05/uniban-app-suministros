@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import co.edu.udea.uniban.suministros.data.Quantity
+import co.edu.udea.uniban.suministros.data.local.LossReason
 import co.edu.udea.uniban.suministros.data.local.MovementType
 import co.edu.udea.uniban.suministros.data.local.SyncStatus
 import java.time.LocalDate
@@ -27,7 +28,7 @@ fun InventoryDetailScreen(
         title = item?.name ?: "Detalle del insumo",
         pendingCount = state.pendingCount,
         onBack = onBack,
-        bottomBar = { BottomAction("+ Registrar entrada", item != null, onNewEntry) },
+        bottomBar = { BottomAction("+ Registrar movimiento", item != null, onNewEntry) },
     ) { padding ->
         if (state.loading || state.error != null) {
             LoadingOrError(state.error, onRetry, Modifier.padding(padding))
@@ -64,6 +65,9 @@ fun InventoryDetailScreen(
                                 color = movementColor(movement.type),
                                 style = MaterialTheme.typography.titleSmall)
                             Text(displayDate(LocalDate.parse(movement.date)), style = MaterialTheme.typography.bodySmall)
+                            LossReason.fromCode(movement.lossReason)?.let {
+                                Text("Motivo: ${it.label}", style = MaterialTheme.typography.bodySmall)
+                            }
                             if (movement.observation.isNotBlank()) Text(movement.observation)
                             Text(syncLabel(movement.syncStatus), style = MaterialTheme.typography.labelSmall,
                                 color = if (movement.syncStatus == SyncStatus.ERROR) MaterialTheme.colorScheme.error

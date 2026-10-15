@@ -4,6 +4,9 @@ Productor → Ubicación → Inventario → Movimiento. Cada productor (uno por 
 de sus ubicaciones e insumos: nada de otro productor se lee ni se modifica con su token.
 Los identificadores son UUID generados en el dispositivo (RT_06). Los movimientos
 son solo de inserción (RT_07): las correcciones futuras serán movimientos AJUSTE.
+
+HU_05: los consumos se asocian a una parcela (y a su ciclo activo, si lo tiene) y las pérdidas
+llevan un motivo.
 """
 
 import uuid
@@ -57,9 +60,19 @@ class Inventory(Base):
     quantity: Mapped[Decimal] = mapped_column(Quantity)
 
 
+# Motivos de pérdida (HU_05).
+LOSS_REASONS = ("DESPERDICIO", "MAL_MANEJO", "CLIMA", "OTRO")
+
+
 class Movement(Base):
     __tablename__ = "movements"
-    __table_args__ = (CheckConstraint("quantity > 0", name="ck_movements_quantity_positive"),)
+    __table_args__ = (
+        CheckConstraint("quantity > 0", name="ck_movements_quantity_positive"),
+        CheckConstraint(
+            "loss_reason IS NULL OR loss_reason IN ('DESPERDICIO', 'MAL_MANEJO', 'CLIMA', 'OTRO')",
+            name="ck_movements_loss_reason",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
     inventory_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("inventory.id"), index=True)
@@ -70,3 +83,7 @@ class Movement(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # HU_05: parcela y ciclo del consumo; motivo de la pérdida. Nulos en las entradas.
+    parcel_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("parcels.id"), index=True)
+    cycle_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("production_cycles.id"))
+    loss_reason: Mapped[str | None] = mapped_column(String(20))

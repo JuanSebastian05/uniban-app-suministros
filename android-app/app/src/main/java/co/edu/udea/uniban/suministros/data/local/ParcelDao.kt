@@ -14,6 +14,13 @@ interface ParcelDao {
     """)
     fun observeParcels(): Flow<List<ParcelSummary>>
 
+    @Query("SELECT EXISTS(SELECT 1 FROM parcels WHERE id = :id)")
+    suspend fun hasParcel(id: String): Boolean
+
+    /** Ciclo activo de la parcela (HU_05: se asocia al consumo), o nulo si no tiene. */
+    @Query("SELECT id FROM production_cycles WHERE parcelId = :parcelId AND endDate IS NULL LIMIT 1")
+    suspend fun activeCycleId(parcelId: String): String?
+
     /** Nombres registrados, para avisar de un nombre repetido antes de ir al servidor. */
     @Query("SELECT name FROM parcels")
     suspend fun names(): List<String>
