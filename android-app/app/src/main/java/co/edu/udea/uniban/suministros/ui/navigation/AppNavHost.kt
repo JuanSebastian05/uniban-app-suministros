@@ -28,6 +28,7 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import co.edu.udea.uniban.suministros.data.InventoryRepository
+import co.edu.udea.uniban.suministros.data.ParcelRepository
 import co.edu.udea.uniban.suministros.data.auth.AuthRepository
 import co.edu.udea.uniban.suministros.data.auth.SessionState
 import co.edu.udea.uniban.suministros.ui.auth.LoginScreen
@@ -35,16 +36,24 @@ import co.edu.udea.uniban.suministros.ui.auth.LoginViewModel
 import co.edu.udea.uniban.suministros.ui.auth.RegisterScreen
 import co.edu.udea.uniban.suministros.ui.auth.RegisterViewModel
 import co.edu.udea.uniban.suministros.ui.inventory.*
+import co.edu.udea.uniban.suministros.ui.parcels.ParcelFormScreen
+import co.edu.udea.uniban.suministros.ui.parcels.ParcelFormViewModel
+import co.edu.udea.uniban.suministros.ui.parcels.ParcelsScreen
+import co.edu.udea.uniban.suministros.ui.parcels.ParcelsViewModel
 
 /**
  * [repositoryFor] entrega el inventario de una cuenta (su propia base local): cada usuario que
  * entra ve y modifica solo sus insumos y movimientos.
+ *
+ * [parcelRepositoryFor] entrega las parcelas de una cuenta (HU_14). Si es nulo, no se muestran la
+ * pestaña de parcelas ni la barra de pestañas.
  */
 @Composable
 fun AppNavHost(
     repositoryFor: (uid: String) -> InventoryRepository,
     authRepository: AuthRepository,
     modifier: Modifier = Modifier,
+    parcelRepositoryFor: ((uid: String) -> ParcelRepository)? = null,
 ) {
     val session by authRepository.sessionState.collectAsStateWithLifecycle()
     val navController = rememberNavController()
@@ -53,6 +62,8 @@ fun AppNavHost(
     // Los ViewModel del inventario se crean al entrar al grafo MAIN, que solo existe con sesión;
     // al cerrar sesión el grafo sale de la pila y la siguiente cuenta recibe ViewModel nuevos.
     val currentRepository by rememberUpdatedState(repository)
+    val parcelRepository = remember(uid, parcelRepositoryFor) { uid?.let { parcelRepositoryFor?.invoke(it) } }
+    val currentParcelRepository by rememberUpdatedState(parcelRepository)
 
     if (session is SessionState.Loading) {
         Box(
@@ -79,6 +90,20 @@ fun AppNavHost(
     }
     val entryFactory = remember {
         viewModelFactory { initializer { EntryViewModel(checkNotNull(currentRepository), createSavedStateHandle()) } }
+    }
+    val parcelsFactory = remember {
+        viewModelFactory { initializer { ParcelsViewModel(checkNotNull(currentParcelRepository)) } }
+    }
+    val parcelFormFactory = remember {
+        viewModelFactory { initializer { ParcelFormViewModel(checkNotNull(currentParcelRepository), createSavedStateHandle()) } }
+    }
+    val tabsEnabled = parcelRepositoryFor != null
+    val openTab: (MainTab) -> Unit = { tab ->
+        navController.navigate(tab.route) {
+            popUpTo(AppDestinations.INVENTORY) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
     }
 
     NavHost(navController, startDestination = startDestination, modifier = modifier) {
@@ -121,6 +146,9 @@ fun AppNavHost(
                     onSelect = { navController.navigate(AppDestinations.detail(it)) },
                     onNewEntry = { navController.navigate(AppDestinations.entry()) { launchSingleTop = true } },
                     onLogout = authRepository::signOut,
+                    navigationBar = if (tabsEnabled) {
+                        { MainBottomBar(MainTab.INVENTORY, openTab) }
+                    } else null,
                 )
             }
             composable(
@@ -152,6 +180,33 @@ fun AppNavHost(
                     onRetryInventory = inventoryViewModel::load,
                 )
             }
+            if (tabsEnabled) {
+                composable(AppDestinations.PARCELS) { entry ->
+                    val inventoryViewModel = mainViewModel(navController, entry, inventoryFactory)
+                    val inventoryState by inventoryViewModel.state.collectAsStateWithLifecycle()
+                    val parcelsViewModel = mainScopedViewModel<ParcelsViewModel>(navController, entry, parcelsFactory)
+                    val state by parcelsViewModel.state.collectAsStateWithLifecycle()
+                    ParcelsScreen(
+                        state = state,
+                        pendingCount = inventoryState.pendingCount,
+                        onRetry = parcelsViewModel::load,
+                        onNewParcel = { navController.navigate(AppDestinations.PARCEL_NEW) { launchSingleTop = true } },
+                        navigationBar = { MainBottomBar(MainTab.PARCELS, openTab) },
+                    )
+                }
+                composable(AppDestinations.PARCEL_NEW) { entry ->
+                    val inventoryViewModel = mainViewModel(navController, entry, inventoryFactory)
+                    val inventoryState by inventoryViewModel.state.collectAsStateWithLifecycle()
+                    val formViewModel: ParcelFormViewModel = viewModel(factory = parcelFormFactory)
+                    ParcelFormScreen(
+                        state = formViewModel.state,
+                        viewModel = formViewModel,
+                        pendingCount = inventoryState.pendingCount,
+                        onBack = { navController.popBackStack() },
+                        onDone = { navController.popBackStack(AppDestinations.PARCELS, inclusive = false) },
+                    )
+                }
+            }
         }
     }
 }
@@ -163,6 +218,17 @@ private fun mainViewModel(
     entry: NavBackStackEntry,
     factory: androidx.lifecycle.ViewModelProvider.Factory,
 ): InventoryViewModel {
+    val parent = remember(entry) { navController.getBackStackEntry(AppDestinations.MAIN) }
+    return viewModel(parent, factory = factory)
+}
+
+/** ViewModel de tipo [T] asociado al grafo [AppDestinations.MAIN] (se destruye al cerrar sesión). */
+@Composable
+private inline fun <reified T : androidx.lifecycle.ViewModel> mainScopedViewModel(
+    navController: NavController,
+    entry: NavBackStackEntry,
+    factory: androidx.lifecycle.ViewModelProvider.Factory,
+): T {
     val parent = remember(entry) { navController.getBackStackEntry(AppDestinations.MAIN) }
     return viewModel(parent, factory = factory)
 }

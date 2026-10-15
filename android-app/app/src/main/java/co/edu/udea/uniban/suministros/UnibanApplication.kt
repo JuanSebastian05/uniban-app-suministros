@@ -4,10 +4,12 @@ import android.app.Application
 import co.edu.udea.uniban.suministros.core.network.NetworkModule
 import co.edu.udea.uniban.suministros.data.InventoryRepository
 import co.edu.udea.uniban.suministros.data.MovementSyncRepository
+import co.edu.udea.uniban.suministros.data.ParcelRepository
 import co.edu.udea.uniban.suministros.data.auth.AuthRepository
 import co.edu.udea.uniban.suministros.data.auth.FirebaseAuthRepository
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
 import co.edu.udea.uniban.suministros.data.remote.MovementApi
+import co.edu.udea.uniban.suministros.data.remote.ParcelApi
 import co.edu.udea.uniban.suministros.data.remote.UserApi
 import co.edu.udea.uniban.suministros.sync.SyncScheduler
 import java.util.concurrent.ConcurrentHashMap
@@ -19,6 +21,8 @@ class UnibanApplication : Application() {
     private val retrofit by lazy { NetworkModule.createRetrofit() }
 
     private val movementApi by lazy { retrofit.create(MovementApi::class.java) }
+
+    private val parcelApi by lazy { retrofit.create(ParcelApi::class.java) }
 
     val authRepository: AuthRepository by lazy {
         FirebaseAuthRepository(this, retrofit.create(UserApi::class.java))
@@ -34,6 +38,10 @@ class UnibanApplication : Application() {
         // Cada movimiento guardado pide una sincronización; se ejecuta cuando haya red.
         return InventoryRepository(database(uid), uid, onMovementSaved = { SyncScheduler.enqueue(this) })
     }
+
+    /** Parcelas de la cuenta [uid] (HU_14): se registran en el backend con el token de esa cuenta. */
+    fun parcelRepository(uid: String): ParcelRepository =
+        ParcelRepository(database(uid), parcelApi, uid) { authRepository.idToken(uid) }
 
     /** Sincroniza los movimientos de [uid] con el token de esa misma cuenta. */
     fun movementSyncRepository(uid: String): MovementSyncRepository =

@@ -26,6 +26,8 @@ fun InventoryScreen(
     onSelect: (String) -> Unit,
     onNewEntry: () -> Unit,
     onLogout: () -> Unit,
+    // Barra de pestañas (Parcelas / Inventario); nula si la app no la muestra.
+    navigationBar: (@Composable () -> Unit)? = null,
 ) {
     var search by rememberSaveable { mutableStateOf("") }
     var confirmLogout by rememberSaveable { mutableStateOf(false) }
@@ -40,7 +42,15 @@ fun InventoryScreen(
             }
         },
         bottomBar = {
-            BottomAction("+ Registrar entrada", !state.loading && state.error == null && state.items.isNotEmpty(), onNewEntry)
+            Column {
+                BottomAction(
+                    "+ Registrar entrada",
+                    enabled = !state.loading && state.error == null && state.items.isNotEmpty(),
+                    applyNavigationBarsPadding = navigationBar == null,
+                    onClick = onNewEntry,
+                )
+                navigationBar?.invoke()
+            }
         },
     ) { padding ->
         if (state.loading || state.error != null) {
