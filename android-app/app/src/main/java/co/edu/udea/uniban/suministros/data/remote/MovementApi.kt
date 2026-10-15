@@ -44,4 +44,8 @@ data class MovementDto(
     val createdAt: String,
     val updatedAt: String,
     val inventory: InventoryDto,
+    // HU_05. Gson omite los nulos, así que las entradas viajan igual que antes.
+    val parcelId: String? = null,
+    val cycleId: String? = null,
+    val lossReason: String? = null,
 )

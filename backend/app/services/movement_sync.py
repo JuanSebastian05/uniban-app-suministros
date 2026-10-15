@@ -3,7 +3,9 @@
 Reglas:
 - El UUID del movimiento identifica el registro. Reenviar el mismo contenido no duplica
   ni vuelve a sumar (DUPLICATE); reenviar el mismo UUID con otro contenido es un conflicto.
-- Los movimientos son solo de inserción. Por ahora solo se aceptan entradas.
+- Los movimientos son solo de inserción. Se aceptan ENTRADA (suma) y, desde HU_05, CONSUMO y
+  PERDIDA (restan). La existencia nunca queda negativa: si no alcanza, es un conflicto.
+- Un consumo se asocia a una parcela del mismo productor y, si viene, a un ciclo de esa parcela.
 - Ubicación, insumo e inventario se insertan solo si no existen; nunca se sobrescriben.
   La existencia = inicial + movimientos recibidos, en la misma transacción.
 - Todo pertenece al productor del usuario autenticado: lo que es de otro productor se rechaza
@@ -18,13 +20,14 @@ from decimal import Decimal
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import Inventory, Location, Movement, Supply
+from app.models import Inventory, Location, Movement, Parcel, ProductionCycle, Supply
 from app.schemas.movements import InventoryIn, MovementIn
 
 logger = logging.getLogger(__name__)
 
 MAX_QUANTITY = Decimal("99999.99")
-SUPPORTED_TYPES = {"ENTRADA"}
+SUPPORTED_TYPES = {"ENTRADA", "CONSUMO", "PERDIDA"}
+SUBTRACTING_TYPES = {"CONSUMO", "PERDIDA"}
 
 
 class MovementConflict(Exception):
@@ -38,7 +41,23 @@ def _same_content(existing: Movement, data: MovementIn) -> bool:
         and existing.quantity == data.quantity
         and existing.date == data.date
         and existing.observation == data.observation
+        and existing.parcel_id == data.parcel_id
+        and existing.cycle_id == data.cycle_id
+        and existing.loss_reason == data.loss_reason
     )
+
+
+def _check_parcel(db: Session, data: MovementIn, producer_id: uuid.UUID) -> None:
+    """La parcela (y el ciclo, si viene) del consumo deben ser del productor."""
+    if data.parcel_id is None:
+        return
+    parcel = db.get(Parcel, data.parcel_id)
+    if parcel is None or parcel.producer_id != producer_id:
+        raise MovementConflict("La parcela no existe o pertenece a otro usuario.")
+    if data.cycle_id is not None:
+        cycle = db.get(ProductionCycle, data.cycle_id)
+        if cycle is None or cycle.parcel_id != parcel.id:
+            raise MovementConflict("El ciclo no pertenece a la parcela indicada.")
 
 
 def _ensure_inventory(db: Session, data: InventoryIn, producer_id: uuid.UUID) -> Inventory:
@@ -106,7 +125,13 @@ def sync_movement(db: Session, data: MovementIn, producer_id: uuid.UUID) -> str:
     try:
         with db.begin_nested():
             inventory = _ensure_inventory(db, data.inventory, producer_id)
-            new_quantity = inventory.quantity + data.quantity
+            _check_parcel(db, data, producer_id)
+            if data.type in SUBTRACTING_TYPES:
+                new_quantity = inventory.quantity - data.quantity
+                if new_quantity < 0:
+                    raise MovementConflict("La cantidad supera la existencia disponible.")
+            else:
+                new_quantity = inventory.quantity + data.quantity
             if new_quantity > MAX_QUANTITY:
                 raise MovementConflict("La existencia resultante supera 99.999,99.")
             db.add(
@@ -119,6 +144,9 @@ def sync_movement(db: Session, data: MovementIn, producer_id: uuid.UUID) -> str:
                     observation=data.observation,
                     created_at=data.created_at,
                     updated_at=data.updated_at,
+                    parcel_id=data.parcel_id,
+                    cycle_id=data.cycle_id,
+                    loss_reason=data.loss_reason,
                 )
             )
             inventory.quantity = new_quantity

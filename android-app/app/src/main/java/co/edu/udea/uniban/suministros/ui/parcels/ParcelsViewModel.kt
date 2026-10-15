@@ -31,6 +31,9 @@ class ParcelsViewModel(private val repository: ParcelRepository) : ViewModel() {
 
     init { load() }
 
+    /** Consumos de una parcela para su detalle; los entrega Room y se actualizan solos. */
+    fun consumptions(parcelId: String) = repository.consumptions(parcelId)
+
     fun load() {
         loadJob?.cancel()
         mutableState.value = ParcelsUiState()

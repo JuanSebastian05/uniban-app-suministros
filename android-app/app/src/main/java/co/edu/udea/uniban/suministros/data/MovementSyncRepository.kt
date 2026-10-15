@@ -129,6 +129,9 @@ class MovementSyncRepository(
                 context.supplyId, context.supplyName, context.supplyCategory, context.supplyUnit,
             ),
         ),
+        parcelId = movement.parcelId,
+        cycleId = movement.cycleId,
+        lossReason = movement.lossReason,
     )
 
     // Float → decimal de dos posiciones, igual que Quantity, para no enviar ruido binario.

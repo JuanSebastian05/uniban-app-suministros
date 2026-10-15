@@ -174,11 +174,17 @@ fun AppNavHost(
                 val inventoryViewModel = mainViewModel(navController, entry, inventoryFactory)
                 val state by inventoryViewModel.state.collectAsStateWithLifecycle()
                 val entryViewModel: EntryViewModel = viewModel(factory = entryFactory)
+                // HU_05: las parcelas (copia local) para asociar un consumo; vacías si no hay pestaña de parcelas.
+                val parcels = if (tabsEnabled) {
+                    val parcelsViewModel = mainScopedViewModel<ParcelsViewModel>(navController, entry, parcelsFactory)
+                    parcelsViewModel.state.collectAsStateWithLifecycle().value.parcels
+                } else emptyList()
                 EntryScreen(
                     inventoryState = state, viewModel = entryViewModel,
                     onBack = { navController.popBackStack() },
                     onDone = { navController.popBackStack(AppDestinations.INVENTORY, inclusive = false) },
                     onRetryInventory = inventoryViewModel::load,
+                    parcels = parcels,
                 )
             }
             if (tabsEnabled) {
@@ -206,12 +212,15 @@ fun AppNavHost(
                     // Mismo ViewModel que la lista: el detalle no vuelve a consultar ni al servidor ni a Room.
                     val parcelsViewModel = mainScopedViewModel<ParcelsViewModel>(navController, entry, parcelsFactory)
                     val state by parcelsViewModel.state.collectAsStateWithLifecycle()
+                    val consumptions by remember(id) { parcelsViewModel.consumptions(id) }
+                        .collectAsStateWithLifecycle(emptyList())
                     ParcelDetailScreen(
                         parcelId = id,
                         state = state,
                         pendingCount = inventoryState.pendingCount,
                         onBack = { navController.popBackStack() },
                         onRetry = parcelsViewModel::load,
+                        consumptions = consumptions,
                     )
                 }
                 composable(AppDestinations.PARCEL_NEW) { entry ->

@@ -36,6 +36,15 @@ interface InventoryDao {
     """)
     fun observeRecentMovements(inventoryId: String, limit: Int): Flow<List<MovementEntity>>
 
+    /** Consumos registrados en una parcela, del más reciente al más antiguo (HU_05). */
+    @Query("""
+        SELECT m.id, s.name AS supplyName, s.unit, m.quantity, m.date, m.cycleId, m.syncStatus
+        FROM movements m JOIN inventory i ON m.inventoryId = i.id JOIN supplies s ON i.supplyId = s.id
+        WHERE m.parcelId = :parcelId AND m.type = 'CONSUMO'
+        ORDER BY m.date DESC, m.createdAt DESC
+    """)
+    fun observeParcelConsumptions(parcelId: String): Flow<List<ParcelConsumption>>
+
     @Query("SELECT COUNT(*) FROM movements WHERE syncStatus <> 'SYNCED'")
     fun observePendingCount(): Flow<Int>
 

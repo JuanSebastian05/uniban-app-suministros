@@ -25,6 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import co.edu.udea.uniban.suministros.data.CycleStatus
 import co.edu.udea.uniban.suministros.data.ParcelValidation
+import co.edu.udea.uniban.suministros.data.Quantity
+import co.edu.udea.uniban.suministros.data.local.ParcelConsumption
 import co.edu.udea.uniban.suministros.data.local.ParcelSummary
 import co.edu.udea.uniban.suministros.ui.inventory.InventoryScaffold
 import co.edu.udea.uniban.suministros.ui.inventory.LoadingOrError
@@ -36,8 +38,9 @@ import java.time.LocalDate
  * Detalle de una parcela (HU_02): área y ciclo productivo activo (estado, fecha de inicio y día del
  * ciclo), o un aviso explícito si no tiene ciclo activo. Lee la copia local: funciona sin conexión.
  *
- * Las secciones del mockup de aforamiento, actividades, insumos consumidos y recomendaciones
- * corresponden a HU_09, HU_08, HU_05 y HU_12; no se muestran hasta que existan.
+ * «Insumos consumidos» lista los consumos registrados en la parcela (HU_05). Las secciones del
+ * mockup de aforamiento, actividades y recomendaciones corresponden a HU_09, HU_08 y HU_12; no se
+ * muestran hasta que existan.
  */
 @Composable
 fun ParcelDetailScreen(
@@ -47,6 +50,7 @@ fun ParcelDetailScreen(
     onBack: () -> Unit,
     onRetry: () -> Unit,
     today: LocalDate = LocalDate.now(),
+    consumptions: List<ParcelConsumption> = emptyList(),
 ) {
     val parcel = state.parcels.find { it.id == parcelId }
     InventoryScaffold(
@@ -71,6 +75,21 @@ fun ParcelDetailScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     if (parcel.cycleStartDate == null) NoActiveCycle() else ActiveCycle(parcel, today)
+                    Text(
+                        "INSUMOS CONSUMIDOS",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                    if (consumptions.isEmpty()) {
+                        Text(
+                            "Aún no hay consumos registrados en esta parcela.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag("no-consumptions"),
+                        )
+                    }
+                    consumptions.forEach { ConsumptionCard(it, activeCycleId = parcel.cycleId) }
                     if (state.offline) {
                         Text(
                             "Sin conexión: datos guardados en este dispositivo.",
@@ -162,6 +181,33 @@ private fun NoActiveCycle() {
                     "aún no está disponible.",
                 style = MaterialTheme.typography.bodySmall,
             )
+        }
+    }
+}
+
+@Composable
+private fun ConsumptionCard(consumption: ParcelConsumption, activeCycleId: String?) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth().testTag("consumption-${consumption.id}"),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(consumption.supplyName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text(
+                "Consumo · ${Quantity.format(consumption.quantity)} ${consumption.unit} · " +
+                    ParcelValidation.formatDate(consumption.date),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            // Un consumo de un ciclo que ya no es el activo (o sin ciclo) se distingue del ciclo actual.
+            if (activeCycleId != null && consumption.cycleId != activeCycleId) {
+                Text(
+                    if (consumption.cycleId == null) "Sin ciclo" else "Ciclo anterior",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

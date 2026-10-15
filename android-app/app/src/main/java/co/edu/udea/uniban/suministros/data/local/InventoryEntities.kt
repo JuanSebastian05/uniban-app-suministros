@@ -54,6 +54,10 @@ data class MovementEntity(
     val updatedAt: String,
     val type: String = "ENTRADA",
     val syncStatus: String = "PENDING",
+    // HU_05: parcela y ciclo activo del consumo; motivo de la pérdida. Nulos en las entradas.
+    val parcelId: String? = null,
+    val cycleId: String? = null,
+    val lossReason: String? = null,
 )
 
 /** Contexto de un inventario que se envía junto con su primer movimiento (HU_06). */
@@ -68,6 +72,17 @@ data class InventorySyncContext(
     val locationName: String,
     val producerId: String,
     val producerName: String,
+)
+
+/** Consumo registrado en una parcela, con el insumo que se usó (HU_05, detalle de parcela). */
+data class ParcelConsumption(
+    val id: String,
+    val supplyName: String,
+    val unit: String,
+    val quantity: Float,
+    val date: String,
+    val cycleId: String?,
+    val syncStatus: String,
 )
 
 data class InventoryItem(

@@ -23,14 +23,21 @@ object SyncScheduler {
         .setRequiredNetworkType(NetworkType.CONNECTED)
         .build()
 
-    /** Pide una sincronización en cuanto haya red (al abrir la app y al guardar un movimiento). */
+    /**
+     * Pide una sincronización en cuanto haya red (al abrir la app y al guardar un movimiento).
+     *
+     * REPLACE (y no APPEND): si una pasada anterior falló y está esperando su reintento con espera
+     * exponencial, la nueva solicitud no queda en fila detrás de esa espera, sino que la reemplaza
+     * y corre apenas haya red. Cancelar una pasada en curso es seguro: lo que estaba SYNCING vuelve
+     * a PENDING y el backend es idempotente por UUID (RT_07), así que reenviar no duplica.
+     */
     fun enqueue(context: Context) {
         val request = OneTimeWorkRequestBuilder<SyncWorker>()
             .setConstraints(requiresNetwork)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
         WorkManager.getInstance(context)
-            .enqueueUniqueWork(ONE_TIME_WORK, ExistingWorkPolicy.APPEND_OR_REPLACE, request)
+            .enqueueUniqueWork(ONE_TIME_WORK, ExistingWorkPolicy.REPLACE, request)
     }
 
     /** Red de seguridad: reintenta periódicamente los movimientos en ERROR rechazados por el servidor. */
