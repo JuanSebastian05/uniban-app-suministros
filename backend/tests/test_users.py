@@ -137,3 +137,52 @@ def test_sin_proyecto_de_firebase_responde_503(session_factory, monkeypatch):
     finally:
         app.dependency_overrides.clear()
     assert response.status_code == 503
+
+
+def _claims(**overrides):
+    claims = {"iss": "https://securetoken.google.com/uniban-test", "aud": "uniban-test",
+              "sub": "uid-ana", "email": "ana@unibanagro.com"}
+    claims.update(overrides)
+    return claims
+
+
+@pytest.fixture()
+def real_identity(session_factory, monkeypatch):
+    """Cliente que usa la verificación real del token, con google-auth simulado (sin red)."""
+    monkeypatch.setattr(get_settings(), "firebase_project_id", "uniban-test")
+    calls = {}
+
+    def fake_verify(token, request, audience=None, clock_skew_in_seconds=0):
+        calls["audience"] = audience
+        if token != "token-valido":
+            raise ValueError("firma inválida")
+        return calls.get("claims", _claims())
+
+    from google.oauth2 import id_token
+
+    monkeypatch.setattr(id_token, "verify_firebase_token", fake_verify)
+    app.dependency_overrides[get_db] = lambda: session_factory()
+    yield TestClient(app), calls
+    app.dependency_overrides.clear()
+
+
+def test_token_valido_registra_con_uid_del_token(real_identity, session_factory):
+    client, calls = real_identity
+    response = client.post(REGISTER, json=BODY, headers={"Authorization": "Bearer token-valido"})
+    assert response.status_code == 201
+    assert calls["audience"] == "uniban-test"
+    with session_factory() as db:
+        assert db.scalar(select(User)).firebase_uid == "uid-ana"
+
+
+def test_token_con_firma_invalida_responde_401(real_identity):
+    client, _ = real_identity
+    response = client.post(REGISTER, json=BODY, headers={"Authorization": "Bearer otro"})
+    assert response.status_code == 401
+
+
+def test_token_de_otro_proyecto_responde_401(real_identity):
+    client, calls = real_identity
+    calls["claims"] = _claims(iss="https://securetoken.google.com/otro-proyecto")
+    response = client.post(REGISTER, json=BODY, headers={"Authorization": "Bearer token-valido"})
+    assert response.status_code == 401

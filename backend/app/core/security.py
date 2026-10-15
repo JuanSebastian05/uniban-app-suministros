@@ -2,8 +2,12 @@
 
 La app envía ``Authorization: Bearer <ID token>``. Aquí solo se comprueba la identidad;
 los permisos se deciden con el rol guardado en PostgreSQL.
+
+El token se valida con las llaves públicas de Google (``google-auth``): basta con el ID del
+proyecto, sin cuenta de servicio ni credenciales de Google Cloud.
 """
 
+import logging
 from dataclasses import dataclass
 from functools import lru_cache
 
@@ -12,7 +16,12 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.config import get_settings
 
+logger = logging.getLogger(__name__)
+
 bearer = HTTPBearer(auto_error=False)
+
+# Tolerancia para relojes desfasados (p. ej. un emulador recién despertado).
+CLOCK_SKEW_SECONDS = 30
 
 
 @dataclass(frozen=True)
@@ -22,12 +31,25 @@ class FirebaseIdentity:
 
 
 @lru_cache
-def _firebase_app():
-    # Import perezoso: el backend y sus pruebas funcionan sin firebase-admin configurado.
-    import firebase_admin
+def _google_request():
+    from google.auth.transport import requests as google_requests
 
-    # Verificar tokens solo requiere el ID del proyecto (llaves públicas de Google), sin cuenta de servicio.
-    return firebase_admin.initialize_app(options={"projectId": get_settings().firebase_project_id}, name="uniban-auth")
+    # Reutiliza la sesión HTTP; google-auth guarda en caché las llaves públicas.
+    return google_requests.Request()
+
+
+def verify_firebase_token(token: str, project_id: str) -> dict:
+    """Valida firma, vencimiento, audiencia y emisor; lanza ``ValueError`` si algo no cuadra."""
+    from google.oauth2 import id_token
+
+    claims = id_token.verify_firebase_token(
+        token, _google_request(), audience=project_id, clock_skew_in_seconds=CLOCK_SKEW_SECONDS
+    )
+    if claims.get("iss") != f"https://securetoken.google.com/{project_id}":
+        raise ValueError("Emisor del token inesperado.")
+    if not claims.get("sub"):
+        raise ValueError("El token no tiene uid.")
+    return claims
 
 
 def get_current_identity(
@@ -36,12 +58,13 @@ def get_current_identity(
     """Dependencia de FastAPI: 401 si falta el token o no es válido; 503 si Firebase no está configurado."""
     if credentials is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Falta el token de autenticación.")
-    if not get_settings().firebase_project_id:
+    project_id = get_settings().firebase_project_id
+    if not project_id:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "FIREBASE_PROJECT_ID no está configurado.")
-    from firebase_admin import auth
-
     try:
-        claims = auth.verify_id_token(credentials.credentials, app=_firebase_app())
+        claims = verify_firebase_token(credentials.credentials, project_id)
     except Exception as error:
+        # El motivo queda en el log del servidor (p. ej. audiencia distinta = FIREBASE_PROJECT_ID equivocado).
+        logger.warning("Token de Firebase rechazado: %s", error)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token de autenticación inválido.") from error
-    return FirebaseIdentity(uid=claims["uid"], email=claims.get("email"))
+    return FirebaseIdentity(uid=claims["sub"], email=claims.get("email"))
