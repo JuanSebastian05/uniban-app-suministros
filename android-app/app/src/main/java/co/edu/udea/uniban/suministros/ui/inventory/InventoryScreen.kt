@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -13,7 +14,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import co.edu.udea.uniban.suministros.R
 import co.edu.udea.uniban.suministros.data.Quantity
 
 @Composable
@@ -22,12 +25,20 @@ fun InventoryScreen(
     onRetry: () -> Unit,
     onSelect: (String) -> Unit,
     onNewEntry: () -> Unit,
+    onLogout: () -> Unit,
 ) {
     var search by rememberSaveable { mutableStateOf("") }
+    var confirmLogout by rememberSaveable { mutableStateOf(false) }
+    if (confirmLogout) LogoutDialog(onConfirm = { confirmLogout = false; onLogout() }, onDismiss = { confirmLogout = false })
     val filtered = state.items.filter { it.name.contains(search.trim(), ignoreCase = true) }
     InventoryScaffold(
         title = "Inventario",
         pendingCount = state.pendingCount,
+        extraActions = {
+            IconButton(onClick = { confirmLogout = true }) {
+                Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = stringResource(R.string.logout_action))
+            }
+        },
         bottomBar = {
             BottomAction("+ Registrar entrada", !state.loading && state.error == null && state.items.isNotEmpty(), onNewEntry)
         },
@@ -85,3 +96,14 @@ fun InventoryScreen(
     }
 }
 
+
+@Composable
+private fun LogoutDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.logout_dialog_title)) },
+        text = { Text(stringResource(R.string.logout_dialog_message)) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.logout_dialog_confirm)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.logout_dialog_cancel)) } },
+    )
+}

@@ -23,6 +23,7 @@ internal fun InventoryScaffold(
     onBack: (() -> Unit)? = null,
     backEnabled: Boolean = true,
     bottomBar: @Composable () -> Unit = {},
+    extraActions: @Composable RowScope.() -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
     Scaffold(
@@ -50,11 +51,13 @@ internal fun InventoryScaffold(
                             )
                         }
                     }
+                    extraActions()
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
                 ),
             )
         },
