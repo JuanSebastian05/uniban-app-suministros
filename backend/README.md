@@ -3,8 +3,8 @@
 API central del sistema. La app Android solo se comunica con este backend (RT_11);
 cualquier integración con los Equipos 1 y 2 pasará por aquí en el futuro.
 
-**Estado actual:** `GET /health` y `POST /api/v1/movements` (HU_06: recepción idempotente de
-movimientos). Las tablas se crean con Alembic: `alembic upgrade head` (requiere `DATABASE_URL`).
+**Estado actual:** `GET /health`, `POST /api/v1/movements` (HU_06: recepción idempotente de
+movimientos) y `POST /api/v1/users/register` / `GET /api/v1/users/me` (registro de usuarios, HU_01). Las tablas se crean con Alembic: `alembic upgrade head` (requiere `DATABASE_URL`).
 Ver [`docs/hu06.md`](../docs/hu06.md).
 
 ## Estructura
@@ -21,7 +21,7 @@ backend/
 │   ├── models/            # modelos ORM (productor, ubicación, insumo, inventario, movimiento)
 │   ├── schemas/           # esquemas Pydantic / contratos OpenAPI
 │   └── services/          # lógica de sincronización idempotente (HU_06)
-├── migrations/            # Alembic (0001: tablas de inventario y movimientos)
+├── migrations/            # Alembic (0001: inventario y movimientos; 0002: usuarios)
 ├── tests/                 # PyTest: /health, /openapi.json y movimientos
 ├── requirements.txt
 ├── pytest.ini
@@ -71,8 +71,10 @@ pytest
 | `ENVIRONMENT`   | `development` / `production`                              | `development` |
 | `API_V1_PREFIX` | Prefijo de la API versionada                              | `/api/v1` |
 | `DATABASE_URL`  | Conexión SQLAlchemy a PostgreSQL (**secreto**, solo en `.env`) | `postgresql+psycopg://USUARIO:CLAVE@localhost:5432/uniban_suministros` |
+| `FIREBASE_PROJECT_ID` | ID del proyecto de Firebase; verifica los tokens de `/api/v1/users` | `uniban-suministros` |
 | `CORS_ORIGINS`  | Orígenes permitidos separados por coma (vacío = sin CORS) | `http://localhost:3000` |
 
 ## Decisiones pendientes
 
-- Verificación de tokens de Firebase en el backend (HU_01 / RT_13).
+- Exigir el token de Firebase también en `/api/v1/movements` y validar el rol (RT_13, RT_17).
+  El registro (`/api/v1/users/register`) ya verifica el token.

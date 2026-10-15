@@ -31,6 +31,8 @@ import co.edu.udea.uniban.suministros.data.auth.AuthRepository
 import co.edu.udea.uniban.suministros.data.auth.SessionState
 import co.edu.udea.uniban.suministros.ui.auth.LoginScreen
 import co.edu.udea.uniban.suministros.ui.auth.LoginViewModel
+import co.edu.udea.uniban.suministros.ui.auth.RegisterScreen
+import co.edu.udea.uniban.suministros.ui.auth.RegisterViewModel
 import co.edu.udea.uniban.suministros.ui.inventory.*
 
 @Composable
@@ -59,6 +61,9 @@ fun AppNavHost(
     val loginFactory = remember(authRepository) {
         viewModelFactory { initializer { LoginViewModel(authRepository, createSavedStateHandle()) } }
     }
+    val registerFactory = remember(authRepository) {
+        viewModelFactory { initializer { RegisterViewModel(authRepository, createSavedStateHandle()) } }
+    }
     val inventoryFactory = remember(repository) {
         viewModelFactory { initializer { InventoryViewModel(repository) } }
     }
@@ -76,6 +81,22 @@ fun AppNavHost(
                 onTogglePassword = loginViewModel::togglePasswordVisible,
                 onSubmit = loginViewModel::submit,
                 onContinueDemo = loginViewModel::continueAsDemo,
+                onCreateAccount = { navController.navigate(AppDestinations.REGISTER) { launchSingleTop = true } },
+            )
+        }
+        composable(AppDestinations.REGISTER) {
+            val registerViewModel: RegisterViewModel = viewModel(factory = registerFactory)
+            RegisterScreen(
+                state = registerViewModel.state,
+                onNameChange = registerViewModel::changeName,
+                onDocumentChange = registerViewModel::changeDocument,
+                onPhoneChange = registerViewModel::changePhone,
+                onEmailChange = registerViewModel::changeEmail,
+                onPasswordChange = registerViewModel::changePassword,
+                onConfirmPasswordChange = registerViewModel::changeConfirmPassword,
+                onTogglePassword = registerViewModel::togglePasswordVisible,
+                onSubmit = registerViewModel::submit,
+                onBack = { navController.popBackStack() },
             )
         }
         // El inventario se carga solo dentro de este grafo: sin sesión no se abre ningún dato,
@@ -137,7 +158,7 @@ private fun mainViewModel(
 }
 
 /**
- * Guard global: sin sesión solo existe el login (cubre cierre de sesión y expiración con la app
+ * Guard global: sin sesión solo existen el login y el registro (cubre cierre de sesión y expiración con la app
  * abierta) y, al autenticarse, se reemplaza el login por el inventario. Se vacía la pila para
  * que Atrás no regrese a pantallas del otro estado.
  */
@@ -148,7 +169,7 @@ private fun SessionGuard(navController: NavController, session: SessionState) {
         val inMain = current.hierarchy.any { it.route == AppDestinations.MAIN }
         val target = when {
             session is SessionState.Authenticated && !inMain -> AppDestinations.MAIN
-            session is SessionState.Unauthenticated && current.route != AppDestinations.LOGIN -> AppDestinations.LOGIN
+            session is SessionState.Unauthenticated && current.route !in PUBLIC_ROUTES -> AppDestinations.LOGIN
             else -> return@LaunchedEffect
         }
         navController.navigate(target) {
@@ -157,3 +178,5 @@ private fun SessionGuard(navController: NavController, session: SessionState) {
         }
     }
 }
+
+private val PUBLIC_ROUTES = setOf(AppDestinations.LOGIN, AppDestinations.REGISTER)

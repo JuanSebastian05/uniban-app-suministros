@@ -6,6 +6,8 @@ import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
+import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import java.io.IOException
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -42,6 +44,18 @@ class AuthErrorMapperTest {
     @Test
     fun tooManyRequests() {
         assertEquals(AuthError.TooManyRequests, mapFirebaseError(FirebaseTooManyRequestsException("x")))
+    }
+
+    @Test
+    fun registrationErrors() {
+        assertEquals(
+            AuthError.EmailInUse,
+            mapFirebaseError(FirebaseAuthUserCollisionException("ERROR_EMAIL_ALREADY_IN_USE", "x")),
+        )
+        assertEquals(
+            AuthError.WeakPassword,
+            mapFirebaseError(FirebaseAuthWeakPasswordException("ERROR_WEAK_PASSWORD", "x", "corta")),
+        )
     }
 
     @Test
