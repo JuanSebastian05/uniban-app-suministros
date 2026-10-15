@@ -40,6 +40,12 @@ class InventoryRepository(
     fun recentMovements(inventoryId: String, limit: Int = RECENT_MOVEMENTS) =
         dao.observeRecentMovements(inventoryId, limit)
 
+    /** Historial completo de movimientos de este dispositivo (HU_07). */
+    val history = dao.observeHistory()
+
+    /** Saldo inicial y existencia de cada insumo, para el resumen del historial (HU_07). */
+    val balances = dao.observeBalances()
+
     /** Crea el inventario inicial de la cuenta la primera vez que se abre. */
     suspend fun initializeDemo() = database.withTransaction {
         if (!dao.hasProducer(starter.producer.id)) {

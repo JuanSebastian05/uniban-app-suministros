@@ -85,6 +85,37 @@ data class ParcelConsumption(
     val syncStatus: String,
 )
 
+/**
+ * Movimiento del historial (HU_07) con el insumo, la parcela y si el ciclo del consumo sigue activo.
+ * [parcelName] es nulo si el movimiento no tiene parcela o si la parcela ya no está en este dispositivo.
+ */
+data class HistoryMovement(
+    val id: String,
+    val inventoryId: String,
+    val supplyName: String,
+    val unit: String,
+    val type: String,
+    val quantity: Float,
+    val date: String,
+    val createdAt: String,
+    val observation: String,
+    val syncStatus: String,
+    val parcelId: String?,
+    val parcelName: String?,
+    val cycleId: String?,
+    val cycleActive: Boolean,
+    val lossReason: String?,
+)
+
+/** Saldo inicial y existencia de un insumo, para el resumen del historial (RT_10, HU_07). */
+data class InventoryBalance(
+    val id: String,
+    val name: String,
+    val unit: String,
+    val initialQuantity: Float,
+    val quantity: Float,
+)
+
 data class InventoryItem(
     val id: String,
     val name: String,

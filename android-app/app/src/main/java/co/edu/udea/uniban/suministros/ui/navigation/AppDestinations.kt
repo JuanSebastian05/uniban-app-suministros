@@ -17,6 +17,11 @@ object AppDestinations {
     /** Detalle de parcela (HU_02). Prefijo distinto de `parcels/` para no chocar con `parcels/new`. */
     const val PARCEL_DETAIL = "parcel/{parcelId}"
 
+    /** Historial de movimientos (HU_07); `inventoryId` vacío = todos los insumos. */
+    const val HISTORY = "history?inventoryId={inventoryId}"
+
+    fun history(inventoryId: String = "") = "history?inventoryId=$inventoryId"
+
     fun parcelDetail(id: String) = "parcel/$id"
 
     fun detail(id: String) = "inventory/$id"
