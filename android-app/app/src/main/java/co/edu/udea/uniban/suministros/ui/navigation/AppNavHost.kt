@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -35,14 +36,23 @@ import co.edu.udea.uniban.suministros.ui.auth.RegisterScreen
 import co.edu.udea.uniban.suministros.ui.auth.RegisterViewModel
 import co.edu.udea.uniban.suministros.ui.inventory.*
 
+/**
+ * [repositoryFor] entrega el inventario de una cuenta (su propia base local): cada usuario que
+ * entra ve y modifica solo sus insumos y movimientos.
+ */
 @Composable
 fun AppNavHost(
-    repository: InventoryRepository,
+    repositoryFor: (uid: String) -> InventoryRepository,
     authRepository: AuthRepository,
     modifier: Modifier = Modifier,
 ) {
     val session by authRepository.sessionState.collectAsStateWithLifecycle()
     val navController = rememberNavController()
+    val uid = (session as? SessionState.Authenticated)?.uid
+    val repository = remember(uid) { uid?.let(repositoryFor) }
+    // Los ViewModel del inventario se crean al entrar al grafo MAIN, que solo existe con sesión;
+    // al cerrar sesión el grafo sale de la pila y la siguiente cuenta recibe ViewModel nuevos.
+    val currentRepository by rememberUpdatedState(repository)
 
     if (session is SessionState.Loading) {
         Box(
@@ -64,11 +74,11 @@ fun AppNavHost(
     val registerFactory = remember(authRepository) {
         viewModelFactory { initializer { RegisterViewModel(authRepository, createSavedStateHandle()) } }
     }
-    val inventoryFactory = remember(repository) {
-        viewModelFactory { initializer { InventoryViewModel(repository) } }
+    val inventoryFactory = remember {
+        viewModelFactory { initializer { InventoryViewModel(checkNotNull(currentRepository)) } }
     }
-    val entryFactory = remember(repository) {
-        viewModelFactory { initializer { EntryViewModel(repository, createSavedStateHandle()) } }
+    val entryFactory = remember {
+        viewModelFactory { initializer { EntryViewModel(checkNotNull(currentRepository), createSavedStateHandle()) } }
     }
 
     NavHost(navController, startDestination = startDestination, modifier = modifier) {

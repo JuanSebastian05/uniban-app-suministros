@@ -6,8 +6,9 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import co.edu.udea.uniban.suministros.data.InventoryRepository
 import co.edu.udea.uniban.suministros.data.MovementSyncRepository
-import co.edu.udea.uniban.suministros.data.local.DemoInventory
+import co.edu.udea.uniban.suministros.data.SyncSummary
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
+import co.edu.udea.uniban.suministros.data.local.StarterInventory
 import co.edu.udea.uniban.suministros.data.local.SyncStatus
 import co.edu.udea.uniban.suministros.data.remote.MovementApi
 import co.edu.udea.uniban.suministros.data.remote.MovementDto
@@ -26,6 +27,7 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -39,8 +41,10 @@ import retrofit2.Response
 class MovementSyncRepositoryTest {
     private class FakeApi : MovementApi {
         val received = mutableListOf<MovementDto>()
+        val authorizations = mutableListOf<String>()
         var respond: suspend (MovementDto) -> Response<Unit> = { Response.success(Unit) }
-        override suspend fun send(movement: MovementDto): Response<Unit> {
+        override suspend fun send(authorization: String, movement: MovementDto): Response<Unit> {
+            authorizations += authorization
             received += movement
             return respond(movement)
         }
@@ -50,13 +54,15 @@ class MovementSyncRepositoryTest {
     private lateinit var inventory: InventoryRepository
     private lateinit var sync: MovementSyncRepository
     private val api = FakeApi()
+    private val starter = StarterInventory(OWNER)
+    private var token: suspend () -> String? = { "token-ana" }
 
     @Before
     fun setUp() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         database = Room.inMemoryDatabaseBuilder(context, InventoryDatabase::class.java).build()
-        inventory = InventoryRepository(database)
-        sync = MovementSyncRepository(database, api)
+        inventory = InventoryRepository(database, OWNER)
+        sync = MovementSyncRepository(database, api) { token() }
         inventory.initializeDemo()
     }
 
@@ -79,7 +85,7 @@ class MovementSyncRepositoryTest {
     fun pendingMovementIsSentWithItsContextAndMarkedSynced() = runBlocking {
         val id = register()
         val item = inventory.inventory.first().first()
-        val demo = DemoInventory.inventory.first { it.id == item.id }
+        val demo = starter.inventory.first { it.id == item.id }
 
         val summary = sync.syncPending()
 
@@ -96,8 +102,84 @@ class MovementSyncRepositoryTest {
         assertEquals(0, BigDecimal(demo.initialQuantity.toString()).compareTo(dto.inventory.initialQuantity))
         assertEquals(item.name, dto.inventory.supply.name)
         assertEquals(item.unit, dto.inventory.supply.unit)
-        assertEquals(DemoInventory.location.name, dto.inventory.location.name)
-        assertEquals(DemoInventory.producer.id, dto.inventory.location.producer.id)
+        assertEquals(starter.location.name, dto.inventory.location.name)
+        assertEquals(starter.producer.id, dto.inventory.location.producer.id)
+        assertEquals(listOf("Bearer token-ana"), api.authorizations)
+    }
+
+    @Test
+    fun withoutASessionForThisAccountNothingIsSent() = runBlocking {
+        val id = register()
+        token = { null }
+
+        val summary = sync.syncPending()
+
+        assertEquals(SyncSummary(0, 0, retryLater = false), summary)
+        assertTrue(api.received.isEmpty())
+        assertEquals(SyncStatus.PENDING, statusOf(id))
+    }
+
+    @Test
+    fun tokenFailureKeepsMovementsPendingAndRetriesLater() = runBlocking {
+        val id = register()
+        token = { throw IllegalStateException("sin red") }
+
+        assertTrue(sync.syncPending().retryLater)
+        assertTrue(api.received.isEmpty())
+        assertEquals(SyncStatus.PENDING, statusOf(id))
+    }
+
+    @Test
+    fun rejectedTokenIsRetriedLaterAndStopsTheBatch() = runBlocking {
+        register("1")
+        register("2")
+        api.respond = { error(401) }
+
+        val summary = sync.syncPending()
+
+        assertTrue(summary.retryLater)
+        assertEquals(1, api.received.size)
+    }
+
+    @Test
+    fun eachAccountHasItsOwnIds() {
+        val other = StarterInventory("uid-luis")
+        assertTrue(starter.inventory.map { it.id }.intersect(other.inventory.map { it.id }.toSet()).isEmpty())
+        assertTrue(starter.supplies.map { it.id }.intersect(other.supplies.map { it.id }.toSet()).isEmpty())
+        assertNotEquals(starter.location.id, other.location.id)
+        assertEquals(starter.inventory, StarterInventory(OWNER).inventory)
+    }
+
+    @Test
+    fun entriesOfOneAccountDoNotReachAnotherAccountsDatabase() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val otherDatabase = Room.inMemoryDatabaseBuilder(context, InventoryDatabase::class.java).build()
+        try {
+            val other = InventoryRepository(otherDatabase, "uid-luis")
+            other.initializeDemo()
+            val before = other.inventory.first()
+            register("5")
+
+            assertEquals(before, other.inventory.first())
+            assertTrue(other.movements.first().isEmpty())
+            val otherApi = FakeApi()
+            MovementSyncRepository(otherDatabase, otherApi) { "token-luis" }.syncPending()
+            assertTrue(otherApi.received.isEmpty())
+        } finally {
+            otherDatabase.close()
+        }
+    }
+
+    @Test
+    fun databaseFileIsPerAccount() {
+        assertEquals("inventory-uidAna123.db", InventoryDatabase.fileName("uidAna123"))
+        assertNotEquals(InventoryDatabase.fileName("uid-ana"), InventoryDatabase.fileName("uid-luis"))
+        assertTrue(runCatching { InventoryDatabase.fileName("../otro") }.isFailure)
+        assertTrue(runCatching { InventoryDatabase.fileName("") }.isFailure)
+    }
+
+    private companion object {
+        const val OWNER = "uid-ana"
     }
 
     @Test

@@ -89,6 +89,11 @@ class FirebaseAuthRepository(context: Context, private val userApi: UserApi) : A
         firebase.signOut()
     }
 
+    override suspend fun idToken(uid: String): String? {
+        val user = auth?.currentUser?.takeIf { it.uid == uid } ?: return null
+        return user.getIdToken(false).await().token
+    }
+
     override fun signOut() {
         if (auth != null) auth.signOut() else state.value = SessionState.Unauthenticated
     }

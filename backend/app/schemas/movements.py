@@ -1,8 +1,8 @@
 """Contrato HTTP de sincronización de movimientos (HU_06).
 
 El JSON usa camelCase para coincidir con los nombres de la app Android.
-Cada movimiento viaja con el contexto de su inventario (productor, ubicación, insumo):
-el backend lo inserta solo si todavía no existe.
+Cada movimiento viaja con el contexto de su inventario (ubicación, insumo): el backend lo
+inserta solo si todavía no existe, siempre a nombre del productor del usuario autenticado.
 """
 
 import uuid
@@ -26,7 +26,8 @@ class ProducerIn(CamelModel):
 class LocationIn(CamelModel):
     id: uuid.UUID
     name: str = Field(min_length=1, max_length=120)
-    producer: ProducerIn
+    # Se ignora: el dueño es siempre el productor del token. Se acepta por compatibilidad.
+    producer: ProducerIn | None = None
 
 
 class SupplyIn(CamelModel):
@@ -58,3 +59,13 @@ class MovementSyncOut(CamelModel):
     id: uuid.UUID
     # CREATED: se guardó ahora. DUPLICATE: ya existía idéntico; no se volvió a sumar.
     status: Literal["CREATED", "DUPLICATE"]
+
+
+class InventoryItemOut(CamelModel):
+    id: uuid.UUID
+    supply_id: uuid.UUID
+    name: str
+    category: str
+    unit: str
+    location: str
+    quantity: Decimal

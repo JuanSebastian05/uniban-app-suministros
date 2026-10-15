@@ -4,9 +4,13 @@ Reglas:
 - El UUID del movimiento identifica el registro. Reenviar el mismo contenido no duplica
   ni vuelve a sumar (DUPLICATE); reenviar el mismo UUID con otro contenido es un conflicto.
 - Los movimientos son solo de inserción. Por ahora solo se aceptan entradas.
-- Productor, ubicación, insumo e inventario se insertan solo si no existen; nunca se
-  sobrescriben. La existencia = inicial + movimientos recibidos, en la misma transacción.
+- Ubicación, insumo e inventario se insertan solo si no existen; nunca se sobrescriben.
+  La existencia = inicial + movimientos recibidos, en la misma transacción.
+- Todo pertenece al productor del usuario autenticado: lo que es de otro productor se rechaza
+  como conflicto, sin revelar su contenido.
 """
+
+import uuid
 
 import logging
 from decimal import Decimal
@@ -14,7 +18,7 @@ from decimal import Decimal
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import Inventory, Location, Movement, Producer, Supply
+from app.models import Inventory, Location, Movement, Supply
 from app.schemas.movements import InventoryIn, MovementIn
 
 logger = logging.getLogger(__name__)
@@ -37,19 +41,26 @@ def _same_content(existing: Movement, data: MovementIn) -> bool:
     )
 
 
-def _ensure_inventory(db: Session, data: InventoryIn) -> Inventory:
+def _ensure_inventory(db: Session, data: InventoryIn, producer_id: uuid.UUID) -> Inventory:
     # Sin relationship() SQLAlchemy no conoce el orden entre tablas: se hace flush tras cada
-    # padre para que PostgreSQL vea productor → ubicación → insumo → inventario en ese orden.
-    if db.get(Producer, data.location.producer.id) is None:
-        db.add(Producer(id=data.location.producer.id, name=data.location.producer.name))
+    # padre para que PostgreSQL vea ubicación → insumo → inventario en ese orden.
+    location = db.get(Location, data.location.id)
+    if location is None:
+        db.add(Location(id=data.location.id, producer_id=producer_id, name=data.location.name))
         db.flush()
-    if db.get(Location, data.location.id) is None:
-        db.add(Location(id=data.location.id, producer_id=data.location.producer.id, name=data.location.name))
+    elif location.producer_id != producer_id:
+        raise MovementConflict("La ubicación pertenece a otro usuario.")
+    supply = db.get(Supply, data.supply.id)
+    if supply is None:
+        db.add(Supply(
+            id=data.supply.id, producer_id=producer_id,
+            name=data.supply.name, category=data.supply.category, unit=data.supply.unit,
+        ))
         db.flush()
-    if db.get(Supply, data.supply.id) is None:
-        db.add(Supply(id=data.supply.id, name=data.supply.name, category=data.supply.category, unit=data.supply.unit))
-        db.flush()
+    elif supply.producer_id != producer_id:
+        raise MovementConflict("El insumo pertenece a otro usuario.")
 
+    # La ubicación ya es del productor, así que un inventario con la misma ubicación también.
     inventory = db.get(Inventory, data.id)
     if inventory is None:
         inventory = Inventory(
@@ -66,24 +77,35 @@ def _ensure_inventory(db: Session, data: InventoryIn) -> Inventory:
     return inventory
 
 
-def _existing_result(existing: Movement, data: MovementIn) -> str:
+def _owner_of(db: Session, movement: Movement) -> uuid.UUID:
+    inventory = db.get(Inventory, movement.inventory_id)
+    return db.get(Location, inventory.location_id).producer_id
+
+
+def _existing_result(db: Session, existing: Movement, data: MovementIn, producer_id: uuid.UUID) -> str:
+    if _owner_of(db, existing) != producer_id:
+        # Mismo mensaje que un contenido distinto: no se revela que el UUID es de otro usuario.
+        raise MovementConflict("Ya existe un movimiento con este id y contenido distinto.")
     if _same_content(existing, data):
         return "DUPLICATE"
     raise MovementConflict("Ya existe un movimiento con este id y contenido distinto.")
 
 
-def sync_movement(db: Session, data: MovementIn) -> str:
-    """Guarda el movimiento. Devuelve ``CREATED`` o ``DUPLICATE``; lanza MovementConflict."""
+def sync_movement(db: Session, data: MovementIn, producer_id: uuid.UUID) -> str:
+    """Guarda el movimiento en el inventario de ``producer_id``.
+
+    Devuelve ``CREATED`` o ``DUPLICATE``; lanza MovementConflict.
+    """
     if data.type not in SUPPORTED_TYPES:
         raise MovementConflict(f"Tipo de movimiento no soportado todavía: {data.type}.")
 
     existing = db.get(Movement, data.id)
     if existing is not None:
-        return _existing_result(existing, data)
+        return _existing_result(db, existing, data, producer_id)
 
     try:
         with db.begin_nested():
-            inventory = _ensure_inventory(db, data.inventory)
+            inventory = _ensure_inventory(db, data.inventory, producer_id)
             new_quantity = inventory.quantity + data.quantity
             if new_quantity > MAX_QUANTITY:
                 raise MovementConflict("La existencia resultante supera 99.999,99.")
@@ -108,7 +130,7 @@ def sync_movement(db: Session, data: MovementIn) -> str:
         existing = db.get(Movement, data.id)
         if existing is None:
             raise MovementConflict("No se pudo guardar el movimiento por una restricción de integridad.")
-        return _existing_result(existing, data)
+        return _existing_result(db, existing, data, producer_id)
     except MovementConflict:
         db.rollback()
         raise

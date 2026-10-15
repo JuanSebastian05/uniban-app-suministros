@@ -38,7 +38,6 @@ object NetworkModule {
                 HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC }
             )
         }
-        // HU_01: agregar el token de Firebase en "Authorization" al implementar la API.
         return builder.build()
     }
 

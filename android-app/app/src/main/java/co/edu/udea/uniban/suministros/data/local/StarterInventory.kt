@@ -2,11 +2,15 @@ package co.edu.udea.uniban.suministros.data.local
 
 import java.util.UUID
 
-internal object DemoInventory {
-    private fun id(value: String) = UUID.nameUUIDFromBytes(value.toByteArray(Charsets.UTF_8)).toString()
+/**
+ * Inventario inicial de una cuenta. Los ids se derivan del uid: cada usuario tiene su propia
+ * ubicación, catálogo e inventario, y el backend nunca mezcla los de dos cuentas.
+ */
+internal class StarterInventory(private val ownerUid: String) {
+    private fun id(value: String) = UUID.nameUUIDFromBytes("$ownerUid/$value".toByteArray(Charsets.UTF_8)).toString()
 
-    val producer = ProducerEntity(id("demo-producer"), "Productor de demostración")
-    val location = LocationEntity(id("demo-location"), producer.id, "Inventario principal")
+    val producer = ProducerEntity(id("producer"), "Mi inventario")
+    val location = LocationEntity(id("location"), producer.id, "Inventario principal")
     private val entries = listOf(
         SupplyEntity(id("fertilizante"), "Fertilizante 15-15-15", "Fertilizante", "kg") to 120f,
         SupplyEntity(id("fungicida"), "Fungicida Mancozeb", "Fungicida", "L") to 35f,
@@ -19,5 +23,9 @@ internal object DemoInventory {
     val inventory = entries.map { (supply, quantity) ->
         InventoryEntity(id("inventory-${supply.id}"), location.id, supply.id, quantity, quantity)
     }
-}
 
+    companion object {
+        /** Dueño de la sesión de demostración (debug sin Firebase); sus datos nunca se sincronizan. */
+        const val DEMO_OWNER = "demo"
+    }
+}

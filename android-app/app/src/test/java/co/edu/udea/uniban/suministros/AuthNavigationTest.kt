@@ -12,6 +12,8 @@ import co.edu.udea.uniban.suministros.data.auth.SessionState
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
 import co.edu.udea.uniban.suministros.ui.navigation.AppNavHost
 import co.edu.udea.uniban.suministros.ui.theme.UnibanTheme
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -39,7 +41,7 @@ class AuthNavigationTest {
     fun tearDown() { database.close() }
 
     private fun launch(auth: FakeAuthRepository) {
-        compose.setContent { UnibanTheme { AppNavHost(repository, auth) } }
+        compose.setContent { UnibanTheme { AppNavHost({ repository }, auth) } }
     }
 
     private fun awaitTag(tag: String) = compose.waitUntil(15_000) {
@@ -131,6 +133,34 @@ class AuthNavigationTest {
         assertEquals(1, auth.signOutCalls)
         compose.activity.onBackPressedDispatcher.onBackPressed()
         assertAbsent("inventory-list")
+    }
+
+    @Test
+    fun eachAccountOpensItsOwnInventory() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val luisDatabase = Room.inMemoryDatabaseBuilder(context, InventoryDatabase::class.java).build()
+        val requested = mutableListOf<String>()
+        val repositories = mapOf(
+            "uid-ana" to InventoryRepository(database, "uid-ana"),
+            "uid-luis" to InventoryRepository(luisDatabase, "uid-luis"),
+        )
+        val auth = FakeAuthRepository(SessionState.Authenticated("uid-ana", "ana@unibanagro.com"))
+        compose.setContent {
+            UnibanTheme { AppNavHost({ uid -> requested += uid; repositories.getValue(uid) }, auth) }
+        }
+        try {
+            awaitTag("inventory-list")
+            auth.setSession(SessionState.Unauthenticated)
+            awaitTag("login-submit")
+            auth.setSession(SessionState.Authenticated("uid-luis", "luis@unibanagro.com"))
+            awaitTag("inventory-list")
+            compose.waitUntil(15_000) {
+                runBlocking { luisDatabase.inventoryDao().observeInventory().first().isNotEmpty() }
+            }
+            assertEquals(listOf("uid-ana", "uid-luis"), requested)
+        } finally {
+            luisDatabase.close()
+        }
     }
 
     @Test

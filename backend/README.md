@@ -4,7 +4,9 @@ API central del sistema. La app Android solo se comunica con este backend (RT_11
 cualquier integración con los Equipos 1 y 2 pasará por aquí en el futuro.
 
 **Estado actual:** `GET /health`, `POST /api/v1/movements` (HU_06: recepción idempotente de
-movimientos) y `POST /api/v1/users/register` / `GET /api/v1/users/me` (registro de usuarios, HU_01). Las tablas se crean con Alembic: `alembic upgrade head` (requiere `DATABASE_URL`).
+movimientos), `GET /api/v1/inventory` (existencias del usuario) y `POST /api/v1/users/register` /
+`GET /api/v1/users/me` (registro de usuarios, HU_01). Todo `/api/v1` exige el token de Firebase y
+cada usuario solo lee y modifica el inventario de su propio productor. Las tablas se crean con Alembic: `alembic upgrade head` (requiere `DATABASE_URL`).
 Ver [`docs/hu06.md`](../docs/hu06.md).
 
 ## Estructura
@@ -71,10 +73,9 @@ pytest
 | `ENVIRONMENT`   | `development` / `production`                              | `development` |
 | `API_V1_PREFIX` | Prefijo de la API versionada                              | `/api/v1` |
 | `DATABASE_URL`  | Conexión SQLAlchemy a PostgreSQL (**secreto**, solo en `.env`) | `postgresql+psycopg://USUARIO:CLAVE@localhost:5432/uniban_suministros` |
-| `FIREBASE_PROJECT_ID` | ID del proyecto de Firebase; verifica los tokens de `/api/v1/users` | `uniban-suministros` |
+| `FIREBASE_PROJECT_ID` | ID del proyecto de Firebase; verifica los tokens de `/api/v1` | `uniban-suministros` |
 | `CORS_ORIGINS`  | Orígenes permitidos separados por coma (vacío = sin CORS) | `http://localhost:3000` |
 
 ## Decisiones pendientes
 
-- Exigir el token de Firebase también en `/api/v1/movements` y validar el rol (RT_13, RT_17).
-  El registro (`/api/v1/users/register`) ya verifica el token.
+- Validar el rol (RT_17): hoy todo usuario registrado es productor y solo ve lo suyo.

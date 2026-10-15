@@ -1,9 +1,9 @@
 package co.edu.udea.uniban.suministros.data
 
 import androidx.room.withTransaction
-import co.edu.udea.uniban.suministros.data.local.DemoInventory
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
 import co.edu.udea.uniban.suministros.data.local.MovementEntity
+import co.edu.udea.uniban.suministros.data.local.StarterInventory
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -11,14 +11,19 @@ import java.util.UUID
 data class SavedEntry(val id: String, val supplyName: String, val quantity: Float, val unit: String)
 
 /**
+ * Inventario local de una sola cuenta: [database] es la base propia de [ownerUid], así que
+ * nada de lo que se registra aquí aparece en el inventario de otro usuario del dispositivo.
+ *
  * [onMovementSaved] se invoca después de confirmar la transacción de un registro; la app lo
  * usa para pedir la sincronización. La UI no conoce la red (RT_08).
  */
 class InventoryRepository(
     private val database: InventoryDatabase,
+    ownerUid: String = StarterInventory.DEMO_OWNER,
     private val onMovementSaved: () -> Unit = {},
 ) {
     private val dao = database.inventoryDao()
+    private val starter = StarterInventory(ownerUid)
     val inventory = dao.observeInventory()
     val movements = dao.observeMovements()
     val pendingCount = dao.observePendingCount()
@@ -27,12 +32,13 @@ class InventoryRepository(
     fun recentMovements(inventoryId: String, limit: Int = RECENT_MOVEMENTS) =
         dao.observeRecentMovements(inventoryId, limit)
 
+    /** Crea el inventario inicial de la cuenta la primera vez que se abre. */
     suspend fun initializeDemo() = database.withTransaction {
-        if (!dao.hasProducer(DemoInventory.producer.id)) {
-            dao.insertProducer(DemoInventory.producer)
-            dao.insertLocation(DemoInventory.location)
-            dao.insertSupplies(DemoInventory.supplies)
-            dao.insertInventory(DemoInventory.inventory)
+        if (!dao.hasProducer(starter.producer.id)) {
+            dao.insertProducer(starter.producer)
+            dao.insertLocation(starter.location)
+            dao.insertSupplies(starter.supplies)
+            dao.insertInventory(starter.inventory)
         }
     }
 
