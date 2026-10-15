@@ -18,10 +18,6 @@ private val AppColors = lightColorScheme(
     onSurfaceVariant = UnibanMuted,
     outline = UnibanBorder,
     outlineVariant = UnibanBorder,
-    error = UnibanError,
-    onError = Color.White,
-    errorContainer = UnibanErrorContainer,
-    onErrorContainer = UnibanError,
     tertiaryContainer = UnibanPending,
     onTertiaryContainer = UnibanPendingText,
 )

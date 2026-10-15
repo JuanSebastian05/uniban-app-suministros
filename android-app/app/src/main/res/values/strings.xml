@@ -1,37 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Unibán Suministros</string>
-
-    <!-- Inicio de sesión (HU_01) -->
-    <string name="login_tagline">Gestión agrícola de productores</string>
-    <string name="login_title">Iniciar sesión</string>
-    <string name="login_email_label">Correo electrónico</string>
-    <string name="login_email_placeholder">usuario@unibanagro.com</string>
-    <string name="login_password_label">Contraseña</string>
-    <string name="login_password_placeholder">••••••••</string>
-    <string name="login_show_password">Mostrar contraseña</string>
-    <string name="login_hide_password">Ocultar contraseña</string>
-    <string name="login_submit">Iniciar sesión</string>
-    <string name="login_submitting">Ingresando…</string>
-    <string name="login_help">¿Problemas para ingresar? Contacte a su asesor Unibán.</string>
-    <string name="login_demo">Continuar en modo demo</string>
-    <string name="login_logo_description">Logotipo de la aplicación</string>
-    <string name="login_checking_session">Comprobando sesión…</string>
-
-    <!-- Errores de inicio de sesión -->
-    <string name="login_error_empty">Por favor ingrese sus credenciales.</string>
-    <string name="login_error_invalid_email">Ingrese un correo válido.</string>
-    <string name="login_error_credentials">Correo o contraseña incorrectos.</string>
-    <string name="login_error_network">Sin conexión. Se necesita internet para iniciar sesión por primera vez.</string>
-    <string name="login_error_too_many">Demasiados intentos fallidos. Espere unos minutos e intente de nuevo.</string>
-    <string name="login_error_disabled">Esta cuenta está deshabilitada. Contacte a su asesor Unibán.</string>
-    <string name="login_error_not_configured">Firebase no está configurado en este dispositivo. Ver README.</string>
-    <string name="login_error_unknown">No se pudo iniciar sesión. Intente de nuevo.</string>
-
-    <!-- Cierre de sesión -->
-    <string name="logout_action">Cerrar sesión</string>
-    <string name="logout_dialog_title">¿Cerrar sesión?</string>
-    <string name="logout_dialog_message">Tendrá que iniciar sesión de nuevo para volver a entrar.</string>
-    <string name="logout_dialog_confirm">Cerrar sesión</string>
-    <string name="logout_dialog_cancel">Cancelar</string>
 </resources>
