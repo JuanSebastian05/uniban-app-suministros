@@ -3,17 +3,23 @@ package co.edu.udea.uniban.suministros.data.remote
 import java.math.BigDecimal
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.Header
 import retrofit2.http.POST
 
 /**
  * Contrato con el backend FastAPI (`/api/v1/movements`, RT_03).
  *
- * 201 = guardado, 200 = ya existía idéntico (idempotente por UUID), 409/422 = rechazado.
+ * Exige el token de Firebase: el backend guarda el movimiento en el inventario del usuario
+ * dueño del token. 201 = guardado, 200 = ya existía idéntico (idempotente por UUID),
+ * 401 = token inválido, 403 = cuenta sin perfil, 409/422 = rechazado.
  * Los nombres de campo coinciden con el JSON camelCase del backend.
  */
 interface MovementApi {
     @POST("movements")
-    suspend fun send(@Body movement: MovementDto): Response<Unit>
+    suspend fun send(
+        @Header("Authorization") authorization: String,
+        @Body movement: MovementDto,
+    ): Response<Unit>
 }
 
 data class ProducerDto(val id: String, val name: String)

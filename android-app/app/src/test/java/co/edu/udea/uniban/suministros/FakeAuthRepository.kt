@@ -48,6 +48,12 @@ class FakeAuthRepository(
         return onRegister(registration, password)
     }
 
+    /** Token que entrega [idToken] a la cuenta con sesión abierta. */
+    var token: String? = "token-de-prueba"
+
+    override suspend fun idToken(uid: String): String? =
+        token.takeIf { (state.value as? SessionState.Authenticated)?.uid == uid }
+
     override fun signOut() {
         signOutCalls++
         state.value = SessionState.Unauthenticated

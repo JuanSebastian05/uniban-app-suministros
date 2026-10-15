@@ -1,6 +1,7 @@
 """Modelos ORM del inventario y sus movimientos (espejo del modelo local de la app).
 
-Productor → Ubicación → Inventario → Movimiento, con Insumo como catálogo.
+Productor → Ubicación → Inventario → Movimiento. Cada productor (uno por usuario) es dueño
+de sus ubicaciones e insumos: nada de otro productor se lee ni se modifica con su token.
 Los identificadores son UUID generados en el dispositivo (RT_06). Los movimientos
 son solo de inserción (RT_07): las correcciones futuras serán movimientos AJUSTE.
 """
@@ -37,6 +38,8 @@ class Supply(Base):
     __tablename__ = "supplies"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
+    # Nulo solo en insumos anteriores a la separación por usuario (0003); ningún usuario los usa.
+    producer_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("producers.id"), index=True)
     name: Mapped[str] = mapped_column(String(120))
     category: Mapped[str] = mapped_column(String(60))
     unit: Mapped[str] = mapped_column(String(20))

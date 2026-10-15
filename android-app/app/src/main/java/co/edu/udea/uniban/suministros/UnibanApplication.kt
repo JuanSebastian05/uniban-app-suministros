@@ -10,24 +10,34 @@ import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
 import co.edu.udea.uniban.suministros.data.remote.MovementApi
 import co.edu.udea.uniban.suministros.data.remote.UserApi
 import co.edu.udea.uniban.suministros.sync.SyncScheduler
+import java.util.concurrent.ConcurrentHashMap
 
 class UnibanApplication : Application() {
-    private val database: InventoryDatabase by lazy { InventoryDatabase.create(this) }
+    /** Una base local por cuenta (uid de Firebase); se abre la primera vez que se usa. */
+    private val databases = ConcurrentHashMap<String, InventoryDatabase>()
 
     private val retrofit by lazy { NetworkModule.createRetrofit() }
+
+    private val movementApi by lazy { retrofit.create(MovementApi::class.java) }
 
     val authRepository: AuthRepository by lazy {
         FirebaseAuthRepository(this, retrofit.create(UserApi::class.java))
     }
 
-    val inventoryRepository: InventoryRepository by lazy {
+    private fun database(uid: String): InventoryDatabase =
+        databases.computeIfAbsent(uid) { InventoryDatabase.create(this, it) }
+
+    /** Inventario de la cuenta [uid]; nunca ve los datos de otra cuenta del dispositivo. */
+    fun inventoryRepository(uid: String): InventoryRepository {
+        // Al abrir el inventario se envía lo que esta cuenta haya dejado pendiente.
+        SyncScheduler.enqueue(this)
         // Cada movimiento guardado pide una sincronización; se ejecuta cuando haya red.
-        InventoryRepository(database, onMovementSaved = { SyncScheduler.enqueue(this) })
+        return InventoryRepository(database(uid), uid, onMovementSaved = { SyncScheduler.enqueue(this) })
     }
 
-    val movementSyncRepository: MovementSyncRepository by lazy {
-        MovementSyncRepository(database, retrofit.create(MovementApi::class.java))
-    }
+    /** Sincroniza los movimientos de [uid] con el token de esa misma cuenta. */
+    fun movementSyncRepository(uid: String): MovementSyncRepository =
+        MovementSyncRepository(database(uid), movementApi) { authRepository.idToken(uid) }
 
     override fun onCreate() {
         super.onCreate()

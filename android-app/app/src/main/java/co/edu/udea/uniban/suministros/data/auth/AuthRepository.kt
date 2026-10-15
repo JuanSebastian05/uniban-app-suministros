@@ -52,6 +52,12 @@ interface AuthRepository {
      */
     suspend fun register(registration: Registration, password: String): Result<Unit>
 
+    /**
+     * Token de Firebase de la sesión abierta, solo si es la cuenta [uid]; `null` si la sesión es
+     * de otra cuenta o de demostración. Falla si no se puede renovar (p. ej. sin red).
+     */
+    suspend fun idToken(uid: String): String?
+
     fun signOut()
 
     /** Abre una sesión local de demostración. No hace nada si [demoAvailable] es `false`. */

@@ -15,9 +15,21 @@ abstract class InventoryDatabase : RoomDatabase() {
     abstract fun inventoryDao(): InventoryDao
 
     companion object {
-        fun create(context: Context): InventoryDatabase =
-            Room.databaseBuilder(context.applicationContext, InventoryDatabase::class.java, "inventory.db")
+        /**
+         * Una base por cuenta: cambiar de usuario en el mismo teléfono no muestra ni sincroniza
+         * el inventario del anterior.
+         */
+        fun create(context: Context, ownerUid: String): InventoryDatabase =
+            Room.databaseBuilder(context.applicationContext, InventoryDatabase::class.java, fileName(ownerUid))
                 .build()
+
+        /** Los uid de Firebase son alfanuméricos; cualquier otro carácter se rechaza. */
+        fun fileName(ownerUid: String): String {
+            require(ownerUid.isNotEmpty() && ownerUid.all { it.isLetterOrDigit() || it == '-' || it == '_' }) {
+                "uid no válido para nombrar la base local."
+            }
+            return "inventory-$ownerUid.db"
+        }
     }
 }
 

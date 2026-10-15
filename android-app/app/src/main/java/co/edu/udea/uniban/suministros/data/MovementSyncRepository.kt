@@ -31,8 +31,16 @@ data class SyncSummary(val synced: Int, val failed: Int, val retryLater: Boolean
  * Estados (RT_02): PENDING → SYNCING → SYNCED, o ERROR si el envío falla. Los ERROR se
  * conservan y se reintentan en la siguiente pasada. El backend es idempotente por UUID
  * (RT_07), así que reenviar un movimiento que ya llegó no lo duplica.
+ *
+ * [database] es la base de una sola cuenta e [idToken] devuelve el token de esa misma cuenta
+ * (o `null` si ya no es la sesión abierta): los movimientos de un usuario solo viajan con su
+ * propio token, y el backend los guarda en el inventario de ese usuario.
  */
-class MovementSyncRepository(database: InventoryDatabase, private val api: MovementApi) {
+class MovementSyncRepository(
+    database: InventoryDatabase,
+    private val api: MovementApi,
+    private val idToken: suspend () -> String?,
+) {
     private val dao = database.inventoryDao()
 
     private sealed interface Outcome {
@@ -42,6 +50,14 @@ class MovementSyncRepository(database: InventoryDatabase, private val api: Movem
     }
 
     suspend fun syncPending(): SyncSummary {
+        val token = try {
+            idToken()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            return SyncSummary(0, 0, retryLater = true) // p. ej. sin red para renovar el token
+        } ?: return SyncSummary(0, 0, retryLater = false) // la cuenta no tiene sesión: se envía al volver
+        val authorization = "Bearer $token"
         // Solo corre una sincronización a la vez (trabajo único de WorkManager): cualquier
         // SYNCING es residuo de un cierre anterior y se retoma.
         dao.resetInterruptedSyncing()
@@ -51,7 +67,7 @@ class MovementSyncRepository(database: InventoryDatabase, private val api: Movem
         for (movement in dao.findSyncable()) {
             if (dao.markSyncing(movement.id) != 1) continue
             val outcome = try {
-                send(movement)
+                send(movement, authorization)
             } catch (cancelled: CancellationException) {
                 withContext(NonCancellable) { dao.finishSyncing(movement.id, SyncStatus.PENDING) }
                 throw cancelled
@@ -80,12 +96,14 @@ class MovementSyncRepository(database: InventoryDatabase, private val api: Movem
         return SyncSummary(synced, failed, retryLater)
     }
 
-    private suspend fun send(movement: MovementEntity): Outcome {
+    private suspend fun send(movement: MovementEntity, authorization: String): Outcome {
         val context = dao.findSyncContext(movement.inventoryId) ?: return Outcome.Rejected
-        val response = api.send(toDto(movement, context))
+        val response = api.send(authorization, toDto(movement, context))
         val code = response.code()
         return when {
             response.isSuccessful -> Outcome.Accepted
+            // Token vencido o perfil aún sin crear: el movimiento no tiene la culpa; se reintenta.
+            code == 401 || code == 403 -> Outcome.Unavailable
             code == 408 || code == 429 || code >= 500 -> Outcome.Unavailable
             else -> Outcome.Rejected
         }
