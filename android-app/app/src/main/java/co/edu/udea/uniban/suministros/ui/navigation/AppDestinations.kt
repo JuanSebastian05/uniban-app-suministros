@@ -10,6 +10,10 @@ object AppDestinations {
     const val DETAIL = "inventory/{inventoryId}"
     const val ENTRY = "entry?inventoryId={inventoryId}"
 
+    /** Parcelas (HU_14). */
+    const val PARCELS = "parcels"
+    const val PARCEL_NEW = "parcels/new"
+
     fun detail(id: String) = "inventory/$id"
     fun entry(id: String = "") = "entry?inventoryId=$id"
 }

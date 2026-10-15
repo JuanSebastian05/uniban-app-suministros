@@ -67,13 +67,20 @@ internal fun InventoryScaffold(
 }
 
 @Composable
-internal fun BottomAction(label: String, enabled: Boolean = true, onClick: () -> Unit) {
+internal fun BottomAction(
+    label: String,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+    // Falso cuando debajo va la barra de pestañas, que ya deja el espacio de la barra del sistema.
+    applyNavigationBarsPadding: Boolean = true,
+) {
     Surface(color = MaterialTheme.colorScheme.background, shadowElevation = 2.dp) {
         Button(
             onClick = onClick,
             enabled = enabled,
             shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+            modifier = Modifier.fillMaxWidth()
+                .then(if (applyNavigationBarsPadding) Modifier.navigationBarsPadding() else Modifier)
                 .padding(horizontal = 16.dp, vertical = 12.dp).heightIn(min = 52.dp),
         ) { Text(label) }
     }
