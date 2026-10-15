@@ -7,6 +7,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import co.edu.udea.uniban.suministros.data.InventoryRepository
+import co.edu.udea.uniban.suministros.data.auth.SessionState
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
 import co.edu.udea.uniban.suministros.ui.navigation.AppNavHost
 import co.edu.udea.uniban.suministros.ui.theme.UnibanTheme
@@ -33,7 +34,7 @@ class EntryFlowTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         database = Room.inMemoryDatabaseBuilder(context, InventoryDatabase::class.java).build()
         repository = InventoryRepository(database)
-        compose.setContent { UnibanTheme { AppNavHost(repository) } }
+        compose.setContent { UnibanTheme { AppNavHost(repository, FakeAuthRepository(SessionState.Authenticated("uid-1", "ana@unibanagro.com"))) } }
     }
 
     @After

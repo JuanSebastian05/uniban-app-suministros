@@ -2,7 +2,7 @@
 
 Repositorio para la realización del proyecto **Uniban – Proyecto Integrador 1 de la Universidad de Antioquia (UdeA)**.
 
-> **Estado actual: HU_04 implementada localmente con datos demo en Room.**
+> **Estado actual: HU_01 (inicio de sesión) y HU_04 (entrada local con datos demo en Room) implementadas.**
 > La primera entrega se limita a **HU_01, HU_03, HU_04 y HU_06**.
 
 ## Objetivo
@@ -41,8 +41,8 @@ Detalle en [`docs/arquitectura/README.md`](docs/arquitectura/README.md).
 ├── android-app/                 # Proyecto Android (abrir esta carpeta en Android Studio)
 │   ├── app/src/main/java/co/edu/udea/uniban/suministros/
 │   │   ├── core/network/        # Cliente HTTP base
-│   │   ├── data/                # InventoryRepository, Quantity y local (Room)
-│   │   ├── ui/                  # navigation | theme | inventory
+│   │   ├── data/                # InventoryRepository, Quantity, auth (Firebase) y local (Room)
+│   │   ├── ui/                  # navigation | theme | auth | inventory
 │   │   ├── MainActivity.kt
 │   │   └── UnibanApplication.kt # Instancia compartida del repositorio
 │   ├── gradle/libs.versions.toml
@@ -70,11 +70,14 @@ Android SDK 35, emulador o dispositivo con Android 8.0 (API 26) o superior.
 1. En Android Studio: **File → Open** → seleccionar la carpeta `android-app/`.
 2. (Opcional) Copiar `android-app/local.properties.example` a `android-app/local.properties` y ajustar `api.baseUrl`.
    Por defecto se usa `http://10.0.2.2:8000/` (backend local visto desde el emulador).
-3. Para desarrollar HU_01, colocar `google-services.json` en `android-app/app/`. El esqueleto
-   compila sin él, pero el inicio de sesión requiere la configuración de Firebase.
-   Este archivo **no se sube** al repositorio.
-4. Sincronizar Gradle y ejecutar la configuración `app`. Se abre **Inventario** con seis insumos demo.
-   HU_04 funciona sin Firebase, backend ni conexión a internet.
+3. Para iniciar sesión, colocar `google-services.json` (consola de Firebase) en `android-app/app/` y
+   crear un usuario en **Authentication → Users → Add user** (no hay registro público; ver
+   [`docs/hu01.md`](docs/hu01.md)). El proyecto compila sin el archivo, que **no se sube** al repositorio.
+   Sin él, el build **debug** muestra el aviso de Firebase sin configurar y el botón
+   «Continuar en modo demo», que no existe en release.
+4. Sincronizar Gradle y ejecutar la configuración `app`. La primera pantalla es el **inicio de sesión**;
+   tras autenticarse (o entrar en modo demo) se abre **Inventario** con seis insumos demo.
+   Con una sesión previa, la app abre directo en Inventario aun sin conexión.
 
 Por línea de comandos (desde `android-app/`): `./gradlew assembleDebug` y `./gradlew testDebugUnitTest`
 (en Windows: `gradlew.bat assembleDebug`).
@@ -122,15 +125,15 @@ Ningún secreto (contraseñas, cadenas de conexión, claves) debe subirse al rep
 - [x] HU_04 local: inventario demo, detalle, entrada y confirmación; cantidades `Float` con dos decimales.
 - [x] Lectura local de inventario y movimientos como soporte de HU_04.
 - [x] Esqueleto backend FastAPI con `/health`, `/api/v1` y configuración por entorno.
-- [ ] HU_01: autenticación y separación de datos por sesión.
-- [x] HU_03: consulta de inventario y movimientos recientes sin conexión, con saldo consistente con su historial (RT_10). Ver [`docs/hu03.md`](docs/hu03.md). Falta integrarlo con la sesión y el catálogo real (depende de HU_01).
+- [x] HU_01: inicio y cierre de sesión con Firebase Authentication (ver [`docs/hu01.md`](docs/hu01.md)).
+- [x] HU_03: consulta de inventario y movimientos recientes sin conexión, con saldo consistente con su historial (RT_10). Ver [`docs/hu03.md`](docs/hu03.md). Falta separar los datos locales por sesión y usar el catálogo real.
 - [x] HU_06: sincronización de movimientos con PostgreSQL (Neon) vía FastAPI, WorkManager y `SYNCED/ERROR`. Ver [`docs/hu06.md`](docs/hu06.md).
 
 La guía de implementación y demostración está en [`docs/hu04.md`](docs/hu04.md).
 
 ## Próximos pasos
 
-- Conectar HU_01 y reemplazar el productor demo por la sesión autorizada.
+- Reemplazar el productor demo por la sesión autorizada (usando el `uid` de HU_01).
 - Incorporar migraciones Room al cambiar el esquema local (las tablas PostgreSQL ya se gestionan con Alembic).
 
 ## Equipo

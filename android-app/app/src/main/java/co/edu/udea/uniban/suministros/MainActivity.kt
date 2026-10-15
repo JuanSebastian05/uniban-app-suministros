@@ -14,7 +14,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             UnibanTheme {
-                AppNavHost((application as UnibanApplication).inventoryRepository)
+                val app = application as UnibanApplication
+                AppNavHost(app.inventoryRepository, app.authRepository)
             }
         }
     }
