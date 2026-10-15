@@ -28,6 +28,8 @@ fun InventoryScreen(
     onLogout: () -> Unit,
     // Barra de pestañas (Parcelas / Inventario); nula si la app no la muestra.
     navigationBar: (@Composable () -> Unit)? = null,
+    // HU_07: abre el historial de todos los insumos; nulo si la app no lo muestra.
+    onHistory: (() -> Unit)? = null,
 ) {
     var search by rememberSaveable { mutableStateOf("") }
     var confirmLogout by rememberSaveable { mutableStateOf(false) }
@@ -37,6 +39,10 @@ fun InventoryScreen(
         title = "Inventario",
         pendingCount = state.pendingCount,
         extraActions = {
+            if (onHistory != null) TextButton(
+                onClick = onHistory,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onPrimary),
+            ) { Text("Historial") }
             IconButton(onClick = { confirmLogout = true }) {
                 Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = stringResource(R.string.logout_action))
             }

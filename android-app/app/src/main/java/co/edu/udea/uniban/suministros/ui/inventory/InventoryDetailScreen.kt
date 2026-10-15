@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import co.edu.udea.uniban.suministros.data.Quantity
@@ -21,6 +22,8 @@ fun InventoryDetailScreen(
     onBack: () -> Unit,
     onRetry: () -> Unit,
     onNewEntry: () -> Unit,
+    // HU_07: abre el historial completo del insumo; nulo si la app no lo muestra.
+    onHistory: (() -> Unit)? = null,
 ) {
     val item = state.items.find { it.id == inventoryId }
     val movements = if (state.detailId == inventoryId) state.detailMovements else emptyList()
@@ -53,7 +56,12 @@ fun InventoryDetailScreen(
                         }
                     }
                 }
-                item { Text("MOVIMIENTOS RECIENTES", style = MaterialTheme.typography.labelLarge) }
+                item {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("MOVIMIENTOS RECIENTES", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                        if (onHistory != null) TextButton(onClick = onHistory) { Text("Ver historial") }
+                    }
+                }
                 if (movements.isEmpty()) item {
                     Text("Aún no hay movimientos. La existencia corresponde al saldo inicial.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -81,11 +89,11 @@ fun InventoryDetailScreen(
 }
 
 /** Símbolos y colores por tipo según los mockups del equipo; el tipo se lee del movimiento. */
-private fun movementHeadline(type: String, quantity: Float, unit: String) =
+internal fun movementHeadline(type: String, quantity: Float, unit: String) =
     "${movementSymbol(type)} ${movementLabel(type)} · ${Quantity.format(quantity)} $unit"
 
 /** Un ajuste puede sumar o restar, por eso «±» y no el signo de RT_10. */
-private fun movementSymbol(type: String) = when (type) {
+internal fun movementSymbol(type: String) = when (type) {
     MovementType.ENTRADA -> "+"
     MovementType.AJUSTE -> "±"
     MovementType.SALIDA, MovementType.CONSUMO, MovementType.PERDIDA -> "−"
@@ -93,14 +101,14 @@ private fun movementSymbol(type: String) = when (type) {
 }
 
 @Composable
-private fun movementColor(type: String) = when (type) {
+internal fun movementColor(type: String) = when (type) {
     MovementType.PERDIDA -> MaterialTheme.colorScheme.error
     MovementType.SALIDA, MovementType.CONSUMO -> MaterialTheme.colorScheme.onTertiaryContainer
     MovementType.AJUSTE -> MaterialTheme.colorScheme.onSurfaceVariant
     else -> MaterialTheme.colorScheme.primary
 }
 
-private fun movementLabel(type: String) = when (type) {
+internal fun movementLabel(type: String) = when (type) {
     MovementType.ENTRADA -> "Entrada"
     MovementType.SALIDA -> "Salida"
     MovementType.CONSUMO -> "Consumo"
@@ -109,7 +117,7 @@ private fun movementLabel(type: String) = when (type) {
     else -> type
 }
 
-private fun syncLabel(status: String) = when (status) {
+internal fun syncLabel(status: String) = when (status) {
     SyncStatus.SYNCED -> "Sincronizado"
     SyncStatus.SYNCING -> "Sincronizando…"
     SyncStatus.ERROR -> "Error al sincronizar · se reintentará"

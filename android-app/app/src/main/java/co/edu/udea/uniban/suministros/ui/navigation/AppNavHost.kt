@@ -92,6 +92,9 @@ fun AppNavHost(
     val entryFactory = remember {
         viewModelFactory { initializer { EntryViewModel(checkNotNull(currentRepository), createSavedStateHandle()) } }
     }
+    val historyFactory = remember {
+        viewModelFactory { initializer { HistoryViewModel(checkNotNull(currentRepository), createSavedStateHandle()) } }
+    }
     val parcelsFactory = remember {
         viewModelFactory { initializer { ParcelsViewModel(checkNotNull(currentParcelRepository)) } }
     }
@@ -150,6 +153,7 @@ fun AppNavHost(
                     navigationBar = if (tabsEnabled) {
                         { MainBottomBar(MainTab.INVENTORY, openTab) }
                     } else null,
+                    onHistory = { navController.navigate(AppDestinations.history()) { launchSingleTop = true } },
                 )
             }
             composable(
@@ -165,6 +169,26 @@ fun AppNavHost(
                     onBack = { navController.popBackStack() },
                     onRetry = inventoryViewModel::load,
                     onNewEntry = { navController.navigate(AppDestinations.entry(id)) { launchSingleTop = true } },
+                    onHistory = { navController.navigate(AppDestinations.history(id)) { launchSingleTop = true } },
+                )
+            }
+            composable(
+                AppDestinations.HISTORY,
+                arguments = listOf(navArgument("inventoryId") { type = NavType.StringType; defaultValue = "" }),
+            ) {
+                // ViewModel propio de la pantalla: los filtros se reinician cada vez que se abre.
+                val historyViewModel: HistoryViewModel = viewModel(factory = historyFactory)
+                val state by historyViewModel.state.collectAsStateWithLifecycle()
+                HistoryScreen(
+                    state = state,
+                    onBack = { navController.popBackStack() },
+                    onRetry = historyViewModel::load,
+                    onSelectSupply = historyViewModel::selectSupply,
+                    onToggleType = historyViewModel::toggleType,
+                    onSelectParcel = historyViewModel::selectParcel,
+                    onChangeFrom = historyViewModel::changeFrom,
+                    onChangeTo = historyViewModel::changeTo,
+                    onClearFilters = historyViewModel::clearFilters,
                 )
             }
             composable(

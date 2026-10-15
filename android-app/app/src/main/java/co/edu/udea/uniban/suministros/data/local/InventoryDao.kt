@@ -45,6 +45,29 @@ interface InventoryDao {
     """)
     fun observeParcelConsumptions(parcelId: String): Flow<List<ParcelConsumption>>
 
+    // --- Historial y trazabilidad (HU_07) ---
+
+    /**
+     * Todos los movimientos registrados en este dispositivo, del más reciente al más antiguo, con el
+     * insumo y la parcela. `cycleActive` indica si el ciclo del consumo sigue siendo el activo.
+     */
+    @Query("""
+        SELECT m.id, m.inventoryId, s.name AS supplyName, s.unit, m.type, m.quantity, m.date, m.createdAt,
+            m.observation, m.syncStatus, m.parcelId, p.name AS parcelName, m.cycleId,
+            (c.id IS NOT NULL AND c.endDate IS NULL) AS cycleActive, m.lossReason
+        FROM movements m JOIN inventory i ON m.inventoryId = i.id JOIN supplies s ON i.supplyId = s.id
+        LEFT JOIN parcels p ON m.parcelId = p.id
+        LEFT JOIN production_cycles c ON m.cycleId = c.id
+        ORDER BY m.date DESC, m.createdAt DESC
+    """)
+    fun observeHistory(): Flow<List<HistoryMovement>>
+
+    @Query("""
+        SELECT i.id, s.name, s.unit, i.initialQuantity, i.quantity
+        FROM inventory i JOIN supplies s ON i.supplyId = s.id ORDER BY s.name
+    """)
+    fun observeBalances(): Flow<List<InventoryBalance>>
+
     @Query("SELECT COUNT(*) FROM movements WHERE syncStatus <> 'SYNCED'")
     fun observePendingCount(): Flow<Int>
 
