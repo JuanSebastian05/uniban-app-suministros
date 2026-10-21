@@ -17,6 +17,31 @@
     <string name="login_demo">Continuar en modo demo</string>
     <string name="login_logo_description">Logotipo de la aplicación</string>
     <string name="login_checking_session">Comprobando sesión…</string>
+    <string name="login_create_account">¿No tiene cuenta? Crear cuenta</string>
+
+    <!-- Registro de usuarios (HU_01) -->
+    <string name="register_title">Crear cuenta</string>
+    <string name="register_name_label">Nombre completo</string>
+    <string name="register_name_placeholder">Ana Pérez</string>
+    <string name="register_document_label">Documento de identidad</string>
+    <string name="register_document_placeholder">1020304050</string>
+    <string name="register_phone_label">Teléfono (opcional)</string>
+    <string name="register_phone_placeholder">3001234567</string>
+    <string name="register_password_placeholder">Mínimo 6 caracteres</string>
+    <string name="register_confirm_label">Confirmar contraseña</string>
+    <string name="register_submit">Crear cuenta</string>
+    <string name="register_submitting">Creando cuenta…</string>
+    <string name="register_have_account">¿Ya tiene cuenta? Iniciar sesión</string>
+
+    <!-- Errores de registro -->
+    <string name="register_error_empty">Complete los campos obligatorios.</string>
+    <string name="register_error_short_password">La contraseña debe tener al menos 6 caracteres.</string>
+    <string name="register_error_mismatch">Las contraseñas no coinciden.</string>
+    <string name="register_error_email_in_use">Ya existe una cuenta con este correo. Inicie sesión.</string>
+    <string name="register_error_weak_password">La contraseña es muy débil. Use una más segura.</string>
+    <string name="register_error_network">Sin conexión. Se necesita internet para crear la cuenta.</string>
+    <string name="register_error_server">No se pudo guardar su perfil. Intente de nuevo.</string>
+    <string name="register_error_unknown">No se pudo crear la cuenta. Intente de nuevo.</string>
 
     <!-- Errores de inicio de sesión -->
     <string name="login_error_empty">Por favor ingrese sus credenciales.</string>

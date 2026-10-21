@@ -1,5 +1,10 @@
 """Modelos ORM (SQLAlchemy) de PostgreSQL.
 
-Vacío a propósito: las tablas del MER (docs/modelo-datos/MERv2.drawio) se crearán
-a medida que se implementen las HU. Cada modelo hereda de ``app.db.base.Base``.
+Importar aquí cada modelo para que ``Base.metadata`` (y Alembic) los conozca.
 """
+
+from app.models.inventory import Inventory, Location, Movement, Producer, Supply
+from app.models.parcel import Parcel, ProductionCycle
+from app.models.user import User
+
+__all__ = ["Inventory", "Location", "Movement", "Parcel", "Producer", "ProductionCycle", "Supply", "User"]

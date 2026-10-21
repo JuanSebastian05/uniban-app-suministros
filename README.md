@@ -2,7 +2,7 @@
 
 Repositorio para la realización del proyecto **Uniban – Proyecto Integrador 1 de la Universidad de Antioquia (UdeA)**.
 
-> **Estado actual: HU_01 (inicio de sesión) y HU_04 (entrada local con datos demo en Room) implementadas.**
+> **Estado actual: HU_01 (inicio de sesión y registro), HU_02 (consulta de parcelas), HU_03, HU_04, HU_05 (consumos y pérdidas), HU_06, HU_07 (historial) y HU_14 (registro de parcelas) implementadas.**
 > La primera entrega se limita a **HU_01, HU_03, HU_04 y HU_06**.
 
 ## Objetivo
@@ -70,14 +70,15 @@ Android SDK 35, emulador o dispositivo con Android 8.0 (API 26) o superior.
 1. En Android Studio: **File → Open** → seleccionar la carpeta `android-app/`.
 2. (Opcional) Copiar `android-app/local.properties.example` a `android-app/local.properties` y ajustar `api.baseUrl`.
    Por defecto se usa `http://10.0.2.2:8000/` (backend local visto desde el emulador).
-3. Para iniciar sesión, colocar `google-services.json` (consola de Firebase) en `android-app/app/` y
-   crear un usuario en **Authentication → Users → Add user** (no hay registro público; ver
-   [`docs/hu01.md`](docs/hu01.md)). El proyecto compila sin el archivo, que **no se sube** al repositorio.
+3. Para iniciar sesión, colocar `google-services.json` (consola de Firebase) en `android-app/app/`.
+   Las cuentas se crean desde la app con **Crear cuenta** (requiere el backend con `FIREBASE_PROJECT_ID`
+   y la migración `0002`); ver [`docs/hu01.md`](docs/hu01.md#registro-de-usuarios). El proyecto compila sin el archivo, que **no se sube** al repositorio.
    Sin él, el build **debug** muestra el aviso de Firebase sin configurar y el botón
    «Continuar en modo demo», que no existe en release.
 4. Sincronizar Gradle y ejecutar la configuración `app`. La primera pantalla es el **inicio de sesión**;
    tras autenticarse (o entrar en modo demo) se abre **Inventario** con seis insumos demo.
-   Con una sesión previa, la app abre directo en Inventario aun sin conexión.
+   Con una sesión previa, la app abre directo en Inventario aun sin conexión. La barra inferior
+   cambia entre **Parcelas** e **Inventario**.
 
 Por línea de comandos (desde `android-app/`): `./gradlew assembleDebug` y `./gradlew testDebugUnitTest`
 (en Windows: `gradlew.bat assembleDebug`).
@@ -98,6 +99,7 @@ uvicorn app.main:app --reload
 - `GET http://localhost:8000/health` → `{"status": "ok"}` (endpoint técnico, no es una HU)
 - Documentación OpenAPI: `http://localhost:8000/docs`
 - Pruebas: `pytest`
+- Tablas: `alembic upgrade head` (hasta la migración `0005`: parcelas y ciclos de HU_14, consumos y pérdidas de HU_05).
 
 Más detalles en [`backend/README.md`](backend/README.md).
 
@@ -105,7 +107,7 @@ Más detalles en [`backend/README.md`](backend/README.md).
 
 | Dónde | Archivo (no versionado) | Plantilla | Claves |
 |-------|-------------------------|-----------|--------|
-| Backend | `backend/.env` | `backend/.env.example` | `DATABASE_URL`, `CORS_ORIGINS`, `ENVIRONMENT`, `API_V1_PREFIX`, `APP_NAME` |
+| Backend | `backend/.env` | `backend/.env.example` | `DATABASE_URL`, `FIREBASE_PROJECT_ID`, `CORS_ORIGINS`, `ENVIRONMENT`, `API_V1_PREFIX`, `APP_NAME` |
 | Android | `android-app/local.properties` | `android-app/local.properties.example` | `sdk.dir`, `api.baseUrl` |
 | Firebase | `android-app/app/google-services.json` | — (se descarga de la consola de Firebase) | — |
 
@@ -114,7 +116,7 @@ Ningún secreto (contraseñas, cadenas de conexión, claves) debe subirse al rep
 ## Documentación disponible
 
 - **Anteproyecto:** [`AnteproyectoInicial-PI1-Equipo3-Uniban.pdf`](docs/avances/AnteproyectoInicial-PI1-Equipo3-Uniban.pdf) – propuesta inicial y planteamiento general.
-- **Requisitos e historias de usuario:** [`HU_y_Requisitos_Tecnicos_Equipo3.pdf`](docs/requisitos/HU_y_Requisitos_Tecnicos_Equipo3.pdf) – 12 HU y 18 requisitos técnicos.
+- **Requisitos e historias de usuario:** [`HU_y_Requisitos_Tecnicos_Equipo3.pdf`](docs/requisitos/HU_y_Requisitos_Tecnicos_Equipo3.pdf) – 14 HU y 18 requisitos técnicos (incluye HU_13, registro, y HU_14, registro de parcelas).
 - **Modelo de datos:** [`MERv2.drawio`](docs/modelo-datos/MERv2.drawio).
 - **Mockups:** [`MockupsFigma.zip`](docs/mockups/MockupsFigma.zip).
 - **Arquitectura:** [`docs/arquitectura/README.md`](docs/arquitectura/README.md).
@@ -126,17 +128,21 @@ Ningún secreto (contraseñas, cadenas de conexión, claves) debe subirse al rep
 - [x] Lectura local de inventario y movimientos como soporte de HU_04.
 - [x] Esqueleto backend FastAPI con `/health`, `/api/v1` y configuración por entorno.
 - [x] HU_01: inicio y cierre de sesión con Firebase Authentication (ver [`docs/hu01.md`](docs/hu01.md)).
-- [ ] Separación de datos locales por sesión (se completa con HU_03).
-- [ ] HU_03: integración del inventario con la sesión y el catálogo real.
-- [ ] HU_06: envío de movimientos al servidor. Por ahora permanecen `PENDING`.
+- [x] Registro de usuarios: cuenta en Firebase y perfil de productor en PostgreSQL (`/api/v1/users/register`).
+- [x] HU_03: consulta de inventario y movimientos recientes sin conexión, con saldo consistente con su historial (RT_10). Ver [`docs/hu03.md`](docs/hu03.md). Falta separar los datos locales por sesión y usar el catálogo real.
+- [x] HU_05: consumos (con parcela y ciclo activo) y pérdidas (con motivo) que restan existencia sin dejarla negativa, sin conexión y sincronizados. Ver [`docs/hu05.md`](docs/hu05.md).
+- [x] HU_06: sincronización de movimientos con PostgreSQL (Neon) vía FastAPI, WorkManager y `SYNCED/ERROR`. Ver [`docs/hu06.md`](docs/hu06.md).
+- [x] HU_02: lista de parcelas y detalle con su ciclo activo (fechas y etapa) o aviso sin ciclo; funciona sin conexión. Ver [`docs/hu02.md`](docs/hu02.md).
+- [x] HU_07: historial de movimientos por insumo (con resumen inicial + entradas − consumos − pérdidas = existencia) y general, con filtros por insumo, tipo, parcela y fechas; sin conexión. Ver [`docs/hu07.md`](docs/hu07.md).
+- [x] HU_14: registro de parcelas con ciclo productivo opcional (`/api/v1/parcels`), copia local en Room (versión 2) y barra inferior Parcelas / Inventario. Ver [`docs/hu14.md`](docs/hu14.md).
 
 La guía de implementación y demostración está en [`docs/hu04.md`](docs/hu04.md).
 
 ## Próximos pasos
 
-- Reemplazar el productor demo por la sesión autorizada (HU_03, usando el `uid` de HU_01).
-- Implementar HU_06 con envío idempotente y reintentos de los movimientos locales.
-- Incorporar migraciones al cambiar el esquema Room y crear las primeras tablas PostgreSQL.
+- HU de ajustes de inventario (AJUSTE) y definición del tipo SALIDA (ver [`docs/hu05.md`](docs/hu05.md#pendiente)).
+- Pendientes de HU_14 (ver [`docs/hu14.md`](docs/hu14.md#pendientes-del-equipo)): actualizar el MER y acordar `id_parcela` con el Equipo 1.
+- Cada cambio del esquema local exige subir la versión de Room y versionar el nuevo `app/schemas/.../N.json` (HU_14 usa `AutoMigration` 1 → 2 y HU_05, 2 → 3).
 
 ## Equipo
 

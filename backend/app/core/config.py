@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     # debe definirse en .env, p. ej. postgresql+psycopg://usuario:clave@localhost:5432/uniban
     database_url: str | None = None
 
+    # ID del proyecto de Firebase: necesario para verificar los tokens que envía la app (HU_01).
+    firebase_project_id: str | None = None
+
     # Orígenes permitidos para CORS (separados por coma). Solo necesario en desarrollo web.
     cors_origins: str = Field(default="")
 

@@ -15,7 +15,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             UnibanTheme {
                 val app = application as UnibanApplication
-                AppNavHost(app.inventoryRepository, app.authRepository)
+                AppNavHost(app::inventoryRepository, app.authRepository, parcelRepositoryFor = app::parcelRepository)
             }
         }
     }

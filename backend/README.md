@@ -3,8 +3,12 @@
 API central del sistema. La app Android solo se comunica con este backend (RT_11);
 cualquier integración con los Equipos 1 y 2 pasará por aquí en el futuro.
 
-**Estado actual:** arquitectura base/configuración inicial. Solo existe el endpoint técnico
-`GET /health`. No hay endpoints de dominio ni tablas creadas.
+**Estado actual:** `GET /health`, `POST /api/v1/movements` (HU_06: recepción idempotente de
+movimientos), `GET /api/v1/inventory` (existencias del usuario) y `POST /api/v1/users/register` /
+`GET /api/v1/users/me` (registro de usuarios, HU_01) y `POST` / `GET /api/v1/parcels` (registro y
+consulta de parcelas con su ciclo activo, HU_14; ver [`docs/hu14.md`](../docs/hu14.md)). Todo `/api/v1` exige el token de Firebase y
+cada usuario solo lee y modifica el inventario y las parcelas de su propio productor. Las tablas se crean con Alembic: `alembic upgrade head` (requiere `DATABASE_URL`).
+Ver [`docs/hu06.md`](../docs/hu06.md).
 
 ## Estructura
 
@@ -12,15 +16,16 @@ cualquier integración con los Equipos 1 y 2 pasará por aquí en el futuro.
 backend/
 ├── app/
 │   ├── main.py            # crea la app FastAPI, CORS, /health e incluye /api/v1
-│   ├── api/v1/router.py   # router raíz de /api/v1 (vacío)
+│   ├── api/v1/            # router raíz y endpoints (movements: HU_06)
 │   ├── core/config.py     # configuración por variables de entorno (pydantic-settings)
 │   ├── db/
 │   │   ├── base.py        # Base declarativa de SQLAlchemy
 │   │   └── session.py     # engine perezoso + dependencia get_db()
-│   ├── models/            # modelos ORM (vacío)
-│   ├── schemas/           # esquemas Pydantic / contratos OpenAPI (vacío)
-│   └── (HU_03/04/06: endpoints y lógica mínima de inventario)
-├── tests/test_health.py   # PyTest: /health y /openapi.json
+│   ├── models/            # modelos ORM (productor, ubicación, insumo, inventario, movimiento, parcela, ciclo)
+│   ├── schemas/           # esquemas Pydantic / contratos OpenAPI
+│   └── services/          # lógica de sincronización idempotente (HU_06)
+├── migrations/            # Alembic (0001: inventario y movimientos; 0002: usuarios)
+├── tests/                 # PyTest: /health, /openapi.json y movimientos
 ├── requirements.txt
 ├── pytest.ini
 └── .env.example
@@ -69,9 +74,9 @@ pytest
 | `ENVIRONMENT`   | `development` / `production`                              | `development` |
 | `API_V1_PREFIX` | Prefijo de la API versionada                              | `/api/v1` |
 | `DATABASE_URL`  | Conexión SQLAlchemy a PostgreSQL (**secreto**, solo en `.env`) | `postgresql+psycopg://USUARIO:CLAVE@localhost:5432/uniban_suministros` |
+| `FIREBASE_PROJECT_ID` | ID del proyecto de Firebase; verifica los tokens de `/api/v1` | `uniban-suministros` |
 | `CORS_ORIGINS`  | Orígenes permitidos separados por coma (vacío = sin CORS) | `http://localhost:3000` |
 
 ## Decisiones pendientes
 
-- Migraciones (Alembic) al crear la primera tabla de inventario.
-- Verificación de tokens de Firebase en el backend (HU_01 / RT_13).
+- Validar el rol (RT_17): hoy todo usuario registrado es productor y solo ve lo suyo.

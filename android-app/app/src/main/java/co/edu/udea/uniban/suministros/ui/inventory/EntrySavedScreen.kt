@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import co.edu.udea.uniban.suministros.data.Quantity
 import co.edu.udea.uniban.suministros.data.SavedEntry
+import co.edu.udea.uniban.suministros.data.local.MovementType
 
 @Composable
 fun EntrySavedScreen(entry: SavedEntry, onDone: () -> Unit) {
@@ -54,7 +55,7 @@ fun EntrySavedScreen(entry: SavedEntry, onDone: () -> Unit) {
                 ) {
                     Text("Insumo actualizado", style = MaterialTheme.typography.labelSmall)
                     Text(entry.supplyName, style = MaterialTheme.typography.titleSmall)
-                    Text("Entrada · ${Quantity.format(entry.quantity)} ${entry.unit}",
+                    Text("${MovementType.label(entry.type)} · ${Quantity.format(entry.quantity)} ${entry.unit}",
                         color = MaterialTheme.colorScheme.primary)
                 }
             }

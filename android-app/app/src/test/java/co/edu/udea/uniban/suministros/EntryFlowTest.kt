@@ -34,7 +34,7 @@ class EntryFlowTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         database = Room.inMemoryDatabaseBuilder(context, InventoryDatabase::class.java).build()
         repository = InventoryRepository(database)
-        compose.setContent { UnibanTheme { AppNavHost(repository, FakeAuthRepository(SessionState.Authenticated("uid-1", "ana@unibanagro.com"))) } }
+        compose.setContent { UnibanTheme { AppNavHost({ repository }, FakeAuthRepository(SessionState.Authenticated("uid-1", "ana@unibanagro.com"))) } }
     }
 
     @After
