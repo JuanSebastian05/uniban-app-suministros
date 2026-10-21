@@ -60,6 +60,11 @@ uvicorn app.main:app --reload
 Para que el emulador Android lo alcance se usa `http://10.0.2.2:8000/`. Desde un dispositivo
 físico, ejecutar `uvicorn app.main:app --reload --host 0.0.0.0` y usar la IP local del PC.
 
+## Despliegue
+
+Publicado en Render: **https://uniban-app-suministros.onrender.com/**. Configuración (carpeta raíz `backend`,
+comandos y variables de entorno) en [`../docs/despliegue-render.md`](../docs/despliegue-render.md).
+
 ## Pruebas
 
 ```bash
