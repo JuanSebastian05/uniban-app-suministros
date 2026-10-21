@@ -70,6 +70,7 @@ Android SDK 35, emulador o dispositivo con Android 8.0 (API 26) o superior.
 1. En Android Studio: **File → Open** → seleccionar la carpeta `android-app/`.
 2. (Opcional) Copiar `android-app/local.properties.example` a `android-app/local.properties` y ajustar `api.baseUrl`.
    Por defecto se usa `http://10.0.2.2:8000/` (backend local visto desde el emulador).
+   Para usar el backend desplegado: `api.baseUrl=https://uniban-app-suministros.onrender.com/` (ver [`docs/despliegue-render.md`](docs/despliegue-render.md)).
 3. Para iniciar sesión, colocar `google-services.json` (consola de Firebase) en `android-app/app/`.
    Las cuentas se crean desde la app con **Crear cuenta** (requiere el backend con `FIREBASE_PROJECT_ID`
    y la migración `0002`); ver [`docs/hu01.md`](docs/hu01.md#registro-de-usuarios). El proyecto compila sin el archivo, que **no se sube** al repositorio.
@@ -102,6 +103,17 @@ uvicorn app.main:app --reload
 - Tablas: `alembic upgrade head` (hasta la migración `0005`: parcelas y ciclos de HU_14, consumos y pérdidas de HU_05).
 
 Más detalles en [`backend/README.md`](backend/README.md).
+
+## Backend desplegado (Render)
+
+El backend de pruebas está publicado en **https://uniban-app-suministros.onrender.com/** (rama `main`, plan gratuito).
+Los otros equipos y la app en el celular lo usan sin necesidad de correr nada en el PC.
+
+- Salud: <https://uniban-app-suministros.onrender.com/health> · Documentación: <https://uniban-app-suministros.onrender.com/docs>
+- En el plan gratuito el servicio se **duerme tras 15 minutos sin uso**; la primera petición tarda cerca de un minuto. Abrir `/health` antes de una prueba o demo.
+- Usa la misma base de datos de Neon que el equipo. Las migraciones se aplican a mano (`alembic upgrade head`) desde un equipo con acceso a esa base.
+
+Pasos y configuración completos en [`docs/despliegue-render.md`](docs/despliegue-render.md).
 
 ## Variables de entorno y configuración local
 
