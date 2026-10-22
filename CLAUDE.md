@@ -108,6 +108,9 @@ cd backend; .venv\Scripts\python.exe -m alembic upgrade head
 
 - Room genera `app/schemas/.../N.json` al compilar: **súbelo** junto con el cambio de esquema.
 - `google-services.json` ausente: la app compila pero no permite iniciar sesión (en debug hay «modo demo»).
-- Render se duerme: el timeout de 30 s de la app puede fallar en el primer intento tras el sueño.
+- Render se duerme (≈ 1 min en despertar): la app espera hasta 90 s (`NetworkModule.READ_TIMEOUT_SECONDS`) y manda un
+  `GET /health` al abrirse (`NetworkModule.warmUp`). No bajes ese tiempo ni lo uses como excusa para reintentos ciegos.
+- `AuthRepository` tiene `profileState`/`refreshProfile`/`completeProfile` (cuenta de Firebase sin perfil en el
+  backend → pantalla «Complete su perfil»). Cualquier fake o implementación nueva debe cubrirlos (`FakeAuthRepository`).
 - El shell `bash` de algunas máquinas Windows no trae `ls`/`head`: usa PowerShell.
 - `.idea/` tiene archivos versionados desde antes del `.gitignore`; no los modifiques por accidente.

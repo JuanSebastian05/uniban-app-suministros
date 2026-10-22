@@ -153,6 +153,14 @@ private fun RegisterForm(
         modifier = Modifier.testTag("register-confirm"),
     )
     state.error?.let { ErrorBanner(stringResource(it.messageRes())) }
+    if (state.isLoading) {
+        Text(
+            stringResource(R.string.server_wakeup_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testTag("server-wakeup-hint"),
+        )
+    }
     Button(
         onClick = onSubmit,
         enabled = enabled,

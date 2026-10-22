@@ -32,6 +32,25 @@ internal suspend fun sendProfile(api: UserApi, idToken: String, registration: Re
         Result.failure(AuthException(AuthError.Server))
     }
 
+/**
+ * Consulta si la cuenta del token tiene perfil: 200 = [ProfileState.Complete], 404 = [ProfileState.Missing].
+ * Cualquier otra cosa (sin red, 401, 5xx, servidor dormido) es [ProfileState.Unknown]: no se debe
+ * bloquear al productor por un fallo que no prueba que le falte el perfil.
+ */
+internal suspend fun fetchProfileState(api: UserApi, idToken: String): ProfileState =
+    try {
+        val response = api.me("Bearer $idToken")
+        when {
+            response.isSuccessful -> ProfileState.Complete
+            response.code() == 404 -> ProfileState.Missing
+            else -> ProfileState.Unknown
+        }
+    } catch (error: CancellationException) {
+        throw error
+    } catch (_: Exception) {
+        ProfileState.Unknown
+    }
+
 private fun errorCode(response: Response<*>): String? = runCatching {
     Gson().fromJson(response.errorBody()?.charStream(), ApiErrorDto::class.java)?.detail?.code
 }.getOrNull()

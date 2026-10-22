@@ -48,8 +48,11 @@ movimientos pendientes. Ya no se necesita `adb reverse` ni `uvicorn` local.
 
 ## Cosas a tener en cuenta
 
-- **Se duerme tras 15 minutos sin uso.** La primera petición tarda cerca de un minuto; la app deja el envío como
-  pendiente y lo reintenta. Antes de una prueba o demo, abrir `/health` para despertarlo.
+- **Se duerme tras 15 minutos sin uso.** La primera petición tarda cerca de un minuto. La app lo tiene en cuenta
+  (P-02): espera hasta 90 s por la respuesta (`NetworkModule.READ_TIMEOUT_SECONDS`), manda un `GET /health` al
+  abrirse para despertarlo mientras el productor llena el formulario, y el registro y la creación de parcelas
+  avisan «puede tardar hasta un minuto». Los movimientos pendientes siguen reintentándose. Antes de una prueba o
+  demo conviene abrir `/health` en el navegador.
 - **Migraciones:** no se ejecutan en Render. Se aplican con `alembic upgrade head` desde un equipo con la
   `DATABASE_URL` de Neon (idealmente en una rama de desarrollo de Neon antes de tocar la base compartida).
   El código desplegado debe corresponder a la versión de la base: hoy, migración `0005`.

@@ -18,7 +18,9 @@ class UnibanApplication : Application() {
     /** Una base local por cuenta (uid de Firebase); se abre la primera vez que se usa. */
     private val databases = ConcurrentHashMap<String, InventoryDatabase>()
 
-    private val retrofit by lazy { NetworkModule.createRetrofit() }
+    private val httpClient by lazy { NetworkModule.createOkHttpClient() }
+
+    private val retrofit by lazy { NetworkModule.createRetrofit(httpClient) }
 
     private val movementApi by lazy { retrofit.create(MovementApi::class.java) }
 
@@ -49,6 +51,8 @@ class UnibanApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Despierta el servidor (Render lo duerme a los 15 min) mientras el productor abre la app.
+        NetworkModule.warmUp(httpClient)
         // Retoma lo que quedó pendiente (o interrumpido) en la sesión anterior.
         SyncScheduler.enqueue(this)
         SyncScheduler.schedulePeriodic(this)

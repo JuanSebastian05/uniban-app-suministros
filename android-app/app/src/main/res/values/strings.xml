@@ -44,6 +44,17 @@
     <string name="register_error_server">No se pudo guardar su perfil. Intente de nuevo.</string>
     <string name="register_error_unknown">No se pudo crear la cuenta. Intente de nuevo.</string>
 
+    <!-- Servidor dormido (Render se duerme a los 15 min y tarda ≈ 1 min en despertar) -->
+    <string name="server_wakeup_hint">Si el servidor estaba inactivo, esto puede tardar hasta un minuto. No cierre la app.</string>
+
+    <!-- Completar perfil (cuenta de Firebase sin perfil en el backend, P-02) -->
+    <string name="complete_profile_title">Complete su perfil</string>
+    <string name="complete_profile_message">Su cuenta %1$s aún no tiene perfil en Unibán Suministros. Complete sus datos para continuar.</string>
+    <string name="complete_profile_submit">Guardar perfil</string>
+    <string name="complete_profile_submitting">Guardando…</string>
+    <string name="complete_profile_sign_out">Usar otra cuenta</string>
+    <string name="complete_profile_error_network">Sin conexión. Se necesita internet para guardar su perfil.</string>
+
     <!-- Errores de inicio de sesión -->
     <string name="login_error_empty">Por favor ingrese sus credenciales.</string>
     <string name="login_error_invalid_email">Ingrese un correo válido.</string>

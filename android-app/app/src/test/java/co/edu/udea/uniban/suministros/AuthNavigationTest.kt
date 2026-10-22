@@ -8,6 +8,9 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import co.edu.udea.uniban.suministros.data.InventoryRepository
+import co.edu.udea.uniban.suministros.data.auth.AuthError
+import co.edu.udea.uniban.suministros.data.auth.AuthException
+import co.edu.udea.uniban.suministros.data.auth.ProfileState
 import co.edu.udea.uniban.suministros.data.auth.SessionState
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
 import co.edu.udea.uniban.suministros.ui.navigation.AppNavHost
@@ -161,6 +164,76 @@ class AuthNavigationTest {
         } finally {
             luisDatabase.close()
         }
+    }
+
+    // --- P-02: cuenta de Firebase sin perfil en el backend (registro interrumpido) ---
+
+    @Test
+    fun accountWithoutProfileMustCompleteItAndThenReturnsToInventory() {
+        val auth = FakeAuthRepository(SessionState.Authenticated("uid-1", "ana@unibanagro.com"))
+        auth.profileOnRefresh = ProfileState.Missing
+        launch(auth)
+        awaitTag("complete-profile-submit")
+        assertAbsent("inventory-list")
+        compose.onNodeWithTag("complete-profile-name").performTextInput("Ana Pérez")
+        compose.onNodeWithTag("complete-profile-document").performTextInput("1020304050")
+        compose.onNodeWithTag("complete-profile-submit").performScrollTo().performClick()
+        awaitTag("inventory-list")
+        assertEquals(listOf(Triple("Ana Pérez", "1020304050", null)), auth.completeProfileCalls)
+        // Atrás no reabre la pantalla de completar el perfil.
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        assertAbsent("complete-profile-submit")
+    }
+
+    @Test
+    fun completingTheProfileFailsKeepsTheFormWithItsDataAndExplainsWhy() {
+        val auth = FakeAuthRepository(SessionState.Authenticated("uid-1", "ana@unibanagro.com"))
+        auth.profileOnRefresh = ProfileState.Missing
+        auth.onCompleteProfile = { _, _, _ -> Result.failure(AuthException(AuthError.DocumentInUse)) }
+        launch(auth)
+        awaitTag("complete-profile-submit")
+        compose.onNodeWithTag("complete-profile-name").performTextInput("Ana Pérez")
+        compose.onNodeWithTag("complete-profile-document").performTextInput("1020304050")
+        compose.onNodeWithTag("complete-profile-submit").performScrollTo().performClick()
+        compose.waitUntil(15_000) {
+            compose.onAllNodesWithText("Ya existe una cuenta con este documento", substring = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithTag("complete-profile-name").assertTextContains("Ana Pérez")
+        assertAbsent("inventory-list")
+    }
+
+    @Test
+    fun accountWithoutProfileCanSignOutInsteadOfCompletingIt() {
+        val auth = FakeAuthRepository(SessionState.Authenticated("uid-1", "ana@unibanagro.com"))
+        auth.profileOnRefresh = ProfileState.Missing
+        launch(auth)
+        awaitTag("complete-profile-sign-out")
+        compose.onNodeWithTag("complete-profile-sign-out").performScrollTo().performClick()
+        awaitTag("login-submit")
+        assertEquals(1, auth.signOutCalls)
+        assertAbsent("complete-profile-submit")
+    }
+
+    @Test
+    fun unknownProfileNeverBlocksTheOfflineUseOfTheApp() {
+        // Sin red (o servidor dormido) el backend no responde: la app sigue con los datos locales.
+        val auth = FakeAuthRepository(SessionState.Authenticated("uid-1", "ana@unibanagro.com"))
+        launch(auth)
+        awaitTag("inventory-list")
+        compose.waitUntil(15_000) { auth.refreshProfileCalls >= 1 }
+        assertAbsent("complete-profile-submit")
+    }
+
+    @Test
+    fun profileIsOnlyAskedWhenThereIsASession() {
+        val auth = FakeAuthRepository()
+        launch(auth)
+        awaitTag("login-submit")
+        assertEquals(0, auth.refreshProfileCalls)
+        auth.setSession(SessionState.Authenticated("uid-1", "ana@unibanagro.com"))
+        awaitTag("inventory-list")
+        compose.waitUntil(15_000) { auth.refreshProfileCalls == 1 }
     }
 
     @Test

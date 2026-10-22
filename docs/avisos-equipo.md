@@ -14,9 +14,28 @@
 | --- | --- | --- | --- |
 | 1 | Compañero de HU_09 (aforamientos) | Tu migración será la `0006`; la de HU_13 es la `0007`. Antes de tu PR, revisa `alembic heads` (ver A-01). | A-01 |
 | 2 | Quien despliegue (Juan José / Juan Sebastián) | Aplicar `0007` en Neon **antes** de hacer merge a `main`. Si no, todas las rutas autenticadas dan 500. | A-02 |
-| 3 | Compañero de HU_09–12 y Salidas | Hacer `git pull` de `develop` cuando entre el PR de pruebas: hasta entonces hay 30 pruebas de Android en rojo que no son tuyas. | A-03 |
+| 3 | Compañero de HU_09–12 y Salidas | Hacer `git pull origin develop`: el PR de pruebas (#14) ya entró; sin él hay 30 pruebas de Android en rojo que no son tuyas. | A-03 (resuelto en `develop`) |
 | 4 | Todos | Reglas nuevas para escribir pruebas (A-03) y para tocar archivos compartidos (A-04). | A-03, A-04 |
 | 5 | Quien haga SALIDA | Coordinar con Simon: AJUSTE y SALIDA tocan los mismos archivos. | A-05 |
+| 6 | Todos los que toquen autenticación o pruebas | `AuthRepository` tiene miembros nuevos; la espera HTTP ahora es de 90 s. Haz `git pull origin develop` y actualiza tus fakes. | A-06 |
+
+---
+
+## A-06 · 2026-10-21 · Simon · `AuthRepository` creció y la app despierta el servidor (P-02)
+
+- **Contrato nuevo.** `AuthRepository` ahora exige `profileState: StateFlow<ProfileState>`,
+  `suspend fun refreshProfile()` y `suspend fun completeProfile(name, document, phone)`. Si tu rama tiene un fake
+  propio que implementa la interfaz, **no compilará** hasta que lo completes; usa `FakeAuthRepository` de
+  `src/test` (campos `profileOnRefresh`, `onCompleteProfile`, `refreshProfileCalls`, `completeProfileCalls`).
+- **Navegación.** `AppNavHost` ya no solo mira la sesión: si el backend responde `404` a `GET /users/me`
+  (cuenta de Firebase sin perfil), el `SessionGuard` lleva a la ruta `AppDestinations.COMPLETE_PROFILE`. Si
+  agregas rutas o cambias el guard, respeta esa condición. Un perfil «desconocido» (sin red, servidor dormido)
+  **nunca** bloquea la app: no lo cambies a bloqueante, rompería HU_01 (uso sin conexión).
+- **Red.** `NetworkModule` espera hasta **90 s** la respuesta (Render tarda ≈ 1 min en despertar) y
+  `UnibanApplication` manda un `GET /health` al abrir. Un endpoint nuevo que el productor espere en pantalla
+  debe mostrar el aviso `R.string.server_wakeup_hint` mientras guarda. Las llamadas del `SyncWorker` no necesitan
+  cambios.
+- **Sin migración** ni cambios en el backend.
 
 ---
 
@@ -72,8 +91,9 @@ reglas:
 4. **No hagas merge con pruebas rojas.** Antes de abrir el PR:
    `cd android-app; .\gradlew.bat testDebugUnitTest` y `cd backend; .venv\Scripts\python.exe -m pytest -q`.
 
-**Qué hacer:** hasta que entre el PR `fix: dejar en verde las pruebas…` a `develop`, esas pruebas
-fallarán en tu rama sin que sea culpa tuya; después, haz `git pull origin develop`.
+**Qué hacer:** el PR `fix: dejar en verde las pruebas…` (#14) **ya está en `develop`** (resuelto el
+21/10/2026): haz `git pull origin develop` y esas pruebas dejan de fallar en tu rama. Si no lo haces, fallarán
+sin que sea culpa tuya.
 
 ## A-02 · 2026-10-21 · Simon · Orden de despliegue: migrar Neon **antes** del merge a `main`
 

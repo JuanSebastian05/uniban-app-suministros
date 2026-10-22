@@ -3,6 +3,7 @@ package co.edu.udea.uniban.suministros
 import android.app.Application
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import co.edu.udea.uniban.suministros.data.auth.AuthError
@@ -47,5 +48,17 @@ class RegisterScreenTest {
         show(RegisterUiState(error = RegisterError.Auth(AuthError.EmailInUse)))
         compose.onNodeWithText("Ya existe una cuenta con este correo. Inicie sesión.")
             .performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun whileCreatingTheAccountItWarnsThatTheServerMayBeWakingUp() {
+        show(RegisterUiState(isLoading = true))
+        compose.onNodeWithTag("server-wakeup-hint").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun noWakeupHintWhenIdle() {
+        show(RegisterUiState())
+        compose.onNodeWithTag("server-wakeup-hint").assertDoesNotExist()
     }
 }
