@@ -38,6 +38,7 @@
     <string name="register_error_short_password">La contraseña debe tener al menos 6 caracteres.</string>
     <string name="register_error_mismatch">Las contraseñas no coinciden.</string>
     <string name="register_error_email_in_use">Ya existe una cuenta con este correo. Inicie sesión.</string>
+    <string name="register_error_document_in_use">Ya existe una cuenta con este documento. Verifique el número o inicie sesión.</string>
     <string name="register_error_weak_password">La contraseña es muy débil. Use una más segura.</string>
     <string name="register_error_network">Sin conexión. Se necesita internet para crear la cuenta.</string>
     <string name="register_error_server">No se pudo guardar su perfil. Intente de nuevo.</string>
