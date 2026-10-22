@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
+import android.app.Application
 import co.edu.udea.uniban.suministros.data.local.ParcelConsumption
 import co.edu.udea.uniban.suministros.data.local.ParcelSummary
 import java.time.LocalDate
@@ -12,9 +13,11 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /** Detalle de parcela (HU_02): ciclo activo con fechas y etapa, o aviso explícito sin ciclo. */
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28], application = Application::class, qualifiers = "w411dp-h891dp")
 class ParcelDetailScreenTest {
     @get:Rule val compose = createComposeRule()
 
