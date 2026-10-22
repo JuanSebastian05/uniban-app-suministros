@@ -13,6 +13,8 @@ enum class AuthError {
     EmailInUse,
     /** Registro: Firebase rechazó la contraseña por débil. */
     WeakPassword,
+    /** Registro (HU_13): el backend rechazó el perfil porque otra cuenta ya usa ese documento. */
+    DocumentInUse,
     /** Registro: la cuenta se creó pero el backend no guardó el perfil. */
     Server,
     Unknown,

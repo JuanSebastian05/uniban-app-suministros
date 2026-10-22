@@ -48,6 +48,21 @@ class ProfileRegistrationTest {
     }
 
     @Test
+    fun duplicateDocumentIsItsOwnError() = runTest {
+        val body = """{"detail":{"code":"DUPLICATE_DOCUMENT","message":"Ya existe una cuenta con este documento."}}"""
+        val api = RecordingApi { Response.error(409, body.toResponseBody()) }
+        assertEquals(AuthError.DocumentInUse, sendProfile(api, "t", registration).error())
+    }
+
+    @Test
+    fun otherConflictsAreServerErrors() = runTest {
+        listOf("{}", """{"detail":{"code":"OTHER"}}""", "no es json").forEach { body ->
+            val api = RecordingApi { Response.error(409, body.toResponseBody()) }
+            assertEquals(AuthError.Server, sendProfile(api, "t", registration).error())
+        }
+    }
+
+    @Test
     fun noConnectionIsNetworkError() = runTest {
         val api = RecordingApi { throw IOException("sin red") }
         assertEquals(AuthError.Network, sendProfile(api, "t", registration).error())
