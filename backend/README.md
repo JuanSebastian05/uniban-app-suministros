@@ -5,7 +5,7 @@ cualquier integración con los Equipos 1 y 2 pasará por aquí en el futuro.
 
 **Estado actual:** `GET /health`, `POST /api/v1/movements` (HU_06: recepción idempotente de
 movimientos), `GET /api/v1/inventory` (existencias del usuario) y `POST /api/v1/users/register` /
-`GET /api/v1/users/me` (registro de usuarios, HU_01) y `POST` / `GET /api/v1/parcels` (registro y
+`GET /api/v1/users/me` (registro de usuarios, HU_01 y HU_13; el documento de identidad es único: `409 DUPLICATE_DOCUMENT`, ver [`docs/hu13.md`](../docs/hu13.md)) y `POST` / `GET /api/v1/parcels` (registro y
 consulta de parcelas con su ciclo activo, HU_14; ver [`docs/hu14.md`](../docs/hu14.md)). Todo `/api/v1` exige el token de Firebase y
 cada usuario solo lee y modifica el inventario y las parcelas de su propio productor. Las tablas se crean con Alembic: `alembic upgrade head` (requiere `DATABASE_URL`).
 Ver [`docs/hu06.md`](../docs/hu06.md).
@@ -24,7 +24,9 @@ backend/
 │   ├── models/            # modelos ORM (productor, ubicación, insumo, inventario, movimiento, parcela, ciclo)
 │   ├── schemas/           # esquemas Pydantic / contratos OpenAPI
 │   └── services/          # lógica de sincronización idempotente (HU_06)
-├── migrations/            # Alembic (0001: inventario y movimientos; 0002: usuarios)
+├── migrations/            # Alembic (0001 inventario y movimientos · 0002 usuarios · 0003 insumos por productor ·
+│                          #  0004 parcelas y ciclos · 0005 consumos y pérdidas · 0007 documento único; la 0006
+│                          #  está reservada para aforamientos). Numeración y orden de despliegue: ../docs/avisos-equipo.md
 ├── tests/                 # PyTest: /health, /openapi.json y movimientos
 ├── requirements.txt
 ├── pytest.ini

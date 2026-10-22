@@ -229,6 +229,7 @@ private fun LoginError.messageRes(): Int = when (this) {
         AuthError.AccountDisabled -> R.string.login_error_disabled
         AuthError.NotConfigured -> R.string.login_error_not_configured
         AuthError.EmailInUse -> R.string.register_error_email_in_use
+        AuthError.DocumentInUse -> R.string.register_error_document_in_use
         AuthError.WeakPassword -> R.string.register_error_weak_password
         AuthError.Server -> R.string.register_error_server
         AuthError.Unknown -> R.string.login_error_unknown

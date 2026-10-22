@@ -4,6 +4,9 @@ object AppDestinations {
     const val LOGIN = "login"
     const val REGISTER = "register"
 
+    /** Cuenta de Firebase sin perfil en el backend: completar los datos antes de usar la app (P-02). */
+    const val COMPLETE_PROFILE = "complete-profile"
+
     /** Grafo anidado con las pantallas internas; solo accesible con sesión. */
     const val MAIN = "main"
     const val INVENTORY = "inventory"
