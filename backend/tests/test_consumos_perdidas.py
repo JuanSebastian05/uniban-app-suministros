@@ -124,10 +124,20 @@ def test_puede_dejar_la_existencia_en_cero(client, session_factory):
 
 
 def test_no_permite_existencia_negativa(client, session_factory, parcel):
+    # El inventario se crea con el primer movimiento aceptado; un rechazo previo no deja nada guardado.
+    assert client.post(URL, json=movement("CONSUMO", 1, parcelId=parcel["id"])).status_code == 201
+    response = client.post(URL, json=movement("CONSUMO", 9.01, parcelId=parcel["id"]))
+    assert response.status_code == 409
+    assert stock(session_factory) == 9.0
+    assert count(session_factory) == 1
+
+
+def test_rechazo_del_primer_movimiento_no_deja_inventario(client, session_factory, parcel):
     response = client.post(URL, json=movement("CONSUMO", 10.01, parcelId=parcel["id"]))
     assert response.status_code == 409
-    assert stock(session_factory) == 10.0
     assert count(session_factory) == 0
+    with session_factory() as db:
+        assert db.get(Inventory, uuid.UUID(INVENTORY["id"])) is None
 
 
 def test_entrada_y_luego_consumo(client, session_factory, parcel):

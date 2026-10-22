@@ -23,7 +23,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28], application = Application::class)
+@Config(sdk = [28], application = Application::class, qualifiers = "w411dp-h891dp")
 class EntryFlowTest {
     @get:Rule val compose = createComposeRule()
     private lateinit var database: InventoryDatabase
@@ -47,7 +47,7 @@ class EntryFlowTest {
         }
         compose.onNodeWithTag("inventory-list").performScrollToNode(hasText("Fertilizante 15-15-15"))
         compose.onNodeWithText("Fertilizante 15-15-15").performClick()
-        compose.onNodeWithText("+ Registrar entrada").performClick()
+        compose.onNodeWithText("+ Registrar movimiento").performClick()
         compose.waitUntil(15_000) {
             compose.onAllNodesWithText("Cantidad").fetchSemanticsNodes().isNotEmpty()
         }

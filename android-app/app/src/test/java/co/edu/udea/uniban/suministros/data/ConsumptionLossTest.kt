@@ -1,5 +1,6 @@
 package co.edu.udea.uniban.suministros.data
 
+import android.app.Application
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
@@ -21,10 +22,12 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import retrofit2.Response
 
 /** Consumos y pérdidas (HU_05): restan sin dejar la existencia negativa y guardan parcela, ciclo o motivo. */
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28], manifest = Config.NONE, application = Application::class)
 class ConsumptionLossTest {
     private lateinit var database: InventoryDatabase
     private lateinit var repository: InventoryRepository
