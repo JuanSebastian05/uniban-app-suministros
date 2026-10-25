@@ -160,7 +160,7 @@ private fun HistoryCard(movement: HistoryMovement, showSupply: Boolean) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (showSupply) Text(movement.supplyName, style = MaterialTheme.typography.labelLarge)
             Text(
-                movementHeadline(movement.type, movement.quantity, movement.unit),
+                movementHeadline(movement.type, movement.quantity, movement.unit, movement.adjustDirection),
                 color = movementColor(movement.type),
                 style = MaterialTheme.typography.titleSmall,
             )

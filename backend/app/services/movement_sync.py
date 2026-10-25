@@ -3,8 +3,9 @@
 Reglas:
 - El UUID del movimiento identifica el registro. Reenviar el mismo contenido no duplica
   ni vuelve a sumar (DUPLICATE); reenviar el mismo UUID con otro contenido es un conflicto.
-- Los movimientos son solo de inserción. Se aceptan ENTRADA (suma) y, desde HU_05, CONSUMO y
-  PERDIDA (restan). La existencia nunca queda negativa: si no alcanza, es un conflicto.
+- Los movimientos son solo de inserción. Se aceptan ENTRADA (suma), CONSUMO y PERDIDA (restan, HU_05)
+  y AJUSTE (corrección: suma o resta según ``adjustDirection``, con el motivo en la observación).
+  La existencia nunca queda negativa: si no alcanza, es un conflicto.
 - Un consumo se asocia a una parcela del mismo productor y, si viene, a un ciclo de esa parcela.
 - Ubicación, insumo e inventario se insertan solo si no existen; nunca se sobrescriben.
   La existencia = inicial + movimientos recibidos, en la misma transacción.
@@ -26,8 +27,13 @@ from app.schemas.movements import InventoryIn, MovementIn
 logger = logging.getLogger(__name__)
 
 MAX_QUANTITY = Decimal("99999.99")
-SUPPORTED_TYPES = {"ENTRADA", "CONSUMO", "PERDIDA"}
+SUPPORTED_TYPES = {"ENTRADA", "CONSUMO", "PERDIDA", "AJUSTE"}
 SUBTRACTING_TYPES = {"CONSUMO", "PERDIDA"}
+
+
+def _subtracts(data: MovementIn) -> bool:
+    """Consumos y pérdidas restan; un ajuste resta solo si es una DISMINUCION."""
+    return data.type in SUBTRACTING_TYPES or (data.type == "AJUSTE" and data.adjust_direction == "DISMINUCION")
 
 
 class MovementConflict(Exception):
@@ -44,6 +50,7 @@ def _same_content(existing: Movement, data: MovementIn) -> bool:
         and existing.parcel_id == data.parcel_id
         and existing.cycle_id == data.cycle_id
         and existing.loss_reason == data.loss_reason
+        and existing.adjust_direction == data.adjust_direction
     )
 
 
@@ -126,7 +133,7 @@ def sync_movement(db: Session, data: MovementIn, producer_id: uuid.UUID) -> str:
         with db.begin_nested():
             inventory = _ensure_inventory(db, data.inventory, producer_id)
             _check_parcel(db, data, producer_id)
-            if data.type in SUBTRACTING_TYPES:
+            if _subtracts(data):
                 new_quantity = inventory.quantity - data.quantity
                 if new_quantity < 0:
                     raise MovementConflict("La cantidad supera la existencia disponible.")
@@ -147,6 +154,7 @@ def sync_movement(db: Session, data: MovementIn, producer_id: uuid.UUID) -> str:
                     parcel_id=data.parcel_id,
                     cycle_id=data.cycle_id,
                     loss_reason=data.loss_reason,
+                    adjust_direction=data.adjust_direction,
                 )
             )
             inventory.quantity = new_quantity

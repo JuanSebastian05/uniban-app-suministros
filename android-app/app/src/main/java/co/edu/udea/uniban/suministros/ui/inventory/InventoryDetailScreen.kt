@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import co.edu.udea.uniban.suministros.data.Quantity
+import co.edu.udea.uniban.suministros.data.local.AdjustDirection
 import co.edu.udea.uniban.suministros.data.local.LossReason
 import co.edu.udea.uniban.suministros.data.local.MovementType
 import co.edu.udea.uniban.suministros.data.local.SyncStatus
@@ -69,7 +70,7 @@ fun InventoryDetailScreen(
                 items(movements, key = { it.id }) { movement ->
                     OutlinedCard(shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(movementHeadline(movement.type, movement.quantity, item.unit),
+                            Text(movementHeadline(movement.type, movement.quantity, item.unit, movement.adjustDirection),
                                 color = movementColor(movement.type),
                                 style = MaterialTheme.typography.titleSmall)
                             Text(displayDate(LocalDate.parse(movement.date)), style = MaterialTheme.typography.bodySmall)
@@ -89,13 +90,13 @@ fun InventoryDetailScreen(
 }
 
 /** Símbolos y colores por tipo según los mockups del equipo; el tipo se lee del movimiento. */
-internal fun movementHeadline(type: String, quantity: Float, unit: String) =
-    "${movementSymbol(type)} ${movementLabel(type)} · ${Quantity.format(quantity)} $unit"
+internal fun movementHeadline(type: String, quantity: Float, unit: String, adjustDirection: String? = null) =
+    "${movementSymbol(type, adjustDirection)} ${movementLabel(type)} · ${Quantity.format(quantity)} $unit"
 
-/** Un ajuste puede sumar o restar, por eso «±» y no el signo de RT_10. */
-internal fun movementSymbol(type: String) = when (type) {
+/** Un ajuste suma o resta según su sentido; sin sentido conocido se muestra «±». */
+internal fun movementSymbol(type: String, adjustDirection: String? = null) = when (type) {
     MovementType.ENTRADA -> "+"
-    MovementType.AJUSTE -> "±"
+    MovementType.AJUSTE -> AdjustDirection.fromCode(adjustDirection)?.symbol ?: "±"
     MovementType.SALIDA, MovementType.CONSUMO, MovementType.PERDIDA -> "−"
     else -> "·"
 }

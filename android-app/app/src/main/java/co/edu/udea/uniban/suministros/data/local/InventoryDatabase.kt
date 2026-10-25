@@ -8,6 +8,7 @@ import androidx.room.RoomDatabase
 
 /**
  * Versión 2 (HU_14): agrega las tablas `parcels` y `production_cycles`.
+ * Versión 4 (ajustes): agrega a `movements` la columna nula `adjustDirection`.
  * Versión 3 (HU_05): agrega a `movements` las columnas nulas `parcelId`, `cycleId` y `lossReason`.
  *
  * Room genera cada migración a partir de los esquemas exportados en `app/schemas/...` (`1.json`,
@@ -17,9 +18,11 @@ import androidx.room.RoomDatabase
 @Database(
     entities = [ProducerEntity::class, LocationEntity::class, SupplyEntity::class,
         InventoryEntity::class, MovementEntity::class, ParcelEntity::class, ProductionCycleEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4),
+    ],
 )
 abstract class InventoryDatabase : RoomDatabase() {
     abstract fun inventoryDao(): InventoryDao

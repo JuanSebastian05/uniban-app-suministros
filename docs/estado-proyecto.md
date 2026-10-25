@@ -26,7 +26,7 @@
 | HU_02 Parcelas y ciclo activo | Hecha | — |
 | HU_03 Inventario sin conexión | Hecha | — (el inventario inicial es de demostración: 6 insumos). |
 | HU_04 Registrar entrada | Hecha | «Crear insumo» no existe; se cumple el criterio 4 eligiendo uno existente. |
-| HU_05 Consumos y pérdidas | Hecha | AJUSTE (P-03) y SALIDA (compañero): ver A-05. |
+| HU_05 Consumos y pérdidas | Hecha (+ AJUSTE el 24/10, P-03) | SALIDA (compañero): ver A-05. |
 | HU_06 Sincronizar | Hecha (solo envío) | El historial no se descarga del servidor (limitación). |
 | HU_07 Historial | Hecha | Mostrar la actividad en cada movimiento: llega con HU_08. |
 | HU_13 Registrarse | **Cerrada el 21/10** (documento único + robustez, P-02) | Ver [`hu13.md`](hu13.md). |
@@ -41,6 +41,7 @@
 | `fix/pruebas-android-y-backend` | **#14, mergeado** en `develop` | Pruebas de Android y backend en verde. | — |
 | `fix/hu13-documento-unico` | [#15](https://github.com/JuanSebastian05/uniban-app-suministros/pull/15), abierto | HU_13: documento único (backend, migración `0007`, app, pruebas) + `CLAUDE.md`, `estado-proyecto.md`, `avisos-equipo.md`, `hu13.md`. | Lo revisa/mergea otra persona; **migrar Neon antes del merge a `main`** (A-02). |
 | `fix/robustez-registro-y-perfil` (apilada sobre `fix/hu13-documento-unico`) | [#16](https://github.com/JuanSebastian05/uniban-app-suministros/pull/16), abierto | P-02: cuenta huérfana («Complete su perfil») y tiempo de espera frente a Render. Solo app + docs, **sin migración**. | Mergear **después** del #15 (o juntos; el #16 contiene al #15). |
+| `feat/ajuste-movimientos` (apilada sobre `fix/robustez-registro-y-perfil`) | PR por abrir | P-03: AJUSTE (backend, migración `0008`, Room v4, app, pruebas, `hu05.md`). Backend 108 y Android 158 pruebas en verde. | Mergear **después** del #16. |
 | `feat/hu08-actividad-productiva` | — | Vacía (creada desde `develop`). | Rehacer sobre `develop` cuando entren los PR anteriores. |
 
 Pruebas al 21/10/2026 en `fix/robustez-registro-y-perfil`: **backend 95** (sin cambios en esta rama, corrido
@@ -53,7 +54,7 @@ No se probó en emulador ni en celular (P-06).
 | --- | --- | --- |
 | P-01 | HU_13: rechazar documento repetido | **Hecho** (rama `fix/hu13-documento-unico`) |
 | P-02 | Robustez del registro: (a) tiempo de espera de 30 s frente al despertar de Render (≈ 1 min) en registro y parcelas; (b) cuenta huérfana (Firebase sin perfil → 403 para siempre): al iniciar sesión, si `GET /users/me` da 404, completar el perfil | **Hecho** (rama `fix/robustez-registro-y-perfil`, PR #16): lectura de 90 s, `GET /health` al abrir, aviso «puede tardar hasta un minuto» y pantalla «Complete su perfil». Ver [`hu01.md`](hu01.md#cuenta-sin-perfil-cuenta-huérfana-p-02) |
-| P-03 | AJUSTE: registrar correcciones (positivas y negativas) con motivo; backend `SUPPORTED_TYPES`, app `MovementType.REGISTRABLE`, historial (`±`) y resumen RT_10. Coordinar con SALIDA (A-05) | Por hacer |
+| P-03 | AJUSTE: registrar correcciones (positivas y negativas) con motivo; backend `SUPPORTED_TYPES`, app `MovementType.REGISTRABLE`, historial (`±`) y resumen RT_10. Coordinar con SALIDA (A-05) | **Hecho** (rama `feat/ajuste-movimientos`): migración `0008`, Room v4, sentido AUMENTO/DISMINUCION. Ver [`hu05.md`](hu05.md#ajustes-ajuste-24102026) |
 | P-04 | Documentación y calidad: README raíz y `docs/arquitectura/README.md` desactualizados (dicen «HU_04 con datos demo»); `hu01/03/06` con secciones «Pendiente» obsoletas; quitar «pendiente de compilar» de `hu02/05/07`; test de 403 por rol (RT_13: hoy solo existe PRODUCTOR); decidir si `.idea/` deja de versionarse | Por hacer |
 | P-05 | HU_14: actualizar `docs/modelo-datos/MERv2.drawio` (aforamiento → `id_parcela`; `id_actividad` opcional en movimientos) y avisar al Equipo 1 que usarán el UUID de parcela y hectáreas | Del equipo (Juan José) |
 | P-06 | Verificar manualmente en emulador/celular los criterios de HU_01–07 (modo avión, etc.): nunca se confirmaron | Por hacer (requiere `google-services.json`) |
@@ -67,9 +68,9 @@ No se probó en emulador ni en celular (P-06).
   fecha, observación opcional y bloque opcional **«Insumos usados»** (insumo + cantidad, varias filas). Todo
   se guarda en **una transacción de Room**: la actividad y un CONSUMO por cada insumo, con `activityId`,
   `parcelId` y el `cycleId` de la actividad; si algún insumo no alcanza, no se guarda nada.
-- **Room versión 4:** tabla `activities` (id, parcelId, cycleId, type, date, observation, createdAt,
-  updatedAt, syncStatus; **sin FK a parcels**) y `movements.activityId` nullable. `AutoMigration(3 → 4)`.
-- **Backend:** migración `0008`: tabla `activities` y `movements.activity_id`; `POST /api/v1/activities`
+- **Room versión 5** (la 4 la tomaron los ajustes): tabla `activities` (id, parcelId, cycleId, type, date, observation, createdAt,
+  updatedAt, syncStatus; **sin FK a parcels**) y `movements.activityId` nullable. `AutoMigration(4 → 5)`.
+- **Backend:** migración `0009` (la `0008` son los ajustes): tabla `activities` y `movements.activity_id`; `POST /api/v1/activities`
   idempotente por UUID (201/200/409/422); un CONSUMO con `activityId` exige que la actividad exista, sea del
   productor y coincidan parcela y ciclo.
 - **Sincronización:** primero las actividades, luego los movimientos; un movimiento cuya actividad aún no
@@ -89,6 +90,11 @@ No se probó en emulador ni en celular (P-06).
 - 15/10/2026 (HU_05): el stock nunca queda negativo; SALIDA y AJUSTE quedaron para después (`hu05.md`).
 
 ## Bitácora
+
+- **2026-10-24 (Simon + Claude), P-03:** AJUSTE (correcciones con sentido aumentar/disminuir y motivo obligatorio).
+  Backend 95 → 108 pruebas, app 143 → 158; migración `0008`, Room v4. HU_08 pasa a `0009` y Room v5. El Equipo 2
+  confirmó su contrato (`POST …/api/v1/recomendar`; JSON con productor, parcela, aforamiento, inventario,
+  consumos y pérdidas): lo implementa el compañero de HU_12 (los campos `aforamiento.*` dependen del Equipo 1).
 
 - **2026-10-21 (Simon + Claude):** se reconstruyó el contexto del repo (flujo de ramas, Render + Neon, archivos
   privados). Línea base: 1 prueba del backend y 30 de Android en rojo desde HU_14, sin culpa del entorno →

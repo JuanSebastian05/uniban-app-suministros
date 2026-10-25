@@ -19,7 +19,7 @@ data class HistoryFilter(
 
 /**
  * Resumen de un insumo según RT_10: inicial + entradas − consumos − pérdidas (± otros) = existencia.
- * [others] reúne los tipos que aún no se registran (SALIDA resta; AJUSTE se toma como suma con signo).
+ * [others] reúne los tipos que aún no se registran (SALIDA resta; AJUSTE suma o resta según su sentido).
  */
 data class HistorySummary(
     val unit: String,
@@ -56,7 +56,10 @@ object MovementHistory {
         val entries = total(MovementType.ENTRADA)
         val consumptions = total(MovementType.CONSUMO)
         val losses = total(MovementType.PERDIDA)
-        val others = total(MovementType.AJUSTE) - total(MovementType.SALIDA)
+        val adjustments = own.filter { it.type == MovementType.AJUSTE }.sumOf {
+            (if (MovementType.subtracts(it.type, it.adjustDirection)) -it.quantity else it.quantity).toDouble()
+        }.toFloat()
+        val others = adjustments - total(MovementType.SALIDA)
         return HistorySummary(
             unit = balance.unit,
             initial = balance.initialQuantity,

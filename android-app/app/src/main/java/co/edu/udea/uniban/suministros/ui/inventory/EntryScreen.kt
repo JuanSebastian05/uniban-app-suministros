@@ -18,6 +18,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import co.edu.udea.uniban.suministros.data.ParcelValidation
 import co.edu.udea.uniban.suministros.data.Quantity
+import co.edu.udea.uniban.suministros.data.local.AdjustDirection
 import co.edu.udea.uniban.suministros.data.local.LossReason
 import co.edu.udea.uniban.suministros.data.local.MovementType
 import co.edu.udea.uniban.suministros.data.local.ParcelSummary
@@ -106,7 +107,11 @@ fun EntryScreen(
                         // De dónde sale o a dónde entra el insumo: el stock es de la bodega del
                         // productor (ubicación de inventario), no de la parcela.
                         Text(
-                            "${if (state.type == MovementType.ENTRADA) "Entra a" else "Sale de"}: ${it.location}",
+                            "${when (state.type) {
+                                MovementType.ENTRADA -> "Entra a"
+                                MovementType.AJUSTE -> "Ajusta"
+                                else -> "Sale de"
+                            }}: ${it.location}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 8.dp),
@@ -189,6 +194,29 @@ fun EntryScreen(
                         }
                     }
                 }
+                if (state.type == MovementType.AJUSTE) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Sentido del ajuste", style = MaterialTheme.typography.labelMedium)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AdjustDirection.entries.forEach { direction ->
+                                FilterChip(
+                                    selected = state.adjustDirection == direction,
+                                    onClick = { viewModel.selectAdjustDirection(direction) },
+                                    label = { Text("${direction.symbol} ${direction.label}") },
+                                    enabled = editable,
+                                )
+                            }
+                        }
+                        Text(
+                            "Un ajuste corrige la existencia sin borrar movimientos anteriores.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        state.reasonError?.let {
+                            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
                 OutlinedTextField(
                     value = state.quantity,
                     onValueChange = viewModel::changeQuantity,
@@ -222,7 +250,8 @@ fun EntryScreen(
                 OutlinedTextField(
                     value = state.observation, onValueChange = viewModel::changeObservation,
                     label = {
-                        Text(if (state.type == MovementType.PERDIDA && state.lossReason == LossReason.OTRO)
+                        Text(if (state.type == MovementType.AJUSTE) "Motivo del ajuste (obligatorio)"
+                        else if (state.type == MovementType.PERDIDA && state.lossReason == LossReason.OTRO)
                             "Observación (obligatoria)" else "Observación (opcional)")
                     },
                     placeholder = { Text("Observaciones adicionales…") },
@@ -237,6 +266,8 @@ fun EntryScreen(
                 Text(
                     if (state.type == MovementType.ENTRADA)
                         "La entrada se guardará en este dispositivo y quedará pendiente de sincronización."
+                    else if (state.type == MovementType.AJUSTE)
+                        "El ajuste se guardará en este dispositivo, corregirá la existencia y quedará pendiente de sincronización."
                     else "${if (state.type == MovementType.PERDIDA) "La pérdida" else "El consumo"} se guardará en " +
                         "este dispositivo, descontará la existencia y quedará pendiente de sincronización.",
                     style = MaterialTheme.typography.bodySmall,

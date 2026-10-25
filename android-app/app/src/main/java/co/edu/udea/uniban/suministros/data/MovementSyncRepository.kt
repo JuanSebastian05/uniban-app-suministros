@@ -132,6 +132,7 @@ class MovementSyncRepository(
         parcelId = movement.parcelId,
         cycleId = movement.cycleId,
         lossReason = movement.lossReason,
+        adjustDirection = movement.adjustDirection,
     )
 
     // Float → decimal de dos posiciones, igual que Quantity, para no enviar ruido binario.

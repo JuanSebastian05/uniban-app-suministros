@@ -58,6 +58,8 @@ data class MovementEntity(
     val parcelId: String? = null,
     val cycleId: String? = null,
     val lossReason: String? = null,
+    // Ajustes: AUMENTO o DISMINUCION. Nulo en los demás tipos.
+    val adjustDirection: String? = null,
 )
 
 /** Contexto de un inventario que se envía junto con su primer movimiento (HU_06). */
@@ -105,6 +107,7 @@ data class HistoryMovement(
     val cycleId: String?,
     val cycleActive: Boolean,
     val lossReason: String?,
+    val adjustDirection: String?,
 )
 
 /** Saldo inicial y existencia de un insumo, para el resumen del historial (RT_10, HU_07). */

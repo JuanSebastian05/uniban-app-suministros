@@ -47,7 +47,11 @@ HU_05 (criterios 3 y 5) y HU_07 (criterios 1 y 3) dan por hecho que existen **AJ
 `services/movement_sync.py`).
 
 - **SALIDA:** la hace el compañero (está en el plan de la semana).
-- **AJUSTE:** lo hará Simon cuando cierre HU_13 y los pendientes de robustez.
+- **AJUSTE:** **ya está hecho** (24/10, rama `feat/ajuste-movimientos`, ver [`hu05.md`](hu05.md#ajustes-ajuste-24102026)).
+  Para SALIDA: el backend ya tiene `SUPPORTED_TYPES`, `_subtracts()` y el campo `adjustDirection` como ejemplo de un
+  tipo nuevo; en la app, agrega el tipo a `MovementType.REGISTRABLE` (ya incluye AJUSTE) y revisa `subtracts()`.
+  **Tu rama debe partir de la de ajustes** (o de `develop` cuando entre) porque ambos tocan los mismos archivos y
+  Room ya está en la versión 4: **no uses la 4 para otra cosa**.
 - Ambos cambian `data/local/MovementType.kt`, `ui/inventory/EntryScreen.kt` / `EntryViewModel.kt`,
   `data/InventoryRepository.kt`, `backend/app/schemas/movements.py` y `services/movement_sync.py`.
 
@@ -61,7 +65,7 @@ Para evitar conflictos al integrar, tengan presente que estos archivos los modif
 
 | Archivo | Quién lo cambia |
 | --- | --- |
-| `android-app/.../data/local/InventoryDatabase.kt` (versión de Room y `AutoMigration`) | HU_08 (Simon) pasará de la versión 3 a la **4**. Cualquier otra HU que agregue tablas o columnas locales debe tomar la versión siguiente **después** de que entre la anterior, y subir el `N.json` de `app/schemas`. |
+| `android-app/.../data/local/InventoryDatabase.kt` (versión de Room y `AutoMigration`) | Los ajustes (Simon) ya pasaron a la versión **4**; HU_08 (Simon) pasará a la **5**. Cualquier otra HU que agregue tablas o columnas locales debe tomar la versión siguiente **después** de que entre la anterior, y subir el `N.json` de `app/schemas`. |
 | `ui/navigation/AppNavHost.kt`, `AppDestinations.kt`, `MainBottomBar.kt` | HU_08 agrega la pestaña **Actividades**; HU_09 y HU_12 agregan secciones y rutas. |
 | `ui/parcels/ParcelDetailScreen.kt` | HU_08 (actividades), HU_09 (aforamiento), HU_12 (recomendaciones): cada una es una sección nueva. |
 | `data/local/InventoryDao.kt` → `observePendingCount` | HU_10 (estado de sincronización) y HU_08 (las actividades también quedan pendientes): el contador debe sumar movimientos **y** actividades. |
@@ -118,7 +122,8 @@ Esto aplica a **toda** migración nueva, no solo a la `0007`.
 | `0005` | HU_05 | En `develop` | `0004` |
 | `0006` | HU_09 (aforamientos, compañero) | **Reservada**, aún no existe | `0005` |
 | `0007` | HU_13 (documento único, Simon) | En PR | `0005` **provisional** |
-| `0008` | HU_08 (actividades, Simon) | Por hacer | `0007` |
+| `0008` | Ajustes de inventario (Simon, 24/10) | En PR | `0007` |
+| `0009` | HU_08 (actividades, Simon) | Por hacer | `0008` |
 
 **Qué hacer:**
 

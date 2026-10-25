@@ -45,6 +45,7 @@ class InventoryIn(CamelModel):
 
 
 LossReason = Literal["DESPERDICIO", "MAL_MANEJO", "CLIMA", "OTRO"]
+AdjustDirection = Literal["AUMENTO", "DISMINUCION"]
 
 
 class MovementIn(CamelModel):
@@ -60,9 +61,18 @@ class MovementIn(CamelModel):
     parcel_id: uuid.UUID | None = None
     cycle_id: uuid.UUID | None = None
     loss_reason: LossReason | None = None
+    # Un AJUSTE corrige la existencia: exige el sentido (suma o resta) y el motivo en la observación.
+    adjust_direction: AdjustDirection | None = None
 
     @model_validator(mode="after")
     def _check_type_fields(self) -> "MovementIn":
+        if self.type == "AJUSTE":
+            if self.adjust_direction is None:
+                raise ValueError("Un ajuste debe indicar si aumenta o disminuye la existencia.")
+            if not self.observation.strip():
+                raise ValueError("Un ajuste exige el motivo en la observación.")
+        elif self.adjust_direction is not None:
+            raise ValueError("Solo los ajustes llevan sentido.")
         if self.type == "CONSUMO" and self.parcel_id is None:
             raise ValueError("Un consumo debe indicar la parcela.")
         if self.type == "PERDIDA":

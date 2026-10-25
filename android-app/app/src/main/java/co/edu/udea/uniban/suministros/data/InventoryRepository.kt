@@ -1,6 +1,7 @@
 package co.edu.udea.uniban.suministros.data
 
 import androidx.room.withTransaction
+import co.edu.udea.uniban.suministros.data.local.AdjustDirection
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
 import co.edu.udea.uniban.suministros.data.local.LossReason
 import co.edu.udea.uniban.suministros.data.local.MovementEntity
@@ -77,7 +78,8 @@ class InventoryRepository(
      *
      * - CONSUMO exige [parcelId]; si la parcela tiene ciclo activo, se asocia automáticamente.
      * - PERDIDA exige [lossReason]; el motivo OTRO exige observación.
-     * - Un consumo o una pérdida nunca deja la existencia negativa ([InsufficientStockException]).
+     * - AJUSTE (corrección) exige [adjustDirection] y el motivo en la observación; suma o resta la cantidad.
+     * - Un consumo, una pérdida o un ajuste de disminución nunca deja la existencia negativa ([InsufficientStockException]).
      * - Reintentar con el mismo [id] y los mismos datos no vuelve a sumar ni restar.
      */
     suspend fun registerMovement(
@@ -89,6 +91,7 @@ class InventoryRepository(
         observation: String,
         parcelId: String? = null,
         lossReason: LossReason? = null,
+        adjustDirection: AdjustDirection? = null,
     ): SavedEntry {
         UUID.fromString(id)
         require(type in MovementType.REGISTRABLE) { "Tipo de movimiento no disponible." }
@@ -97,6 +100,11 @@ class InventoryRepository(
         require(observation.length <= 500) { "La observación admite hasta 500 caracteres." }
         val parcel = parcelId?.takeIf { type == MovementType.CONSUMO }
         val reason = lossReason?.takeIf { type == MovementType.PERDIDA }
+        val direction = adjustDirection?.takeIf { type == MovementType.AJUSTE }
+        if (type == MovementType.AJUSTE) {
+            require(direction != null) { "Indica si el ajuste aumenta o disminuye la existencia." }
+            require(cleanObservation.isNotEmpty()) { "Describe el motivo del ajuste en la observación." }
+        }
         if (type == MovementType.CONSUMO) require(parcel != null) { "Selecciona la parcela donde se usó el insumo." }
         if (type == MovementType.PERDIDA) {
             require(reason != null) { "Selecciona el motivo de la pérdida." }
@@ -115,12 +123,12 @@ class InventoryRepository(
                 require(existing.inventoryId == inventoryId && existing.type == type &&
                     existing.quantity == quantity && existing.date == date.toString() &&
                     existing.observation == cleanObservation && existing.parcelId == parcel &&
-                    existing.lossReason == reason?.name) {
+                    existing.lossReason == reason?.name && existing.adjustDirection == direction?.name) {
                     if (type == MovementType.ENTRADA) "Esta entrada ya fue registrada con otros datos."
                     else "Este movimiento ya fue registrado con otros datos."
                 }
             } else {
-                val newQuantity = if (MovementType.subtracts(type)) Quantity.subtract(item.quantity, quantity)
+                val newQuantity = if (MovementType.subtracts(type, direction?.name)) Quantity.subtract(item.quantity, quantity)
                 else Quantity.add(item.quantity, quantity)
                 val now = Instant.now().toString()
                 dao.insertMovement(MovementEntity(
@@ -128,6 +136,7 @@ class InventoryRepository(
                     date = date.toString(), observation = cleanObservation,
                     createdAt = now, updatedAt = now, type = type,
                     parcelId = parcel, cycleId = cycleId, lossReason = reason?.name,
+                    adjustDirection = direction?.name,
                 ))
                 check(dao.updateQuantity(inventoryId, newQuantity) == 1)
             }

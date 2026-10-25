@@ -25,7 +25,7 @@ backend/
 │   ├── schemas/           # esquemas Pydantic / contratos OpenAPI
 │   └── services/          # lógica de sincronización idempotente (HU_06)
 ├── migrations/            # Alembic (0001 inventario y movimientos · 0002 usuarios · 0003 insumos por productor ·
-│                          #  0004 parcelas y ciclos · 0005 consumos y pérdidas · 0007 documento único; la 0006
+│                          #  0004 parcelas y ciclos · 0005 consumos y pérdidas · 0007 documento único · 0008 ajustes; la 0006
 │                          #  está reservada para aforamientos). Numeración y orden de despliegue: ../docs/avisos-equipo.md
 ├── tests/                 # PyTest: /health, /openapi.json y movimientos
 ├── requirements.txt

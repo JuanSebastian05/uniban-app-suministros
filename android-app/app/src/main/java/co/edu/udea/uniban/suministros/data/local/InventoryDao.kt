@@ -54,7 +54,8 @@ interface InventoryDao {
     @Query("""
         SELECT m.id, m.inventoryId, s.name AS supplyName, s.unit, m.type, m.quantity, m.date, m.createdAt,
             m.observation, m.syncStatus, m.parcelId, p.name AS parcelName, m.cycleId,
-            (c.id IS NOT NULL AND c.endDate IS NULL) AS cycleActive, m.lossReason
+            (c.id IS NOT NULL AND c.endDate IS NULL) AS cycleActive, m.lossReason,
+            m.adjustDirection
         FROM movements m JOIN inventory i ON m.inventoryId = i.id JOIN supplies s ON i.supplyId = s.id
         LEFT JOIN parcels p ON m.parcelId = p.id
         LEFT JOIN production_cycles c ON m.cycleId = c.id
