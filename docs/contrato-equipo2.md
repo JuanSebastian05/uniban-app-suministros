@@ -1,7 +1,7 @@
 # Contrato con el Equipo 2 (recomendaciones)
 
 > Estado: **acordado con el Equipo 2** (grupo del equipo, 22/10/2026). Lo implementa quien haga HU_12.
-> Los campos de `aforamiento` **dependen del Equipo 1**, que aún no confirmó su contrato.
+> Los campos de `aforamiento` dependen del Equipo 1, que el 25/10 aceptó el contrato propuesto (ver [`guia-integracion-equipos.md`](guia-integracion-equipos.md)). Guía de implementación: la misma.
 
 El backend del Equipo 3 envía los datos de una parcela al servicio de logística del Equipo 2 y guarda las
 recomendaciones que devuelve (alimentan HU_12). La app Android **no** llama a ese servicio: solo habla con

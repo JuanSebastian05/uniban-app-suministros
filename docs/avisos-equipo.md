@@ -36,7 +36,7 @@ Cuando entren los PR de ajustes (#17) y de HU_08, esto ya existe y te afecta:
   (`ActivityDao.findSyncable` y `InventoryDao.findSyncable`).
 - **SALIDA:** el backend ya tiene `_subtracts()` y `SUPPORTED_TYPES`; en la app agrega el tipo a
   `MovementType.REGISTRABLE` y a `subtracts()`. El historial (`MovementHistory.summary`) ya la resta en «± Otros».
-- **Contrato con el Equipo 2** (HU_12): [`contrato-equipo2.md`](contrato-equipo2.md).
+- **Integración con los Equipos 1 y 2** (prioridad pedida el 25/10): guía completa en [`guia-integracion-equipos.md`](guia-integracion-equipos.md); contrato del Equipo 2 en [`contrato-equipo2.md`](contrato-equipo2.md).
 
 ---
 
