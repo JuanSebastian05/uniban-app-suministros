@@ -93,3 +93,5 @@ class Movement(Base):
     loss_reason: Mapped[str | None] = mapped_column(String(20))
     # Ajuste (corrección): la cantidad siempre es positiva y esta columna dice si suma o resta.
     adjust_direction: Mapped[str | None] = mapped_column(String(12))
+    # HU_08: actividad a la que pertenece el consumo (nula si se registró suelto desde el inventario).
+    activity_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("activities.id"), index=True)

@@ -106,6 +106,10 @@ cd backend; .venv\Scripts\python.exe -m alembic upgrade head
 
 ## Trampas conocidas
 
+- Una prueba de ViewModel con Robolectric + Room real + `viewModelScope` deja colgadas las pruebas de Compose que corren
+  después (solo se nota en la corrida completa: `AppNotIdleException`, ≈ 10 min). Prueba los ViewModel en JVM puro con
+  un repositorio falso (ver `ActivityFormTest`) y `testDebugUnitTest` completo antes de abrir el PR.
+
 - Room genera `app/schemas/.../N.json` al compilar: **súbelo** junto con el cambio de esquema.
 - `google-services.json` ausente: la app compila pero no permite iniciar sesión (en debug hay «modo demo»).
 - Render se duerme (≈ 1 min en despertar): la app espera hasta 90 s (`NetworkModule.READ_TIMEOUT_SECONDS`) y manda un

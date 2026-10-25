@@ -21,7 +21,7 @@ from decimal import Decimal
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import Inventory, Location, Movement, Parcel, ProductionCycle, Supply
+from app.models import Activity, Inventory, Location, Movement, Parcel, ProductionCycle, Supply
 from app.schemas.movements import InventoryIn, MovementIn
 
 logger = logging.getLogger(__name__)
@@ -51,7 +51,20 @@ def _same_content(existing: Movement, data: MovementIn) -> bool:
         and existing.cycle_id == data.cycle_id
         and existing.loss_reason == data.loss_reason
         and existing.adjust_direction == data.adjust_direction
+        and existing.activity_id == data.activity_id
     )
+
+
+def _check_activity(db: Session, data: MovementIn, producer_id: uuid.UUID) -> None:
+    """La actividad del consumo debe existir, ser del productor y coincidir en parcela y ciclo (HU_08)."""
+    if data.activity_id is None:
+        return
+    activity = db.get(Activity, data.activity_id)
+    parcel = None if activity is None else db.get(Parcel, activity.parcel_id)
+    if activity is None or parcel is None or parcel.producer_id != producer_id:
+        raise MovementConflict("La actividad no existe o pertenece a otro usuario.")
+    if activity.parcel_id != data.parcel_id or activity.cycle_id != data.cycle_id:
+        raise MovementConflict("El consumo no coincide con la parcela y el ciclo de su actividad.")
 
 
 def _check_parcel(db: Session, data: MovementIn, producer_id: uuid.UUID) -> None:
@@ -133,6 +146,7 @@ def sync_movement(db: Session, data: MovementIn, producer_id: uuid.UUID) -> str:
         with db.begin_nested():
             inventory = _ensure_inventory(db, data.inventory, producer_id)
             _check_parcel(db, data, producer_id)
+            _check_activity(db, data, producer_id)
             if _subtracts(data):
                 new_quantity = inventory.quantity - data.quantity
                 if new_quantity < 0:
@@ -155,6 +169,7 @@ def sync_movement(db: Session, data: MovementIn, producer_id: uuid.UUID) -> str:
                     cycle_id=data.cycle_id,
                     loss_reason=data.loss_reason,
                     adjust_direction=data.adjust_direction,
+                    activity_id=data.activity_id,
                 )
             )
             inventory.quantity = new_quantity

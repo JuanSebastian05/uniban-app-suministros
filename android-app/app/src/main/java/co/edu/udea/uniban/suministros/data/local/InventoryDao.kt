@@ -55,9 +55,10 @@ interface InventoryDao {
         SELECT m.id, m.inventoryId, s.name AS supplyName, s.unit, m.type, m.quantity, m.date, m.createdAt,
             m.observation, m.syncStatus, m.parcelId, p.name AS parcelName, m.cycleId,
             (c.id IS NOT NULL AND c.endDate IS NULL) AS cycleActive, m.lossReason,
-            m.adjustDirection
+            m.adjustDirection, a.type AS activityType
         FROM movements m JOIN inventory i ON m.inventoryId = i.id JOIN supplies s ON i.supplyId = s.id
         LEFT JOIN parcels p ON m.parcelId = p.id
+        LEFT JOIN activities a ON m.activityId = a.id
         LEFT JOIN production_cycles c ON m.cycleId = c.id
         ORDER BY m.date DESC, m.createdAt DESC
     """)
@@ -69,7 +70,11 @@ interface InventoryDao {
     """)
     fun observeBalances(): Flow<List<InventoryBalance>>
 
-    @Query("SELECT COUNT(*) FROM movements WHERE syncStatus <> 'SYNCED'")
+    /** Registros por sincronizar: movimientos y actividades (HU_08). */
+    @Query("""
+        SELECT (SELECT COUNT(*) FROM movements WHERE syncStatus <> 'SYNCED') +
+            (SELECT COUNT(*) FROM activities WHERE syncStatus <> 'SYNCED')
+    """)
     fun observePendingCount(): Flow<Int>
 
     @Query("SELECT EXISTS(SELECT 1 FROM producers WHERE id = :id)")
@@ -95,7 +100,16 @@ interface InventoryDao {
 
     // --- Sincronización (HU_06) ---
 
-    @Query("SELECT * FROM movements WHERE syncStatus IN ('PENDING', 'ERROR') ORDER BY createdAt, id")
+    /**
+     * Movimientos por enviar. Un consumo de una actividad espera a que la actividad ya esté SYNCED (HU_08):
+     * el backend rechaza un consumo cuya actividad no conoce.
+     */
+    @Query("""
+        SELECT * FROM movements m WHERE m.syncStatus IN ('PENDING', 'ERROR')
+        AND (m.activityId IS NULL OR EXISTS (
+            SELECT 1 FROM activities a WHERE a.id = m.activityId AND a.syncStatus = 'SYNCED'))
+        ORDER BY m.createdAt, m.id
+    """)
     suspend fun findSyncable(): List<MovementEntity>
 
     /** Toma el movimiento para enviarlo; devuelve 0 si otro proceso ya lo tomó o ya está SYNCED. */

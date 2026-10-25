@@ -31,7 +31,7 @@
 | HU_07 Historial | Hecha | Mostrar la actividad en cada movimiento: llega con HU_08. |
 | HU_13 Registrarse | **Cerrada el 21/10** (documento único + robustez, P-02) | Ver [`hu13.md`](hu13.md). |
 | HU_14 Registrar parcela | Hecha | Actualizar el MER y avisar al Equipo 1 (equipo, Juan José). |
-| **HU_08 Actividad productiva** | **Por empezar (Simon)** | Después de P-01…P-04. Diseño en «HU_08». |
+| **HU_08 Actividad productiva** | **Implementada el 24/10 (Simon)**, en PR | Ver [`hu08.md`](hu08.md). Falta verificar en emulador y aplicar `0009` en Neon. |
 | HU_09–12, SALIDA | Compañero | — |
 
 ## Ramas y PR (de Simon, al 21/10/2026)
@@ -42,7 +42,7 @@
 | `fix/hu13-documento-unico` | [#15](https://github.com/JuanSebastian05/uniban-app-suministros/pull/15), abierto | HU_13: documento único (backend, migración `0007`, app, pruebas) + `CLAUDE.md`, `estado-proyecto.md`, `avisos-equipo.md`, `hu13.md`. | Lo revisa/mergea otra persona; **migrar Neon antes del merge a `main`** (A-02). |
 | `fix/robustez-registro-y-perfil` (apilada sobre `fix/hu13-documento-unico`) | [#16](https://github.com/JuanSebastian05/uniban-app-suministros/pull/16), abierto | P-02: cuenta huérfana («Complete su perfil») y tiempo de espera frente a Render. Solo app + docs, **sin migración**. | Mergear **después** del #15 (o juntos; el #16 contiene al #15). |
 | `feat/ajuste-movimientos` (apilada sobre `fix/robustez-registro-y-perfil`) | [#17](https://github.com/JuanSebastian05/uniban-app-suministros/pull/17), abierto | P-03: AJUSTE (backend, migración `0008`, Room v4, app, pruebas, `hu05.md`). Backend 108 y Android 158 pruebas en verde. | Mergear **después** del #16. |
-| `feat/hu08-actividad-productiva` | — | Vacía (creada desde `develop`). | Rehacer sobre `develop` cuando entren los PR anteriores. |
+| `feat/hu08-actividad-productiva` (apilada sobre `feat/ajuste-movimientos`) | PR por abrir | HU_08: backend (`0009`, `POST /activities`), Room v5, formulario, pestaña Actividades, sincronización y `hu08.md`. Backend 136 y Android 210 pruebas en verde. | Mergear **después** del #17. |
 
 Pruebas al 21/10/2026 en `fix/robustez-registro-y-perfil`: **backend 95** (sin cambios en esta rama, corrido
 en la rama del #15) y **Android 143, todas en verde**; `assembleDebug` y `lintDebug` sin errores.
@@ -60,7 +60,7 @@ No se probó en emulador ni en celular (P-06).
 | P-06 | Verificar manualmente en emulador/celular los criterios de HU_01–07 (modo avión, etc.): nunca se confirmaron | Por hacer (requiere `google-services.json`) |
 | P-07 | Historial y saldos solo del dispositivo: al reinstalar o cambiar de teléfono se pierden (existe `GET /api/v1/inventory`, la app no lo usa) | Decisión pendiente |
 
-## HU_08: diseño acordado (aún sin implementar)
+## HU_08: diseño acordado (implementado el 24/10/2026; el resultado está en [`hu08.md`](hu08.md))
 
 - **Tipos de actividad** (mockup): Fertilización, Siembra, Cosecha, Aplicación de insumo, Control
   fitosanitario, Otra actividad. **Exige ciclo activo** en la parcela.
@@ -90,6 +90,12 @@ No se probó en emulador ni en celular (P-06).
 - 15/10/2026 (HU_05): el stock nunca queda negativo; SALIDA y AJUSTE quedaron para después (`hu05.md`).
 
 ## Bitácora
+
+- **2026-10-24 (Simon + Claude), HU_08:** actividad productiva completa (formulario con «Insumos usados» en una sola
+  transacción, ciclo activo obligatorio, sección en el detalle de la parcela, pestaña Actividades, «Actividad: …» en el
+  historial, sincronización actividades → consumos). Migración `0009`, Room v5. Backend 108 → 136, app 158 → 210. Un
+  cuelgue de las pruebas de Compose en la corrida completa se resolvió probando el ViewModel en JVM puro (A-03).
+  Quedan: verificación manual, aplicar `0007`–`0009` en Neon y los PR por revisar (#15 → #16 → #17 → HU_08).
 
 - **2026-10-24 (Simon + Claude), P-03:** AJUSTE (correcciones con sentido aumentar/disminuir y motivo obligatorio).
   Backend 95 → 108 pruebas, app 143 → 158; migración `0008`, Room v4. HU_08 pasa a `0009` y Room v5. El Equipo 2

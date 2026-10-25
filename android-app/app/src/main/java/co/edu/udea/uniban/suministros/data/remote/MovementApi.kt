@@ -50,4 +50,6 @@ data class MovementDto(
     val lossReason: String? = null,
     // Ajustes: AUMENTO o DISMINUCION.
     val adjustDirection: String? = null,
+    // HU_08: actividad del consumo.
+    val activityId: String? = null,
 )

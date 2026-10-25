@@ -1,6 +1,8 @@
 package co.edu.udea.uniban.suministros.data
 
 import androidx.room.withTransaction
+import co.edu.udea.uniban.suministros.data.local.ActivityEntity
+import co.edu.udea.uniban.suministros.data.local.ActivityType
 import co.edu.udea.uniban.suministros.data.local.AdjustDirection
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
 import co.edu.udea.uniban.suministros.data.local.LossReason
@@ -19,6 +21,27 @@ data class SavedEntry(
     val type: String = MovementType.ENTRADA,
 )
 
+/** Insumo usado en una actividad (HU_08): el insumo del inventario y la cantidad escrita. */
+data class ActivitySupply(val inventoryId: String, val quantityText: String)
+
+data class SavedActivity(val id: String, val type: ActivityType, val cycleId: String, val consumptions: Int)
+
+/** Lo que el formulario de actividades necesita del repositorio (HU_08); permite probar el ViewModel sin Room. */
+interface ActivityRegistrar {
+    suspend fun registerActivity(
+        id: String,
+        parcelId: String,
+        type: ActivityType,
+        date: LocalDate,
+        observation: String,
+        supplies: List<ActivitySupply> = emptyList(),
+    ): SavedActivity
+}
+
+/** Un insumo de la actividad no alcanza (HU_08): se guarda nada. [inventoryId] dice cuál. */
+class ActivityStockException(val inventoryId: String, val available: Float) :
+    IllegalArgumentException("La cantidad supera la existencia disponible (${Quantity.format(available)}).")
+
 /**
  * Inventario local de una sola cuenta: [database] es la base propia de [ownerUid], así que
  * nada de lo que se registra aquí aparece en el inventario de otro usuario del dispositivo.
@@ -30,7 +53,7 @@ class InventoryRepository(
     private val database: InventoryDatabase,
     ownerUid: String = StarterInventory.DEMO_OWNER,
     private val onMovementSaved: () -> Unit = {},
-) {
+) : ActivityRegistrar {
     private val dao = database.inventoryDao()
     private val starter = StarterInventory(ownerUid)
     val inventory = dao.observeInventory()
@@ -43,6 +66,9 @@ class InventoryRepository(
 
     /** Historial completo de movimientos de este dispositivo (HU_07). */
     val history = dao.observeHistory()
+
+    /** Actividades productivas de la cuenta, con el nombre de su parcela (HU_08). */
+    val activities = database.activityDao().observeActivities()
 
     /** Saldo inicial y existencia de cada insumo, para el resumen del historial (HU_07). */
     val balances = dao.observeBalances()
@@ -92,6 +118,10 @@ class InventoryRepository(
         parcelId: String? = null,
         lossReason: LossReason? = null,
         adjustDirection: AdjustDirection? = null,
+        /** HU_08: actividad a la que pertenece el consumo; el consumo toma su parcela y su ciclo. */
+        activityId: String? = null,
+        /** Falso cuando lo llama [registerActivity] dentro de su transacción: avisa una sola vez al final. */
+        notify: Boolean = true,
     ): SavedEntry {
         UUID.fromString(id)
         require(type in MovementType.REGISTRABLE) { "Tipo de movimiento no disponible." }
@@ -114,16 +144,22 @@ class InventoryRepository(
         }
         val saved = database.withTransaction {
             val item = requireNotNull(dao.findInventory(inventoryId)) { "Selecciona un insumo del catálogo." }
+            val activity = if (type == MovementType.CONSUMO) activityId?.let {
+                requireNotNull(database.activityDao().findActivity(it)) { "La actividad ya no está disponible." }
+            } else null
+            if (activity != null) require(activity.parcelId == parcel) { "La actividad es de otra parcela." }
             val cycleId = parcel?.let {
                 require(database.parcelDao().hasParcel(it)) { "La parcela ya no está disponible." }
-                database.parcelDao().activeCycleId(it)
+                // Un consumo de una actividad usa el ciclo de la actividad aunque la parcela ya tenga otro.
+                activity?.cycleId ?: database.parcelDao().activeCycleId(it)
             }
             val existing = dao.findMovement(id)
             if (existing != null) {
                 require(existing.inventoryId == inventoryId && existing.type == type &&
                     existing.quantity == quantity && existing.date == date.toString() &&
                     existing.observation == cleanObservation && existing.parcelId == parcel &&
-                    existing.lossReason == reason?.name && existing.adjustDirection == direction?.name) {
+                    existing.lossReason == reason?.name && existing.adjustDirection == direction?.name &&
+                    existing.activityId == activity?.id) {
                     if (type == MovementType.ENTRADA) "Esta entrada ya fue registrada con otros datos."
                     else "Este movimiento ya fue registrado con otros datos."
                 }
@@ -136,11 +172,71 @@ class InventoryRepository(
                     date = date.toString(), observation = cleanObservation,
                     createdAt = now, updatedAt = now, type = type,
                     parcelId = parcel, cycleId = cycleId, lossReason = reason?.name,
-                    adjustDirection = direction?.name,
+                    adjustDirection = direction?.name, activityId = activity?.id,
                 ))
                 check(dao.updateQuantity(inventoryId, newQuantity) == 1)
             }
             SavedEntry(id, item.name, quantity, item.unit, type)
+        }
+        if (notify) onMovementSaved()
+        return saved
+    }
+
+    /**
+     * Registra una actividad productiva y, en la misma transacción, un CONSUMO por cada insumo usado
+     * (HU_08). Todo o nada: si algún insumo no alcanza se lanza [ActivityStockException] y no se guarda
+     * ni la actividad ni los demás consumos. Funciona sin conexión: todo queda PENDING.
+     *
+     * - Exige que la parcela tenga un **ciclo activo**; la actividad y sus consumos se asocian a él.
+     * - Reintentar con el mismo [id] y los mismos datos no duplica nada: los consumos usan un UUID derivado de
+     *   la actividad y del insumo.
+     */
+    override suspend fun registerActivity(
+        id: String,
+        parcelId: String,
+        type: ActivityType,
+        date: LocalDate,
+        observation: String,
+        supplies: List<ActivitySupply>,
+    ): SavedActivity {
+        UUID.fromString(id)
+        val cleanObservation = observation.trim()
+        require(parcelId.isNotBlank()) { "Selecciona la parcela." }
+        require(observation.length <= 500) { "La observación admite hasta 500 caracteres." }
+        require(supplies.map { it.inventoryId }.toSet().size == supplies.size) { "No repitas el mismo insumo." }
+        val activityDao = database.activityDao()
+        val saved = database.withTransaction {
+            require(database.parcelDao().hasParcel(parcelId)) { "La parcela ya no está disponible." }
+            val existing = activityDao.findActivity(id)
+            val cycleId = if (existing != null) {
+                require(existing.parcelId == parcelId && existing.type == type.name &&
+                    existing.date == date.toString() && existing.observation == cleanObservation) {
+                    "Esta actividad ya fue registrada con otros datos."
+                }
+                existing.cycleId
+            } else {
+                val cycle = database.parcelDao().activeCycleId(parcelId)
+                requireNotNull(cycle) { "La parcela no tiene un ciclo activo. Inicia un ciclo para registrar actividades." }
+                val now = Instant.now().toString()
+                activityDao.insertActivity(ActivityEntity(
+                    id = id, parcelId = parcelId, cycleId = cycle, type = type.name, date = date.toString(),
+                    observation = cleanObservation, createdAt = now, updatedAt = now,
+                ))
+                cycle
+            }
+            supplies.forEach { supply ->
+                try {
+                    registerMovement(
+                        id = UUID.nameUUIDFromBytes("$id|${supply.inventoryId}".toByteArray()).toString(),
+                        type = MovementType.CONSUMO, inventoryId = supply.inventoryId,
+                        quantityText = supply.quantityText, date = date, observation = "",
+                        parcelId = parcelId, activityId = id, notify = false,
+                    )
+                } catch (error: InsufficientStockException) {
+                    throw ActivityStockException(supply.inventoryId, error.available)
+                }
+            }
+            SavedActivity(id, type, cycleId, supplies.size)
         }
         onMovementSaved()
         return saved

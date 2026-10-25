@@ -18,6 +18,25 @@
 | 4 | Todos | Reglas nuevas para escribir pruebas (A-03) y para tocar archivos compartidos (A-04). | A-03, A-04 |
 | 5 | Quien haga SALIDA | Coordinar con Simon: AJUSTE y SALIDA tocan los mismos archivos. | A-05 |
 | 6 | Todos los que toquen autenticación o pruebas | `AuthRepository` tiene miembros nuevos; la espera HTTP ahora es de 90 s. Haz `git pull origin develop` y actualiza tus fakes. | A-06 |
+| 7 | Compañero de HU_09–12 y SALIDA | Ya existen AJUSTE (Room v4, `0008`) y HU_08 (Room v5, `0009`, pestaña Actividades): parte de esas ramas y no reutilices esos números. HU_10 debe leer también el estado de las actividades. | A-07 |
+
+---
+
+## A-07 · 2026-10-24 · Simon · Qué dejan HU_08 y AJUSTE para HU_09–12 y SALIDA
+
+Cuando entren los PR de ajustes (#17) y de HU_08, esto ya existe y te afecta:
+
+- **Base:** Room **v5** (`activities`, `movements.activityId`, `movements.adjustDirection`) y Alembic **`0009`** (cabeza).
+  La migración `0006` sigue reservada para aforamientos: al integrarla, re-parenta según A-01.
+- **Pestañas:** `MainTab` ya tiene Parcelas, Inventario y **Actividades** (`MainBottomBar.kt`). HU_09 y HU_12 agregan
+  secciones al detalle de la parcela (`ParcelDetailScreen.kt`, que ahora tiene «Actividades» e «Insumos consumidos»).
+- **Sincronización (HU_10):** `MovementSyncRepository` envía primero las actividades (`ActivityApi`) y luego los
+  movimientos; los estados `PENDING/SYNCING/SYNCED/ERROR` están en **dos tablas** (`movements` y `activities`) y
+  `InventoryDao.observePendingCount` ya suma ambas. Para «última sincronización» y «errores visibles» consulta las dos
+  (`ActivityDao.findSyncable` y `InventoryDao.findSyncable`).
+- **SALIDA:** el backend ya tiene `_subtracts()` y `SUPPORTED_TYPES`; en la app agrega el tipo a
+  `MovementType.REGISTRABLE` y a `subtracts()`. El historial (`MovementHistory.summary`) ya la resta en «± Otros».
+- **Contrato con el Equipo 2** (HU_12): [`contrato-equipo2.md`](contrato-equipo2.md).
 
 ---
 
@@ -65,7 +84,7 @@ Para evitar conflictos al integrar, tengan presente que estos archivos los modif
 
 | Archivo | Quién lo cambia |
 | --- | --- |
-| `android-app/.../data/local/InventoryDatabase.kt` (versión de Room y `AutoMigration`) | Los ajustes (Simon) ya pasaron a la versión **4**; HU_08 (Simon) pasará a la **5**. Cualquier otra HU que agregue tablas o columnas locales debe tomar la versión siguiente **después** de que entre la anterior, y subir el `N.json` de `app/schemas`. |
+| `android-app/.../data/local/InventoryDatabase.kt` (versión de Room y `AutoMigration`) | Los ajustes (Simon) ya usan la versión **4** y HU_08 (Simon) la **5**: **la siguiente libre es la 6** (toma la versión después de que entren estos PR). Cualquier otra HU que agregue tablas o columnas locales debe tomar la versión siguiente **después** de que entre la anterior, y subir el `N.json` de `app/schemas`. |
 | `ui/navigation/AppNavHost.kt`, `AppDestinations.kt`, `MainBottomBar.kt` | HU_08 agrega la pestaña **Actividades**; HU_09 y HU_12 agregan secciones y rutas. |
 | `ui/parcels/ParcelDetailScreen.kt` | HU_08 (actividades), HU_09 (aforamiento), HU_12 (recomendaciones): cada una es una sección nueva. |
 | `data/local/InventoryDao.kt` → `observePendingCount` | HU_10 (estado de sincronización) y HU_08 (las actividades también quedan pendientes): el contador debe sumar movimientos **y** actividades. |
@@ -92,7 +111,11 @@ reglas:
    pequeña por defecto, los botones quedan fuera de vista.
 3. Si cambias un texto de un botón, busca las pruebas que lo usan (`EntryFlowTest` buscaba
    «+ Registrar entrada» desde antes de HU_05).
-4. **No hagas merge con pruebas rojas.** Antes de abrir el PR:
+4. **ViewModel con `viewModelScope`:** pruébalo en JVM puro (sin Robolectric), con un repositorio falso y
+   `Dispatchers.setMain(UnconfinedTestDispatcher())`, como `RegisterViewModelTest` y `ActivityFormTest`. Probarlo con
+   Robolectric + Room real dejó colgadas (Compose «nunca queda ocioso», 60 s por prueba) las pruebas de pantalla que
+   corrían después (24/10/2026). Si una prueba de pantalla se cuelga solo en la corrida completa, sospecha de esto.
+5. **No hagas merge con pruebas rojas.** Antes de abrir el PR:
    `cd android-app; .\gradlew.bat testDebugUnitTest` y `cd backend; .venv\Scripts\python.exe -m pytest -q`.
 
 **Qué hacer:** el PR `fix: dejar en verde las pruebas…` (#14) **ya está en `develop`** (resuelto el
@@ -123,7 +146,7 @@ Esto aplica a **toda** migración nueva, no solo a la `0007`.
 | `0006` | HU_09 (aforamientos, compañero) | **Reservada**, aún no existe | `0005` |
 | `0007` | HU_13 (documento único, Simon) | En PR | `0005` **provisional** |
 | `0008` | Ajustes de inventario (Simon, 24/10) | En PR | `0007` |
-| `0009` | HU_08 (actividades, Simon) | Por hacer | `0008` |
+| `0009` | HU_08 (actividades, Simon, 24/10) | En PR | `0008` |
 
 **Qué hacer:**
 

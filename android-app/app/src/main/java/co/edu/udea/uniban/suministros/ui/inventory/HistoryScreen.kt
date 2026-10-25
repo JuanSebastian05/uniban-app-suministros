@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import co.edu.udea.uniban.suministros.data.HistorySummary
 import co.edu.udea.uniban.suministros.data.Quantity
 import co.edu.udea.uniban.suministros.data.local.HistoryMovement
+import co.edu.udea.uniban.suministros.data.local.ActivityType
 import co.edu.udea.uniban.suministros.data.local.LossReason
 import co.edu.udea.uniban.suministros.data.local.MovementType
 import co.edu.udea.uniban.suministros.data.local.SyncStatus
@@ -172,6 +173,9 @@ private fun HistoryCard(movement: HistoryMovement, showSupply: Boolean) {
                     else -> ""
                 }
                 Text("Parcela: ${movement.parcelName ?: "no disponible"}$cycle", style = MaterialTheme.typography.bodySmall)
+            }
+            ActivityType.fromCode(movement.activityType)?.let {
+                Text("Actividad: ${it.label}", style = MaterialTheme.typography.bodySmall)
             }
             LossReason.fromCode(movement.lossReason)?.let {
                 Text("Motivo: ${it.label}", style = MaterialTheme.typography.bodySmall)

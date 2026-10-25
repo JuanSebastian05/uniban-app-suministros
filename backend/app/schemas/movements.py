@@ -63,9 +63,13 @@ class MovementIn(CamelModel):
     loss_reason: LossReason | None = None
     # Un AJUSTE corrige la existencia: exige el sentido (suma o resta) y el motivo en la observación.
     adjust_direction: AdjustDirection | None = None
+    # HU_08: un CONSUMO puede pertenecer a una actividad (debe coincidir en parcela y ciclo).
+    activity_id: uuid.UUID | None = None
 
     @model_validator(mode="after")
     def _check_type_fields(self) -> "MovementIn":
+        if self.activity_id is not None and self.type != "CONSUMO":
+            raise ValueError("Solo los consumos pueden pertenecer a una actividad.")
         if self.type == "AJUSTE":
             if self.adjust_direction is None:
                 raise ValueError("Un ajuste debe indicar si aumenta o disminuye la existencia.")

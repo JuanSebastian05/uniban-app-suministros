@@ -32,6 +32,10 @@ import co.edu.udea.uniban.suministros.data.ParcelRepository
 import co.edu.udea.uniban.suministros.data.auth.AuthRepository
 import co.edu.udea.uniban.suministros.data.auth.ProfileState
 import co.edu.udea.uniban.suministros.data.auth.SessionState
+import co.edu.udea.uniban.suministros.ui.activities.ActivitiesScreen
+import co.edu.udea.uniban.suministros.ui.activities.ActivitiesViewModel
+import co.edu.udea.uniban.suministros.ui.activities.ActivityFormScreen
+import co.edu.udea.uniban.suministros.ui.activities.ActivityFormViewModel
 import co.edu.udea.uniban.suministros.ui.auth.CompleteProfileScreen
 import co.edu.udea.uniban.suministros.ui.auth.CompleteProfileViewModel
 import co.edu.udea.uniban.suministros.ui.auth.LoginScreen
@@ -110,6 +114,12 @@ fun AppNavHost(
     }
     val parcelFormFactory = remember {
         viewModelFactory { initializer { ParcelFormViewModel(checkNotNull(currentParcelRepository), createSavedStateHandle()) } }
+    }
+    val activitiesFactory = remember {
+        viewModelFactory { initializer { ActivitiesViewModel(checkNotNull(currentRepository)) } }
+    }
+    val activityFormFactory = remember {
+        viewModelFactory { initializer { ActivityFormViewModel(checkNotNull(currentRepository), createSavedStateHandle()) } }
     }
     val tabsEnabled = parcelRepositoryFor != null
     val openTab: (MainTab) -> Unit = { tab ->
@@ -260,6 +270,8 @@ fun AppNavHost(
                     val state by parcelsViewModel.state.collectAsStateWithLifecycle()
                     val consumptions by remember(id) { parcelsViewModel.consumptions(id) }
                         .collectAsStateWithLifecycle(emptyList())
+                    val activities by remember(id) { parcelsViewModel.activities(id) }
+                        .collectAsStateWithLifecycle(emptyList())
                     ParcelDetailScreen(
                         parcelId = id,
                         state = state,
@@ -267,6 +279,40 @@ fun AppNavHost(
                         onBack = { navController.popBackStack() },
                         onRetry = parcelsViewModel::load,
                         consumptions = consumptions,
+                        activities = activities,
+                        onNewActivity = {
+                            navController.navigate(AppDestinations.activityNew(id)) { launchSingleTop = true }
+                        },
+                    )
+                }
+                composable(AppDestinations.ACTIVITIES) { entry ->
+                    val inventoryViewModel = mainViewModel(navController, entry, inventoryFactory)
+                    val inventoryState by inventoryViewModel.state.collectAsStateWithLifecycle()
+                    val activitiesViewModel = mainScopedViewModel<ActivitiesViewModel>(navController, entry, activitiesFactory)
+                    val activities by activitiesViewModel.activities.collectAsStateWithLifecycle()
+                    ActivitiesScreen(
+                        activities = activities,
+                        pendingCount = inventoryState.pendingCount,
+                        onNewActivity = { navController.navigate(AppDestinations.activityNew()) { launchSingleTop = true } },
+                        navigationBar = { MainBottomBar(MainTab.ACTIVITIES, openTab) },
+                    )
+                }
+                composable(
+                    AppDestinations.ACTIVITY_NEW,
+                    arguments = listOf(navArgument("parcelId") { type = NavType.StringType; defaultValue = "" }),
+                ) { entry ->
+                    val inventoryViewModel = mainViewModel(navController, entry, inventoryFactory)
+                    val inventoryState by inventoryViewModel.state.collectAsStateWithLifecycle()
+                    val parcelsViewModel = mainScopedViewModel<ParcelsViewModel>(navController, entry, parcelsFactory)
+                    val parcels by parcelsViewModel.state.collectAsStateWithLifecycle()
+                    val formViewModel: ActivityFormViewModel = viewModel(factory = activityFormFactory)
+                    ActivityFormScreen(
+                        inventoryState = inventoryState,
+                        parcels = parcels.parcels,
+                        viewModel = formViewModel,
+                        onBack = { navController.popBackStack() },
+                        onDone = { navController.popBackStack() },
+                        onRetryInventory = inventoryViewModel::load,
                     )
                 }
                 composable(AppDestinations.PARCEL_NEW) { entry ->
