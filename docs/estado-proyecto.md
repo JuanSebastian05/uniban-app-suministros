@@ -41,7 +41,7 @@
 | `fix/pruebas-android-y-backend` | **#14, mergeado** en `develop` | Pruebas de Android y backend en verde. | — |
 | `fix/hu13-documento-unico` | [#15](https://github.com/JuanSebastian05/uniban-app-suministros/pull/15), abierto | HU_13: documento único (backend, migración `0007`, app, pruebas) + `CLAUDE.md`, `estado-proyecto.md`, `avisos-equipo.md`, `hu13.md`. | Lo revisa/mergea otra persona; **migrar Neon antes del merge a `main`** (A-02). |
 | `fix/robustez-registro-y-perfil` (apilada sobre `fix/hu13-documento-unico`) | [#16](https://github.com/JuanSebastian05/uniban-app-suministros/pull/16), abierto | P-02: cuenta huérfana («Complete su perfil») y tiempo de espera frente a Render. Solo app + docs, **sin migración**. | Mergear **después** del #15 (o juntos; el #16 contiene al #15). |
-| `feat/ajuste-movimientos` (apilada sobre `fix/robustez-registro-y-perfil`) | PR por abrir | P-03: AJUSTE (backend, migración `0008`, Room v4, app, pruebas, `hu05.md`). Backend 108 y Android 158 pruebas en verde. | Mergear **después** del #16. |
+| `feat/ajuste-movimientos` (apilada sobre `fix/robustez-registro-y-perfil`) | [#17](https://github.com/JuanSebastian05/uniban-app-suministros/pull/17), abierto | P-03: AJUSTE (backend, migración `0008`, Room v4, app, pruebas, `hu05.md`). Backend 108 y Android 158 pruebas en verde. | Mergear **después** del #16. |
 | `feat/hu08-actividad-productiva` | — | Vacía (creada desde `develop`). | Rehacer sobre `develop` cuando entren los PR anteriores. |
 
 Pruebas al 21/10/2026 en `fix/robustez-registro-y-perfil`: **backend 95** (sin cambios en esta rama, corrido
