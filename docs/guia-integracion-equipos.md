@@ -54,8 +54,8 @@ No exponer productor, documento, ciclo ni nada más (privacidad). `areaHa` con d
 - Validar: `parcelId` existe (si no, `404` o `409` con mensaje claro), `date` AAAA-MM-DD, `areaHa > 0` (informativa, no se
   contrasta), `estimatedPlants` entero `>= 0`, `confidence` entre 0 y 1 (`422` si no).
 - Tabla nueva `aforamientos`: `id UUID PK`, `parcel_id FK → parcels.id (índice)`, `date`, `area_ha NUMERIC(9,2)`,
-  `estimated_plants INT`, `confidence NUMERIC(4,3)`, `received_at`. **Migración `0006`**: está reservada para esto
-  (A-01); su `down_revision` debe ser la cabeza actual (`0009` si ya entraron los PR #17/#18), **no** `0005`. Verifica
+  `estimated_plants INT`, `confidence NUMERIC(4,3)`, `received_at`. **Migración `0010`** (la `0006` ya no sirve: cuando Neon pase de la `0005` a la `0009`, una migración intermedia nunca se ejecutaría allí);
+  su `down_revision` es la cabeza actual (`0009`). Verifica
   con `alembic heads` (una sola cabeza) y prueba la migración en un PostgreSQL temporal (receta en `CLAUDE.md`), **no** en
   Neon compartida.
 - Sigue el patrón de `app/services/activities.py` + `app/api/v1/endpoints/activities.py` (servicio con excepción de
@@ -98,7 +98,7 @@ obligatorios antes de implementar (varios campos de aforamiento dependen del Equ
 
 ### B.3 Guardar y servir la respuesta
 
-- Tabla `recommendations` (migración nueva, **siguiente número libre después de la 0006**; coordina por A-01): guarda por
+- Tabla `recommendations` (migración nueva, **la siguiente libre después de la 0010**; coordina por A-01): guarda por
   parcela y periodo la respuesta completa (`jsonb` o columnas), `generated_at` y `source_version`.
 - `POST /api/v1/parcels/{id}/recommendation` (token de Firebase): pide una recomendación nueva al Equipo 2 y la guarda.
   `GET /api/v1/parcels/{id}/recommendation`: la última guardada.
@@ -113,7 +113,7 @@ Sin conexión muestra la última guardada.
 
 1. `SERVICE_API_KEY` + `require_service_key` + `GET /service/parcels` → **avisar al Equipo 1 ya** (es lo que más los
    desbloquea) y pasarles la clave.
-2. `POST /aforamientos` + migración `0006` + pruebas.
+2. `POST /aforamientos` + migración `0010` + pruebas.
 3. Cliente del Equipo 2 + `POST /parcels/{id}/recommendation` (primero sin aforamiento real si el Equipo 1 aún no envía).
 4. HU_09 y HU_12 en la app.
 5. Pruebas conjuntas con ambos equipos y el diagrama entre los tres.
@@ -131,6 +131,6 @@ Sin conexión muestra la última guardada.
 
 > Trabajas en el repo `uniban-app-suministros`. Lee `CLAUDE.md`, `docs/avisos-equipo.md`, `docs/estado-proyecto.md` y
 > `docs/guia-integracion-equipos.md`. Implementa la Parte A (clave de servicio, `GET /api/v1/service/parcels`,
-> `POST /api/v1/aforamientos` con migración 0006) siguiendo el patrón de `activities` en el backend, con pruebas, en una
+> `POST /api/v1/aforamientos` con migración 0010) siguiendo el patrón de `activities` en el backend, con pruebas, en una
 > rama `feat/integracion-equipo1` que parta de `develop`. No toques Neon ni imprimas secretos. Al terminar, corre
 > `pytest`, verifica la migración en un PostgreSQL temporal, actualiza la documentación y abre el PR a `develop`.

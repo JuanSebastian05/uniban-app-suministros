@@ -12,7 +12,7 @@
 
 | # | Quién | Qué | Aviso |
 | --- | --- | --- | --- |
-| 1 | Compañero de HU_09 (aforamientos) | Tu migración será la `0006`; la de HU_13 es la `0007`. Antes de tu PR, revisa `alembic heads` (ver A-01). | A-01 |
+| 1 | Compañero de HU_09 (aforamientos) | Tu migración de aforamientos será la **`0010`** (down_revision `0009`); la `0006` ya no se usa (A-01). Antes de tu PR, revisa `alembic heads`. | A-01 |
 | 2 | Quien despliegue (Juan José / Juan Sebastián) | Aplicar `0007` en Neon **antes** de hacer merge a `main`. Si no, todas las rutas autenticadas dan 500. | A-02 |
 | 3 | Compañero de HU_09–12 y Salidas | Hacer `git pull origin develop`: el PR de pruebas (#14) ya entró; sin él hay 30 pruebas de Android en rojo que no son tuyas. | A-03 (resuelto en `develop`) |
 | 4 | Todos | Reglas nuevas para escribir pruebas (A-03) y para tocar archivos compartidos (A-04). | A-03, A-04 |
@@ -27,7 +27,7 @@
 Cuando entren los PR de ajustes (#17) y de HU_08, esto ya existe y te afecta:
 
 - **Base:** Room **v5** (`activities`, `movements.activityId`, `movements.adjustDirection`) y Alembic **`0009`** (cabeza).
-  La migración `0006` sigue reservada para aforamientos: al integrarla, re-parenta según A-01.
+  La migración de aforamientos será la `0010` (la `0006` quedó sin usar: ver A-01).
 - **Pestañas:** `MainTab` ya tiene Parcelas, Inventario y **Actividades** (`MainBottomBar.kt`). HU_09 y HU_12 agregan
   secciones al detalle de la parcela (`ParcelDetailScreen.kt`, que ahora tiene «Actividades» e «Insumos consumidos»).
 - **Sincronización (HU_10):** `MovementSyncRepository` envía primero las actividades (`ActivityApi`) y luego los
@@ -143,7 +143,8 @@ Esto aplica a **toda** migración nueva, no solo a la `0007`.
 | Id | HU | Estado | `down_revision` |
 | --- | --- | --- | --- |
 | `0005` | HU_05 | En `develop` | `0004` |
-| `0006` | HU_09 (aforamientos, compañero) | **Reservada**, aún no existe | `0005` |
+| `0006` | — | **Descartada** (ver nota): no se usa | — |
+| `0010` | Aforamientos (HU_09, compañero) | Por hacer | `0009` |
 | `0007` | HU_13 (documento único, Simon) | En PR | `0005` **provisional** |
 | `0008` | Ajustes de inventario (Simon, 24/10) | En PR | `0007` |
 | `0009` | HU_08 (actividades, Simon, 24/10) | En PR | `0008` |
@@ -154,7 +155,8 @@ Esto aplica a **toda** migración nueva, no solo a la `0007`.
   (debe mostrar **un** resultado) y toma el siguiente número libre.
 - Si al hacer tu PR `develop` ya tiene otra migración que parte de la misma que la tuya, **cambia tu
   `down_revision`** al id de la última y renumera si hace falta. Quien entra segundo re-parenta.
-- Al integrar `0006` y `0007`: la segunda en entrar pone `down_revision` = id de la primera (la `0007`
+- **Nota (25/10):** la `0006` se descarta porque Neon pasará de la `0005` a la `0009`; una migración intermedia nueva nunca se ejecutaría allí. Las migraciones nuevas parten de la cabeza actual (`0010` en adelante).
+- (Histórico) Al integrar `0006` y `0007`: la segunda en entrar pone `down_revision` = id de la primera (la `0007`
   hoy apunta a `0005` a propósito, porque la `0006` todavía no existe). Los ids no tienen que ser
   contiguos.
 - Cómo probar una migración sin tocar Neon: ver «Verificar una migración» en [`CLAUDE.md`](../CLAUDE.md).
