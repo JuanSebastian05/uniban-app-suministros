@@ -13,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -26,10 +27,14 @@ import androidx.compose.ui.unit.dp
 import co.edu.udea.uniban.suministros.data.CycleStatus
 import co.edu.udea.uniban.suministros.data.ParcelValidation
 import co.edu.udea.uniban.suministros.data.Quantity
+import co.edu.udea.uniban.suministros.data.local.ActivityType
+import co.edu.udea.uniban.suministros.data.local.ParcelActivity
 import co.edu.udea.uniban.suministros.data.local.ParcelConsumption
 import co.edu.udea.uniban.suministros.data.local.ParcelSummary
+import co.edu.udea.uniban.suministros.data.local.SyncStatus
 import co.edu.udea.uniban.suministros.ui.inventory.InventoryScaffold
 import co.edu.udea.uniban.suministros.ui.inventory.LoadingOrError
+import co.edu.udea.uniban.suministros.ui.inventory.syncLabel
 import co.edu.udea.uniban.suministros.ui.theme.UnibanPending
 import co.edu.udea.uniban.suministros.ui.theme.UnibanPendingText
 import java.time.LocalDate
@@ -38,8 +43,8 @@ import java.time.LocalDate
  * Detalle de una parcela (HU_02): área y ciclo productivo activo (estado, fecha de inicio y día del
  * ciclo), o un aviso explícito si no tiene ciclo activo. Lee la copia local: funciona sin conexión.
  *
- * «Insumos consumidos» lista los consumos registrados en la parcela (HU_05). Las secciones del
- * mockup de aforamiento, actividades y recomendaciones corresponden a HU_09, HU_08 y HU_12; no se
+ * «Actividades» lista las actividades de la parcela (HU_08) y «Insumos consumidos» sus consumos (HU_05).
+ * Las secciones del mockup de aforamiento y recomendaciones corresponden a HU_09 y HU_12; no se
  * muestran hasta que existan.
  */
 @Composable
@@ -51,6 +56,9 @@ fun ParcelDetailScreen(
     onRetry: () -> Unit,
     today: LocalDate = LocalDate.now(),
     consumptions: List<ParcelConsumption> = emptyList(),
+    // HU_08: actividades de la parcela y acceso al formulario. Sin [onNewActivity] no se muestra el botón.
+    activities: List<ParcelActivity> = emptyList(),
+    onNewActivity: (() -> Unit)? = null,
 ) {
     val parcel = state.parcels.find { it.id == parcelId }
     InventoryScaffold(
@@ -75,6 +83,35 @@ fun ParcelDetailScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     if (parcel.cycleStartDate == null) NoActiveCycle() else ActiveCycle(parcel, today)
+                    Text(
+                        "ACTIVIDADES",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                    if (activities.isEmpty()) {
+                        Text(
+                            "Aún no hay actividades registradas en esta parcela.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag("no-activities"),
+                        )
+                    }
+                    activities.forEach { ActivityCard(it, activeCycleId = parcel.cycleId) }
+                    if (onNewActivity != null) {
+                        if (parcel.cycleId == null) {
+                            Text(
+                                "Inicia un ciclo productivo para registrar actividades en esta parcela.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        } else {
+                            OutlinedButton(
+                                onClick = onNewActivity,
+                                modifier = Modifier.fillMaxWidth().testTag("new-activity"),
+                            ) { Text("+ Registrar actividad") }
+                        }
+                    }
                     Text(
                         "INSUMOS CONSUMIDOS",
                         style = MaterialTheme.typography.labelMedium,
@@ -180,6 +217,41 @@ private fun NoActiveCycle() {
                 "Los ciclos se inician al registrar la parcela. Iniciar un ciclo en una parcela existente " +
                     "aún no está disponible.",
                 style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActivityCard(activity: ParcelActivity, activeCycleId: String?) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth().testTag("activity-${activity.id}"),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                ActivityType.fromCode(activity.type)?.label ?: activity.type,
+                style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
+            )
+            Text(
+                ParcelValidation.formatDate(activity.date) + when (activity.consumptionCount) {
+                    0 -> ""
+                    1 -> " · 1 insumo usado"
+                    else -> " · ${activity.consumptionCount} insumos usados"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (activity.observation.isNotBlank()) Text(activity.observation, style = MaterialTheme.typography.bodyMedium)
+            if (activeCycleId != null && activity.cycleId != activeCycleId) {
+                Text("Ciclo anterior", style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text(
+                syncLabel(activity.syncStatus), style = MaterialTheme.typography.labelSmall,
+                color = if (activity.syncStatus == SyncStatus.ERROR) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.onTertiaryContainer,
             )
         }
     }

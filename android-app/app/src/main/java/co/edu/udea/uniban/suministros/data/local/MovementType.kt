@@ -8,11 +8,16 @@ object MovementType {
     const val PERDIDA = "PERDIDA"
     const val AJUSTE = "AJUSTE"
 
-    /** Tipos que hoy se pueden registrar desde la app (HU_04 y HU_05). SALIDA y AJUSTE aún no. */
-    val REGISTRABLE = listOf(ENTRADA, CONSUMO, PERDIDA)
+    /** Tipos que hoy se pueden registrar desde la app (HU_04, HU_05 y ajustes). SALIDA aún no. */
+    val REGISTRABLE = listOf(ENTRADA, CONSUMO, PERDIDA, AJUSTE)
 
-    /** RT_10: entradas y ajustes suman; salidas, consumos y pérdidas restan. */
-    fun subtracts(type: String) = type == SALIDA || type == CONSUMO || type == PERDIDA
+    /**
+     * RT_10: entradas suman; salidas, consumos y pérdidas restan. Un ajuste suma o resta según su
+     * [direction] ([AdjustDirection.DISMINUCION] resta).
+     */
+    fun subtracts(type: String, direction: String? = null) =
+        type == SALIDA || type == CONSUMO || type == PERDIDA ||
+            (type == AJUSTE && direction == AdjustDirection.DISMINUCION.name)
 
     fun label(type: String) = when (type) {
         ENTRADA -> "Entrada"
@@ -21,6 +26,17 @@ object MovementType {
         PERDIDA -> "Pérdida"
         AJUSTE -> "Ajuste"
         else -> type
+    }
+}
+
+/** Sentido de un ajuste (corrección). [name] es el valor que se guarda y viaja al backend. */
+enum class AdjustDirection(val label: String, val symbol: String) {
+    AUMENTO("Aumentar", "+"),
+    DISMINUCION("Disminuir", "−"),
+    ;
+
+    companion object {
+        fun fromCode(code: String?): AdjustDirection? = entries.firstOrNull { it.name == code }
     }
 }
 

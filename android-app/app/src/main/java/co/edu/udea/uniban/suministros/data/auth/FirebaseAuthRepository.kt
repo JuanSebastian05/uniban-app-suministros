@@ -35,11 +35,20 @@ class FirebaseAuthRepository(context: Context, private val userApi: UserApi) : A
     private val state = MutableStateFlow(auth?.currentUser.toSession())
     override val sessionState: StateFlow<SessionState> = state.asStateFlow()
 
+    private val profile = MutableStateFlow(ProfileState.Unknown)
+    override val profileState: StateFlow<ProfileState> = profile.asStateFlow()
+
     @Volatile private var registering = false
 
     init {
         // El repositorio vive tanto como la aplicación; no hace falta quitar el listener.
-        auth?.addAuthStateListener { if (!registering) state.value = it.currentUser.toSession() }
+        auth?.addAuthStateListener { if (!registering) publish(it.currentUser.toSession()) }
+    }
+
+    /** Publica la sesión; al cambiar de cuenta, el perfil de la anterior deja de valer. */
+    private fun publish(session: SessionState) {
+        if (session.uid() != state.value.uid()) profile.value = ProfileState.Unknown
+        state.value = session
     }
 
     override suspend fun signIn(email: String, password: String): Result<Unit> {
@@ -57,6 +66,7 @@ class FirebaseAuthRepository(context: Context, private val userApi: UserApi) : A
     override suspend fun register(registration: Registration, password: String): Result<Unit> {
         val firebase = auth ?: return Result.failure(AuthException(AuthError.NotConfigured))
         registering = true
+        var saved = false
         try {
             val user = try {
                 firebase.createUserWithEmailAndPassword(registration.email, password).await().user
@@ -66,7 +76,7 @@ class FirebaseAuthRepository(context: Context, private val userApi: UserApi) : A
             } catch (error: Exception) {
                 return Result.failure(AuthException(mapFirebaseError(error)))
             }
-            val profile = try {
+            val result = try {
                 val token = user.getIdToken(false).await().token.orEmpty()
                 sendProfile(userApi, token, registration)
             } catch (error: CancellationException) {
@@ -75,12 +85,44 @@ class FirebaseAuthRepository(context: Context, private val userApi: UserApi) : A
             } catch (error: Exception) {
                 Result.failure(AuthException(mapFirebaseError(error)))
             }
-            if (profile.isFailure) discard(firebase, user)
-            return profile
+            if (result.isFailure) discard(firebase, user) else saved = true
+            return result
         } finally {
             registering = false
-            state.value = firebase.currentUser.toSession()
+            publish(firebase.currentUser.toSession())
+            // Recién registrada: el perfil existe, no hace falta preguntarlo al backend.
+            if (saved) profile.value = ProfileState.Complete
         }
+    }
+
+    override suspend fun refreshProfile() {
+        val firebase = auth ?: return
+        val user = firebase.currentUser ?: return
+        if (profile.value == ProfileState.Complete) return
+        val result = try {
+            fetchProfileState(userApi, user.getIdToken(false).await().token.orEmpty())
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            ProfileState.Unknown
+        }
+        // La cuenta pudo cambiar mientras llegaba la respuesta (el servidor tarda al despertar).
+        if (firebase.currentUser?.uid == user.uid) profile.value = result
+    }
+
+    override suspend fun completeProfile(name: String, document: String, phone: String?): Result<Unit> {
+        val firebase = auth ?: return Result.failure(AuthException(AuthError.NotConfigured))
+        val user = firebase.currentUser ?: return Result.failure(AuthException(AuthError.Unknown))
+        val result = try {
+            val token = user.getIdToken(false).await().token.orEmpty()
+            sendProfile(userApi, token, Registration(name, document, phone, user.email.orEmpty()))
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Result.failure(AuthException(mapFirebaseError(error)))
+        }
+        if (result.isSuccess && firebase.currentUser?.uid == user.uid) profile.value = ProfileState.Complete
+        return result
     }
 
     /** Deshace una cuenta sin perfil en el backend; si no se puede borrar, al menos cierra la sesión. */
@@ -95,15 +137,17 @@ class FirebaseAuthRepository(context: Context, private val userApi: UserApi) : A
     }
 
     override fun signOut() {
-        if (auth != null) auth.signOut() else state.value = SessionState.Unauthenticated
+        if (auth != null) auth.signOut() else publish(SessionState.Unauthenticated)
     }
 
     override fun startDemo() {
-        if (demoAvailable) state.value = SessionState.Authenticated(DEMO_UID, null)
+        if (demoAvailable) publish(SessionState.Authenticated(DEMO_UID, null))
     }
 
     private fun FirebaseUser?.toSession(): SessionState =
         if (this == null) SessionState.Unauthenticated else SessionState.Authenticated(uid, email)
+
+    private fun SessionState.uid(): String? = (this as? SessionState.Authenticated)?.uid
 
     private companion object {
         const val DEMO_UID = "demo"

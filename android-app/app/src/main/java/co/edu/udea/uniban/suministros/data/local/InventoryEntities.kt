@@ -58,6 +58,51 @@ data class MovementEntity(
     val parcelId: String? = null,
     val cycleId: String? = null,
     val lossReason: String? = null,
+    // Ajustes: AUMENTO o DISMINUCION. Nulo en los demás tipos.
+    val adjustDirection: String? = null,
+    // HU_08: actividad a la que pertenece el consumo. Sin clave foránea: ver [ActivityEntity].
+    val activityId: String? = null,
+)
+
+/**
+ * Actividad productiva (HU_08), registrada sobre una parcela y su ciclo activo. **Sin clave foránea hacia
+ * `parcels`**: `ParcelRepository.refresh()` borra y reinserta las parcelas y una FK rompería ese refresco.
+ * Nace en el dispositivo con UUID y `PENDING`; se sincroniza antes que sus consumos.
+ */
+@Entity(tableName = "activities", indices = [Index("parcelId"), Index("syncStatus")])
+data class ActivityEntity(
+    @PrimaryKey val id: String,
+    val parcelId: String,
+    val cycleId: String,
+    val type: String,
+    val date: String,
+    val observation: String,
+    val createdAt: String,
+    val updatedAt: String,
+    val syncStatus: String = "PENDING",
+)
+
+/** Actividad con la cantidad de consumos que se le asociaron, para el detalle de la parcela (HU_08). */
+data class ParcelActivity(
+    val id: String,
+    val type: String,
+    val date: String,
+    val observation: String,
+    val cycleId: String,
+    val syncStatus: String,
+    val consumptionCount: Int,
+)
+
+/** Actividad con el nombre de su parcela, para la lista de la pestaña Actividades (HU_08). */
+data class ActivityListItem(
+    val id: String,
+    val parcelId: String,
+    val parcelName: String?,
+    val type: String,
+    val date: String,
+    val observation: String,
+    val syncStatus: String,
+    val consumptionCount: Int,
 )
 
 /** Contexto de un inventario que se envía junto con su primer movimiento (HU_06). */
@@ -105,6 +150,9 @@ data class HistoryMovement(
     val cycleId: String?,
     val cycleActive: Boolean,
     val lossReason: String?,
+    val adjustDirection: String?,
+    /** Tipo de la actividad del consumo (HU_08), o nulo si no pertenece a una. */
+    val activityType: String?,
 )
 
 /** Saldo inicial y existencia de un insumo, para el resumen del historial (RT_10, HU_07). */

@@ -30,7 +30,14 @@ import androidx.navigation.navArgument
 import co.edu.udea.uniban.suministros.data.InventoryRepository
 import co.edu.udea.uniban.suministros.data.ParcelRepository
 import co.edu.udea.uniban.suministros.data.auth.AuthRepository
+import co.edu.udea.uniban.suministros.data.auth.ProfileState
 import co.edu.udea.uniban.suministros.data.auth.SessionState
+import co.edu.udea.uniban.suministros.ui.activities.ActivitiesScreen
+import co.edu.udea.uniban.suministros.ui.activities.ActivitiesViewModel
+import co.edu.udea.uniban.suministros.ui.activities.ActivityFormScreen
+import co.edu.udea.uniban.suministros.ui.activities.ActivityFormViewModel
+import co.edu.udea.uniban.suministros.ui.auth.CompleteProfileScreen
+import co.edu.udea.uniban.suministros.ui.auth.CompleteProfileViewModel
 import co.edu.udea.uniban.suministros.ui.auth.LoginScreen
 import co.edu.udea.uniban.suministros.ui.auth.LoginViewModel
 import co.edu.udea.uniban.suministros.ui.auth.RegisterScreen
@@ -57,8 +64,12 @@ fun AppNavHost(
     parcelRepositoryFor: ((uid: String) -> ParcelRepository)? = null,
 ) {
     val session by authRepository.sessionState.collectAsStateWithLifecycle()
+    val profile by authRepository.profileState.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val uid = (session as? SessionState.Authenticated)?.uid
+    // No bloquea: la app abre con los datos locales y, cuando el backend responde que la cuenta no tiene
+    // perfil (cuenta huérfana), el guard la lleva a completarlo. Sin red el perfil queda «desconocido».
+    LaunchedEffect(uid) { if (uid != null) authRepository.refreshProfile() }
     val repository = remember(uid) { uid?.let(repositoryFor) }
     // Los ViewModel del inventario se crean al entrar al grafo MAIN, que solo existe con sesión;
     // al cerrar sesión el grafo sale de la pila y la siguiente cuenta recibe ViewModel nuevos.
@@ -78,13 +89,16 @@ fun AppNavHost(
     val startDestination = remember {
         if (session is SessionState.Authenticated) AppDestinations.MAIN else AppDestinations.LOGIN
     }
-    SessionGuard(navController, session)
+    SessionGuard(navController, session, profile)
 
     val loginFactory = remember(authRepository) {
         viewModelFactory { initializer { LoginViewModel(authRepository, createSavedStateHandle()) } }
     }
     val registerFactory = remember(authRepository) {
         viewModelFactory { initializer { RegisterViewModel(authRepository, createSavedStateHandle()) } }
+    }
+    val completeProfileFactory = remember(authRepository) {
+        viewModelFactory { initializer { CompleteProfileViewModel(authRepository, createSavedStateHandle()) } }
     }
     val inventoryFactory = remember {
         viewModelFactory { initializer { InventoryViewModel(checkNotNull(currentRepository)) } }
@@ -100,6 +114,12 @@ fun AppNavHost(
     }
     val parcelFormFactory = remember {
         viewModelFactory { initializer { ParcelFormViewModel(checkNotNull(currentParcelRepository), createSavedStateHandle()) } }
+    }
+    val activitiesFactory = remember {
+        viewModelFactory { initializer { ActivitiesViewModel(checkNotNull(currentRepository)) } }
+    }
+    val activityFormFactory = remember {
+        viewModelFactory { initializer { ActivityFormViewModel(checkNotNull(currentRepository), createSavedStateHandle()) } }
     }
     val tabsEnabled = parcelRepositoryFor != null
     val openTab: (MainTab) -> Unit = { tab ->
@@ -136,6 +156,18 @@ fun AppNavHost(
                 onTogglePassword = registerViewModel::togglePasswordVisible,
                 onSubmit = registerViewModel::submit,
                 onBack = { navController.popBackStack() },
+            )
+        }
+        // Cuenta sin perfil en el backend: el guard trae aquí y devuelve al inventario al completarlo.
+        composable(AppDestinations.COMPLETE_PROFILE) {
+            val completeProfileViewModel: CompleteProfileViewModel = viewModel(factory = completeProfileFactory)
+            CompleteProfileScreen(
+                state = completeProfileViewModel.state,
+                onNameChange = completeProfileViewModel::changeName,
+                onDocumentChange = completeProfileViewModel::changeDocument,
+                onPhoneChange = completeProfileViewModel::changePhone,
+                onSubmit = completeProfileViewModel::submit,
+                onSignOut = completeProfileViewModel::signOut,
             )
         }
         // El inventario se carga solo dentro de este grafo: sin sesión no se abre ningún dato,
@@ -238,6 +270,8 @@ fun AppNavHost(
                     val state by parcelsViewModel.state.collectAsStateWithLifecycle()
                     val consumptions by remember(id) { parcelsViewModel.consumptions(id) }
                         .collectAsStateWithLifecycle(emptyList())
+                    val activities by remember(id) { parcelsViewModel.activities(id) }
+                        .collectAsStateWithLifecycle(emptyList())
                     ParcelDetailScreen(
                         parcelId = id,
                         state = state,
@@ -245,6 +279,40 @@ fun AppNavHost(
                         onBack = { navController.popBackStack() },
                         onRetry = parcelsViewModel::load,
                         consumptions = consumptions,
+                        activities = activities,
+                        onNewActivity = {
+                            navController.navigate(AppDestinations.activityNew(id)) { launchSingleTop = true }
+                        },
+                    )
+                }
+                composable(AppDestinations.ACTIVITIES) { entry ->
+                    val inventoryViewModel = mainViewModel(navController, entry, inventoryFactory)
+                    val inventoryState by inventoryViewModel.state.collectAsStateWithLifecycle()
+                    val activitiesViewModel = mainScopedViewModel<ActivitiesViewModel>(navController, entry, activitiesFactory)
+                    val activities by activitiesViewModel.activities.collectAsStateWithLifecycle()
+                    ActivitiesScreen(
+                        activities = activities,
+                        pendingCount = inventoryState.pendingCount,
+                        onNewActivity = { navController.navigate(AppDestinations.activityNew()) { launchSingleTop = true } },
+                        navigationBar = { MainBottomBar(MainTab.ACTIVITIES, openTab) },
+                    )
+                }
+                composable(
+                    AppDestinations.ACTIVITY_NEW,
+                    arguments = listOf(navArgument("parcelId") { type = NavType.StringType; defaultValue = "" }),
+                ) { entry ->
+                    val inventoryViewModel = mainViewModel(navController, entry, inventoryFactory)
+                    val inventoryState by inventoryViewModel.state.collectAsStateWithLifecycle()
+                    val parcelsViewModel = mainScopedViewModel<ParcelsViewModel>(navController, entry, parcelsFactory)
+                    val parcels by parcelsViewModel.state.collectAsStateWithLifecycle()
+                    val formViewModel: ActivityFormViewModel = viewModel(factory = activityFormFactory)
+                    ActivityFormScreen(
+                        inventoryState = inventoryState,
+                        parcels = parcels.parcels,
+                        viewModel = formViewModel,
+                        onBack = { navController.popBackStack() },
+                        onDone = { navController.popBackStack() },
+                        onRetryInventory = inventoryViewModel::load,
                     )
                 }
                 composable(AppDestinations.PARCEL_NEW) { entry ->
@@ -288,16 +356,20 @@ private inline fun <reified T : androidx.lifecycle.ViewModel> mainScopedViewMode
 
 /**
  * Guard global: sin sesión solo existen el login y el registro (cubre cierre de sesión y expiración con la app
- * abierta) y, al autenticarse, se reemplaza el login por el inventario. Se vacía la pila para
- * que Atrás no regrese a pantallas del otro estado.
+ * abierta) y, al autenticarse, se reemplaza el login por el inventario. Si el backend confirma que la cuenta no
+ * tiene perfil ([ProfileState.Missing]) solo existe la pantalla de completarlo; con el perfil completo vuelve
+ * al inventario. Se vacía la pila para que Atrás no regrese a pantallas del otro estado.
  */
 @Composable
-private fun SessionGuard(navController: NavController, session: SessionState) {
-    LaunchedEffect(session) {
+private fun SessionGuard(navController: NavController, session: SessionState, profile: ProfileState) {
+    LaunchedEffect(session, profile) {
         val current = navController.currentDestination ?: return@LaunchedEffect
         val inMain = current.hierarchy.any { it.route == AppDestinations.MAIN }
+        val authenticated = session is SessionState.Authenticated
+        val needsProfile = authenticated && profile == ProfileState.Missing
         val target = when {
-            session is SessionState.Authenticated && !inMain -> AppDestinations.MAIN
+            needsProfile && current.route != AppDestinations.COMPLETE_PROFILE -> AppDestinations.COMPLETE_PROFILE
+            authenticated && !needsProfile && !inMain -> AppDestinations.MAIN
             session is SessionState.Unauthenticated && current.route !in PUBLIC_ROUTES -> AppDestinations.LOGIN
             else -> return@LaunchedEffect
         }

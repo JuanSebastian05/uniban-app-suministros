@@ -8,6 +8,7 @@ import co.edu.udea.uniban.suministros.data.ParcelRepository
 import co.edu.udea.uniban.suministros.data.auth.AuthRepository
 import co.edu.udea.uniban.suministros.data.auth.FirebaseAuthRepository
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
+import co.edu.udea.uniban.suministros.data.remote.ActivityApi
 import co.edu.udea.uniban.suministros.data.remote.MovementApi
 import co.edu.udea.uniban.suministros.data.remote.ParcelApi
 import co.edu.udea.uniban.suministros.data.remote.UserApi
@@ -18,11 +19,15 @@ class UnibanApplication : Application() {
     /** Una base local por cuenta (uid de Firebase); se abre la primera vez que se usa. */
     private val databases = ConcurrentHashMap<String, InventoryDatabase>()
 
-    private val retrofit by lazy { NetworkModule.createRetrofit() }
+    private val httpClient by lazy { NetworkModule.createOkHttpClient() }
+
+    private val retrofit by lazy { NetworkModule.createRetrofit(httpClient) }
 
     private val movementApi by lazy { retrofit.create(MovementApi::class.java) }
 
     private val parcelApi by lazy { retrofit.create(ParcelApi::class.java) }
+
+    private val activityApi by lazy { retrofit.create(ActivityApi::class.java) }
 
     val authRepository: AuthRepository by lazy {
         FirebaseAuthRepository(this, retrofit.create(UserApi::class.java))
@@ -45,10 +50,12 @@ class UnibanApplication : Application() {
 
     /** Sincroniza los movimientos de [uid] con el token de esa misma cuenta. */
     fun movementSyncRepository(uid: String): MovementSyncRepository =
-        MovementSyncRepository(database(uid), movementApi) { authRepository.idToken(uid) }
+        MovementSyncRepository(database(uid), movementApi, activityApi) { authRepository.idToken(uid) }
 
     override fun onCreate() {
         super.onCreate()
+        // Despierta el servidor (Render lo duerme a los 15 min) mientras el productor abre la app.
+        NetworkModule.warmUp(httpClient)
         // Retoma lo que quedó pendiente (o interrumpido) en la sesión anterior.
         SyncScheduler.enqueue(this)
         SyncScheduler.schedulePeriodic(this)

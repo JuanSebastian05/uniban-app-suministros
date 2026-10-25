@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import co.edu.udea.uniban.suministros.data.HistorySummary
 import co.edu.udea.uniban.suministros.data.Quantity
 import co.edu.udea.uniban.suministros.data.local.HistoryMovement
+import co.edu.udea.uniban.suministros.data.local.ActivityType
 import co.edu.udea.uniban.suministros.data.local.LossReason
 import co.edu.udea.uniban.suministros.data.local.MovementType
 import co.edu.udea.uniban.suministros.data.local.SyncStatus
@@ -160,7 +161,7 @@ private fun HistoryCard(movement: HistoryMovement, showSupply: Boolean) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (showSupply) Text(movement.supplyName, style = MaterialTheme.typography.labelLarge)
             Text(
-                movementHeadline(movement.type, movement.quantity, movement.unit),
+                movementHeadline(movement.type, movement.quantity, movement.unit, movement.adjustDirection),
                 color = movementColor(movement.type),
                 style = MaterialTheme.typography.titleSmall,
             )
@@ -172,6 +173,9 @@ private fun HistoryCard(movement: HistoryMovement, showSupply: Boolean) {
                     else -> ""
                 }
                 Text("Parcela: ${movement.parcelName ?: "no disponible"}$cycle", style = MaterialTheme.typography.bodySmall)
+            }
+            ActivityType.fromCode(movement.activityType)?.let {
+                Text("Actividad: ${it.label}", style = MaterialTheme.typography.bodySmall)
             }
             LossReason.fromCode(movement.lossReason)?.let {
                 Text("Motivo: ${it.label}", style = MaterialTheme.typography.bodySmall)

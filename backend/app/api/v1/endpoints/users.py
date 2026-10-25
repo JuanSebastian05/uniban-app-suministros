@@ -11,7 +11,7 @@ from app.core.security import FirebaseIdentity, get_current_identity
 from app.db.session import get_db
 from app.models import User
 from app.schemas.users import RegisterIn, UserOut
-from app.services.user_registration import find_user, register_user
+from app.services.user_registration import DuplicateDocument, find_user, register_user
 
 router = APIRouter()
 
@@ -31,7 +31,9 @@ def _out(user: User) -> UserOut:
     responses={
         200: {"description": "La cuenta ya estaba registrada; se devuelve su perfil."},
         401: {"description": "Falta el token de Firebase o no es válido."},
-        422: {"description": "Datos inválidos o token sin correo."},
+        409: {"description": "`detail.code` = DUPLICATE_DOCUMENT: otra cuenta ya usa ese documento (se ignoran "
+                             "mayúsculas, puntos, espacios y guiones)."},
+        422: {"description": "Datos inválidos, documento sin letras ni números o token sin correo."},
     },
 )
 def register(
@@ -42,7 +44,12 @@ def register(
 ) -> UserOut:
     if not identity.email:
         raise HTTPException(422, "La cuenta de Firebase no tiene correo.")
-    user, created = register_user(db, identity, payload)
+    try:
+        user, created = register_user(db, identity, payload)
+    except DuplicateDocument as error:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, detail={"code": error.code, "message": error.message},
+        ) from error
     if not created:
         response.status_code = status.HTTP_200_OK
     return _out(user)
