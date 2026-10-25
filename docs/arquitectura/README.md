@@ -1,67 +1,53 @@
-# Arquitectura: primera entrega
+# Arquitectura de la app
 
-El alcance acordado es HU_01, HU_03, HU_04 y HU_06. Actualmente están implementados
-el inicio de sesión (HU_01) y el registro local de entradas (HU_04), con lista y detalle
-para demostrar el resultado.
+La app es **offline-first**: todo se escribe primero en Room (con UUID y estado `PENDING`) y un
+trabajo de WorkManager lo envía al backend FastAPI cuando hay red. La app solo habla con nuestro backend
+(RT_11); los Equipos 1 y 2 también.
 
-## Flujo implementado
+Estado de las historias y de las ramas: [`../estado-proyecto.md`](../estado-proyecto.md). Cada historia tiene
+su guía en `docs/huNN.md`.
+
+## Flujo
 
 ```text
-UnibanApplication → InventoryRepository → InventoryDatabase (Room)
-UnibanApplication → AuthRepository (FirebaseAuthRepository)
-Compose → InventoryViewModel / EntryViewModel → InventoryRepository
-Compose → LoginViewModel → AuthRepository → Firebase Auth
-AppNavHost observa AuthRepository.sessionState y protege las rutas internas
+Compose → ViewModel → Repository → Room (siempre)  ──►  WorkManager (SyncWorker) → Retrofit → FastAPI /api/v1 → PostgreSQL (Neon)
+Compose → LoginViewModel / RegisterViewModel / CompleteProfileViewModel → AuthRepository → Firebase Auth (+ POST /users/register)
+AppNavHost observa AuthRepository.sessionState y profileState (SessionGuard) y protege las rutas internas
 ```
 
-La aplicación mantiene una instancia de cada repositorio y la base. La navegación crea los
-ViewModel y les entrega el repositorio. La UI observa datos locales y envía acciones;
-no conoce el DAO ni administra conexiones.
+La UI no conoce el DAO ni la red (RT_08). La navegación crea los ViewModel y les entrega el repositorio de la
+cuenta con sesión abierta: cada cuenta tiene **su propia base Room** (`inventory-<uid>.db`), así que nunca ve los
+datos de otra.
 
-Firebase Auth solo aporta identidad (RT_05); la autorización la validará el backend (RT_13).
-Sin sesión solo existe la ruta `login`; las pantallas internas viven en el grafo `main` y,
-al cerrar sesión, la pila se vacía y el ViewModel de inventario se destruye.
+## Paquetes
 
 | Ubicación | Responsabilidad |
 | --- | --- |
-| `ui/inventory` | Lista, detalle, formulario, confirmación y sus ViewModels. |
-| `ui/auth` | Pantalla de login, `LoginViewModel` y componentes propios (logotipo, banner de error). |
-| `ui/navigation` | Rutas, guard de sesión y creación de ViewModels. |
-| `data/auth` | `AuthRepository`, implementación Firebase, estado de sesión y mapeo de errores. |
-| `data/InventoryRepository` | Carga demo y transacción de registro de entrada. |
-| `data/Quantity` | Validación, suma y presentación de cantidades con dos decimales. |
-| `data/local` | Entidades, DAO, base Room y datos de demostración. |
-| `core/network` | Configuración HTTP reservada para la conexión futura. |
+| `ui/auth` | Login, registro, completar perfil (cuenta sin perfil en el backend) y sus ViewModel. |
+| `ui/inventory` | Inventario, detalle, formulario de movimientos (entrada, consumo, pérdida, ajuste) e historial. |
+| `ui/parcels` | Lista, detalle y registro de parcelas (con sus actividades y consumos). |
+| `ui/activities` | Formulario de actividad productiva y la pestaña Actividades (HU_08). |
+| `ui/navigation` | Rutas, pestañas, `SessionGuard` y creación de ViewModel. |
+| `data/auth` | `AuthRepository`, implementación Firebase, estado de sesión y de perfil, mapeo de errores. |
+| `data` | `InventoryRepository` (movimientos, actividades, historial), `ParcelRepository`, `MovementSyncRepository`, `Quantity`. |
+| `data/local` | Entidades, DAO y base Room (versión 5; esquemas exportados en `android-app/app/schemas`). |
+| `data/remote` | Interfaces Retrofit (`MovementApi`, `ActivityApi`, `ParcelApi`, `UserApi`). |
+| `sync` | `SyncScheduler` y `SyncWorker` (WorkManager). |
+| `core/network` | `NetworkModule`: cliente HTTP (espera de 90 s por el servidor dormido) y calentamiento al abrir. |
 
-Una entrada guarda el movimiento con UUID y estado `PENDING` y actualiza la
-existencia en una misma transacción. Los saldos iniciales están separados de los
-movimientos. El esquema Room se exporta en `android-app/app/schemas`; los cambios
-posteriores requieren aumentar la versión y una migración que preserve los datos.
+## Reglas que sostienen el diseño
 
-Se usan repositorios concretos e inyección manual. No se necesitan capas vacías de
-dominio ni un framework de inyección para este alcance.
+- **Movimientos solo de inserción** (RT_07); las correcciones son ajustes. La existencia se actualiza en la misma
+  transacción que el movimiento (RT_10) y nunca queda negativa.
+- **Sincronización idempotente por UUID**: reenviar no duplica. Las actividades viajan antes que sus consumos.
+- **Autenticación y autorización separadas** (RT_05, RT_13): Firebase solo aporta identidad; el backend valida el
+  token, que la cuenta tenga perfil y que su rol sea PRODUCTOR.
+- **Tablas locales sin clave foránea hacia `parcels`**: `ParcelRepository.refresh()` borra y reinserta las parcelas.
+- Cada cambio del esquema local sube la versión de Room, con `AutoMigration` y su `N.json`.
+- Repositorios concretos e inyección manual; no se agregan capas vacías ni un framework de inyección.
 
-## Decisiones de esta demostración
+## Backend
 
-- Un productor y una ubicación: **Inventario principal**.
-- Catálogo local fijo de seis insumos, cargado una sola vez.
-- Cantidades Float, hasta dos decimales y límite de 99.999,99.
-- Solo movimientos de entrada; sin actividad productiva asociada.
-- Los datos locales todavía no pertenecen a la cuenta: al cerrar sesión **no se borran** y
-  cualquier cuenta ve el mismo productor demo. Asociarlos al `uid` queda para HU_03.
-
-Ver [HU_01](../hu01.md) y [HU_04](../hu04.md) para detalles y pasos de demostración.
-
-## Pendiente para HU_03 y HU_06
-
-Asociar el inventario a la cuenta (`SessionState.Authenticated.uid`) y definir el tratamiento
-de datos locales al cambiar de sesión. El token de Firebase se agregará a las llamadas HTTP con HU_06.
-
-WorkManager coordinará el envío de movimientos mediante Retrofit a FastAPI `/api/v1`.
-La base PostgreSQL deberá imponer unicidad por UUID para evitar duplicados, y el
-backend validará identidad y permisos. Se definirán reintentos y recuperación de
-registros `SYNCING` interrumpidos al implementar HU_06.
-
-El backend conserva `api/v1`, `schemas`, `models` y `db`. Se incorporarán
-migraciones al crear la primera tabla. Capas adicionales se extraerán cuando la
-lógica implementada las justifique.
+`api/v1` (rutas), `schemas` (contratos camelCase), `services` (reglas), `models` y `db`, con migraciones de Alembic
+(una sola cabeza). Ver [`../../backend/README.md`](../../backend/README.md) y, para el despliegue,
+[`../despliegue-render.md`](../despliegue-render.md).
