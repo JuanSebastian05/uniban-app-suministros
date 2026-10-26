@@ -34,7 +34,7 @@ Rama `feat/integracion-equipo1` (PR a `develop`). Lo que cambia y te afecta:
 - **Migración `0010`** (tabla `aforamientos`, `down_revision` `0009`). Verificada en un PostgreSQL temporal
   (upgrade, `alembic check`, downgrade y upgrade); **no aplicada en Neon**. Procedimiento: rama de ensayo → compartida →
   merge a `main` (A-02).
-- Backend: 146 → 198 pruebas en verde.
+- Backend: 146 → 213 pruebas en verde.
 - **Qué hacer:** Simon, generar y configurar la clave, aplicar `0010` y entregar la clave al Equipo 1. Quien haga la
   migración de `recommendations`: parte de la `0010` (será la `0011`). HU_09 (app, Room v6) se entrega en otro PR.
 

@@ -50,9 +50,9 @@ Si el Equipo 1 la necesita como número, avisar (cambio pequeño).
 | `id` | UUID, obligatorio. Hace idempotente el reenvío. |
 | `parcelId` | UUID de una parcela existente. |
 | `date` | `AAAA-MM-DD`. |
-| `areaHa` | Mayor que 0 y hasta 99999,99. **Informativa**: no se contrasta con el área de la parcela. |
+| `areaHa` | Número o texto numérico (`2.4` o `"2.4"`; punto decimal, no coma). Mayor que 0 y hasta 99999,99. **Informativa**: no se contrasta con el área de la parcela. |
 | `estimatedPlants` | Entero entre 0 y 2.147.483.647. |
-| `confidence` | **Opcional**, entre 0 y 1. |
+| `confidence` | **Opcional**, entre 0 y 1. Número o texto numérico (`0.87` o `"0.87"`). |
 
 | Respuesta | Cuándo |
 | --- | --- |
@@ -68,6 +68,7 @@ Los aforamientos son de **solo inserción**: una corrección se envía con otro 
 
 ## Supuestos (no definidos con el Equipo 1; decididos aquí)
 
+- **Número o texto.** `areaHa` y `confidence` se aceptan en ambos formatos y un reenvío en otro formato del mismo valor es idempotente (200, no 409). La coma decimal, el texto vacío o no numérico, `NaN` e `Infinity` dan `422`.
 - **Redondeo.** `areaHa` se redondea a 2 decimales y `confidence` a 3 (mitad hacia arriba) al guardar. Reenviar el mismo
   `id` con más decimales sigue siendo idempotente porque se compara ya redondeado.
 - **`confidence` ausente** se guarda como nulo y la app no muestra el dato (la HU dice «si existe»).

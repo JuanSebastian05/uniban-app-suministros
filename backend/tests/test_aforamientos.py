@@ -168,6 +168,54 @@ def test_varios_aforamientos_de_la_misma_parcela_conviven(client, session_factor
     assert count(session_factory) == 3
 
 
+@pytest.mark.parametrize("area,confidence", [
+    (2.4, 0.87),          # números JSON
+    ("2.4", "0.87"),      # texto numérico
+    ("2.40", "0.870"),    # texto con ceros finales
+    (2.4, "0.87"),        # mezcla
+    ("2.4", 0.87),
+    (" 2.4 ", " 0.87 "),  # espacios alrededor
+])
+def test_area_y_confianza_aceptan_numero_o_texto_numerico(client, session_factory, parcel_id, area, confidence):
+    body = aforamiento(parcel_id, areaHa=area, confidence=confidence)
+    assert client.post(URL, json=body, headers=HEADERS).status_code == 201
+    with session_factory() as db:
+        saved = db.get(Aforamiento, uuid.UUID(body["id"]))
+        assert float(saved.area_ha) == 2.4
+        assert float(saved.confidence) == 0.87
+
+
+def test_enteros_como_numero_o_texto_tambien_se_aceptan(client, session_factory, parcel_id):
+    for area, confidence in ((2, 1), ("2", "1"), (2, "0"), ("2", 0)):
+        body = aforamiento(parcel_id, areaHa=area, confidence=confidence)
+        assert client.post(URL, json=body, headers=HEADERS).status_code == 201, (area, confidence)
+
+
+def test_reenviar_en_otro_formato_es_el_mismo_contenido(client, session_factory, parcel_id):
+    # Primero números, luego el mismo aforamiento con texto: es idempotente (200), no un conflicto (409).
+    body = aforamiento(parcel_id, areaHa=2.4, confidence=0.87)
+    assert client.post(URL, json=body, headers=HEADERS).status_code == 201
+    as_text = {**body, "areaHa": "2.40", "confidence": "0.870"}
+    again = client.post(URL, json=as_text, headers=HEADERS)
+    assert again.status_code == 200
+    assert again.json()["status"] == "DUPLICATE"
+    assert count(session_factory) == 1
+
+
+@pytest.mark.parametrize("change", [
+    {"areaHa": "2,4"},         # coma decimal: no es un número JSON ni un texto numérico válido
+    {"confidence": "0,87"},
+    {"areaHa": ""},
+    {"areaHa": "dos"},
+    {"confidence": "alta"},
+    {"areaHa": "NaN"},
+    {"confidence": "Infinity"},
+])
+def test_texto_no_numerico_sigue_siendo_422(client, session_factory, parcel_id, change):
+    assert client.post(URL, json=aforamiento(parcel_id, **change), headers=HEADERS).status_code == 422
+    assert count(session_factory) == 0
+
+
 # --- Parcela ---
 
 def test_parcela_inexistente_responde_404(client, session_factory):

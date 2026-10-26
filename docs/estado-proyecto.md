@@ -106,7 +106,7 @@ No se probó en emulador ni en celular (P-06).
 - **2026-10-26 (Claude), integración Equipo 1 (backend):** `SERVICE_API_KEY` y `require_service_key` (401 sin clave o con
   clave incorrecta, 503 sin configurar), `GET /api/v1/service/parcels` (solo id, nombre y área de todas las parcelas),
   `POST /api/v1/aforamientos` (idempotente por `id`: 201 / 200 / 409; 404 si la parcela no existe; 422 al validar) y
-  migración `0010`. Backend 146 → 198 pruebas. `0010` verificada en un PostgreSQL temporal (upgrade, `alembic check`,
+  migración `0010`. Backend 146 → 213 pruebas. `0010` verificada en un PostgreSQL temporal (upgrade, `alembic check`,
   restricciones, downgrade y upgrade); no se tocó Neon. Supuestos documentados en `contrato-equipo1.md` (redondeo,
   `confidence` opcional, 404 por parcela inexistente). Pendiente: configurar la clave en Render, aplicar `0010` en Neon y
   HU_09 en la app.
