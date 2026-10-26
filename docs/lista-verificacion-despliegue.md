@@ -1,6 +1,8 @@
 # Lista de verificación: de `develop` a producción (Render + Neon)
 
-> Estado al **25/10/2026**: los PR #15 a #19 ya están mezclados en `develop` (HU_13 documento único, cuentas sin perfil,
+> **Ejecutada el 25/10/2026:** Neon quedó en `0009` y `develop` se mezcló a `main` (PR #22). La lista se conserva como procedimiento para las próximas migraciones (`0010`).
+>
+> Estado antes de ejecutarla, al **25/10/2026**: los PR #15 a #19 ya están mezclados en `develop` (HU_13 documento único, cuentas sin perfil,
 > ajustes, HU_08 y documentación). **`main` sigue en el merge del PR #13 y Neon en la migración `0005`.** Esta lista lleva
 > lo que está en `develop` a producción sin romperla. Quien la ejecuta necesita la `DATABASE_URL` real de Neon (secreto:
 > no se pega en chats, commits ni capturas).
@@ -73,6 +75,7 @@ Solo con Neon en `0009`:
 - [ ] Desde la app apuntando a Render: iniciar sesión, registrar una parcela, un consumo y una actividad; el contador de
       pendientes llega a 0.
 - [ ] Neon: `SELECT COUNT(*) FROM activities;` y `SELECT COUNT(*) FROM movements WHERE activity_id IS NOT NULL;`.
+- [ ] Si `/openapi.json` no lista las rutas nuevas, Render sigue con el código anterior: pide un *Manual Deploy* a quien administra el servicio.
 - [ ] Aviso al grupo: producción actualizada. Actualiza [`estado-proyecto.md`](estado-proyecto.md) (Neon en `0009`, `main` al día)
       y [`despliegue-render.md`](despliegue-render.md) (donde dice «migración `0005`»).
 

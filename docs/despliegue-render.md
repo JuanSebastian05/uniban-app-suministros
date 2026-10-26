@@ -55,7 +55,7 @@ movimientos pendientes. Ya no se necesita `adb reverse` ni `uvicorn` local.
   demo conviene abrir `/health` en el navegador.
 - **Migraciones:** no se ejecutan en Render. Se aplican con `alembic upgrade head` desde un equipo con la
   `DATABASE_URL` de Neon (idealmente en una rama de desarrollo de Neon antes de tocar la base compartida).
-  El código desplegado debe corresponder a la versión de la base: hoy, migración `0005`.
+  El código desplegado debe corresponder a la versión de la base: hoy, migración `0009` (desde el 25/10/2026). Tras cada merge a `main`, comprueba que `/openapi.json` liste las rutas nuevas: Render puede quedar «Live» con el código anterior y requerir un *Manual Deploy*.
 - **Base compartida:** el servidor y los equipos de desarrollo usan la misma base de Neon.
 - **Autenticación:** todas las rutas de `/api/v1` exigen el token de Firebase de un productor registrado. Los otros
   equipos necesitarán una clave de servicio (pendiente de implementar, ver integración con Equipo 1 y Equipo 2).
