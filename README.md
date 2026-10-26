@@ -132,6 +132,9 @@ Ningún secreto (contraseñas, cadenas de conexión, claves) debe subirse al rep
 - **Modelo de datos:** [`MERv2.drawio`](docs/modelo-datos/MERv2.drawio).
 - **Mockups:** [`MockupsFigma.zip`](docs/mockups/MockupsFigma.zip).
 - **Arquitectura:** [`docs/arquitectura/README.md`](docs/arquitectura/README.md).
+- **Estado del proyecto y avisos del equipo:** [`docs/estado-proyecto.md`](docs/estado-proyecto.md) y [`docs/avisos-equipo.md`](docs/avisos-equipo.md).
+- **Probar y desplegar:** [`docs/guia-prueba-celular.md`](docs/guia-prueba-celular.md), [`docs/lista-verificacion-despliegue.md`](docs/lista-verificacion-despliegue.md) y [`docs/despliegue-render.md`](docs/despliegue-render.md).
+- **Integración con los Equipos 1 y 2:** [`docs/guia-integracion-equipos.md`](docs/guia-integracion-equipos.md) y [`docs/contrato-equipo2.md`](docs/contrato-equipo2.md).
 
 ## Estado actual
 
@@ -153,7 +156,7 @@ Ningún secreto (contraseñas, cadenas de conexión, claves) debe subirse al rep
 - [x] HU_08: actividades productivas con sus insumos en una sola transacción, pestaña Actividades y sincronización. Ver [`docs/hu08.md`](docs/hu08.md).
 - [x] Autorización por rol (RT_13): el backend solo atiende el rol PRODUCTOR; cualquier otro recibe 403.
 
-La guía de cada historia (implementación y demostración) está en `docs/huNN.md`.
+La guía de cada historia (implementación y demostración) está en `docs/huNN.md`; la de la primera entrega, con el paso a paso de HU_04, en [`docs/hu04.md`](docs/hu04.md).
 
 ## Próximos pasos
 
