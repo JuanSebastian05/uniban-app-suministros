@@ -41,6 +41,14 @@ class CycleOut(CamelModel):
     status: CycleStatus
 
 
+class ServiceParcelOut(CamelModel):
+    """Lo único que se entrega al Equipo 1: sin productor, documento, ciclo ni otros datos (privacidad)."""
+
+    id: uuid.UUID
+    name: str
+    area_ha: Decimal
+
+
 class ParcelOut(CamelModel):
     id: uuid.UUID
     name: str

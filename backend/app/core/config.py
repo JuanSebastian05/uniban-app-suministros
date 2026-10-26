@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     # ID del proyecto de Firebase: necesario para verificar los tokens que envía la app (HU_01).
     firebase_project_id: str | None = None
 
+    # Clave compartida con el Equipo 1 para las rutas ``/api/v1/service/*`` (cabecera ``X-API-Key``).
+    # Solo por variable de entorno; sin valor, esas rutas responden 503 (nunca aceptan «clave vacía»).
+    service_api_key: str | None = None
+
     # Orígenes permitidos para CORS (separados por coma). Solo necesario en desarrollo web.
     cors_origins: str = Field(default="")
 

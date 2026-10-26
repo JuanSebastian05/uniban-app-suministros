@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Parcel, ProductionCycle
 from app.models.parcel import name_key
-from app.schemas.parcels import CycleOut, ParcelIn, ParcelOut
+from app.schemas.parcels import CycleOut, ParcelIn, ParcelOut, ServiceParcelOut
 
 DUPLICATE_NAME = "DUPLICATE_NAME"
 ID_CONFLICT = "ID_CONFLICT"
@@ -128,3 +128,11 @@ def list_parcels(db: Session, producer_id: uuid.UUID) -> list[ParcelOut]:
         .order_by(Parcel.name_key)
     ).all()
     return [_to_out(parcel, cycle) for parcel, cycle in rows]
+
+
+def list_all_parcels(db: Session) -> list[ServiceParcelOut]:
+    """Todas las parcelas de todos los productores, solo con id, nombre y área (para el Equipo 1)."""
+    rows = db.execute(select(Parcel).order_by(Parcel.name_key, Parcel.id)).scalars().all()
+    return [
+        ServiceParcelOut(id=p.id, name=p.name, area_ha=Decimal(p.area_ha).quantize(Decimal("0.01"))) for p in rows
+    ]

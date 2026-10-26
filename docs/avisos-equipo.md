@@ -18,9 +18,25 @@
 | 4 | Todos | Reglas nuevas para escribir pruebas (A-03) y para tocar archivos compartidos (A-04). | A-03, A-04 |
 | 5 | Quien haga SALIDA | Coordinar con Simon: AJUSTE y SALIDA tocan los mismos archivos. | A-05 |
 | 6 | Todos los que toquen autenticación o pruebas | `AuthRepository` tiene miembros nuevos; la espera HTTP ahora es de 90 s. Haz `git pull origin develop` y actualiza tus fakes. | A-06 |
+| 8 | Simon (Render y Neon) | Generar `SERVICE_API_KEY` y configurarla en Render; ensayar y aplicar la migración **`0010`** en Neon **antes** del merge a `main`; entregar la clave al Equipo 1 por un canal privado. | A-08 |
 | 7 | Compañero de HU_09–12 y SALIDA | Ya existen AJUSTE (Room v4, `0008`) y HU_08 (Room v5, `0009`, pestaña Actividades): parte de esas ramas y no reutilices esos números. HU_10 debe leer también el estado de las actividades. | A-07 |
 
 ---
+
+## A-08 · 2026-10-26 · Integración con el Equipo 1 (backend): clave de servicio y aforamientos
+
+Rama `feat/integracion-equipo1` (PR a `develop`). Lo que cambia y te afecta:
+
+- **Variable nueva `SERVICE_API_KEY`** (Render y tu `backend/.env`; línea vacía en `.env.example`). Sin ella, las rutas
+  de servicio responden `503`. Nunca va en el repositorio.
+- **Rutas nuevas para el Equipo 1** (cabecera `X-API-Key`, sin Firebase): `GET /api/v1/service/parcels` y
+  `POST /api/v1/aforamientos`. Contrato en [`contrato-equipo1.md`](contrato-equipo1.md).
+- **Migración `0010`** (tabla `aforamientos`, `down_revision` `0009`). Verificada en un PostgreSQL temporal
+  (upgrade, `alembic check`, downgrade y upgrade); **no aplicada en Neon**. Procedimiento: rama de ensayo → compartida →
+  merge a `main` (A-02).
+- Backend: 146 → 198 pruebas en verde.
+- **Qué hacer:** Simon, generar y configurar la clave, aplicar `0010` y entregar la clave al Equipo 1. Quien haga la
+  migración de `recommendations`: parte de la `0010` (será la `0011`). HU_09 (app, Room v6) se entrega en otro PR.
 
 ## A-07 · 2026-10-24 · Simon · Qué dejan HU_08 y AJUSTE para HU_09–12 y SALIDA
 
@@ -144,7 +160,8 @@ Esto aplica a **toda** migración nueva, no solo a la `0007`.
 | --- | --- | --- | --- |
 | `0005` | HU_05 | En `develop` | `0004` |
 | `0006` | — | **Descartada** (ver nota): no se usa | — |
-| `0010` | Aforamientos (HU_09, compañero) | Por hacer | `0009` |
+| `0010` | Aforamientos (Equipo 1 + HU_09) | En `feat/integracion-equipo1` (PR a `develop`); **sin aplicar en Neon** | `0009` |
+| `0011` | `recommendations` (HU_12) | Por hacer | `0010` |
 | `0007` | HU_13 (documento único, Simon) | En Neon (25/10) | `0005` **provisional** |
 | `0008` | Ajustes de inventario (Simon, 24/10) | En Neon (25/10) | `0007` |
 | `0009` | HU_08 (actividades, Simon, 24/10) | En Neon (25/10) | `0008` |

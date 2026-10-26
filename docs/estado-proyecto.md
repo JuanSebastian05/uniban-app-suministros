@@ -32,7 +32,9 @@
 | HU_13 Registrarse | **Cerrada el 21/10** (documento único + robustez, P-02) | Ver [`hu13.md`](hu13.md). |
 | HU_14 Registrar parcela | Hecha | Actualizar el MER y avisar al Equipo 1 (equipo, Juan José). |
 | **HU_08 Actividad productiva** | **Implementada el 24/10 (Simon)**, en PR | Ver [`hu08.md`](hu08.md). Verificada en emulador (25/10); migración `0009` ya aplicada en Neon y desplegada en `main`. |
-| HU_09–12, SALIDA | Compañero | — |
+| **Integración Equipo 1 (backend)** | **Implementada el 26/10**, rama `feat/integracion-equipo1` | Clave de servicio, `GET /service/parcels`, `POST /aforamientos` y migración `0010`. Ver [`contrato-equipo1.md`](contrato-equipo1.md) y A-08. Falta: configurar `SERVICE_API_KEY` en Render y aplicar `0010` en Neon (Simon). |
+| HU_09 (app) | Compañero, en curso | Consulta del aforamiento en el detalle de la parcela (Room v6). |
+| HU_10–12, SALIDA | Compañero | — |
 
 ## Producción (25/10/2026)
 
@@ -41,7 +43,7 @@
 - **`main` = `develop`** (merge del PR #22). Render redesplegó y sirve `/api/v1/activities` (comprobado en `/openapi.json`).
 - **Primer despliegue:** Render quedó «Live» pero con el código anterior hasta que quien administra el servicio lanzó
   un *Manual Deploy*. Tras un merge a `main`, comprobar siempre que `/openapi.json` liste las rutas nuevas.
-- **Siguiente migración: `0010`** (aforamientos, compañero), con el mismo procedimiento: rama de ensayo → compartida → `main`
+- **Siguiente migración: `0010`** (aforamientos; ya escrita en `feat/integracion-equipo1`, pendiente de aplicar), con el mismo procedimiento: rama de ensayo → compartida → `main`
   ([`lista-verificacion-despliegue.md`](lista-verificacion-despliegue.md)).
 
 ## Ramas y PR (de Simon, al 21/10/2026; los PR #15 a #19 ya están mezclados en `develop`)
@@ -100,6 +102,14 @@ No se probó en emulador ni en celular (P-06).
 - 15/10/2026 (HU_05): el stock nunca queda negativo; SALIDA y AJUSTE quedaron para después (`hu05.md`).
 
 ## Bitácora
+
+- **2026-10-26 (Claude), integración Equipo 1 (backend):** `SERVICE_API_KEY` y `require_service_key` (401 sin clave o con
+  clave incorrecta, 503 sin configurar), `GET /api/v1/service/parcels` (solo id, nombre y área de todas las parcelas),
+  `POST /api/v1/aforamientos` (idempotente por `id`: 201 / 200 / 409; 404 si la parcela no existe; 422 al validar) y
+  migración `0010`. Backend 146 → 198 pruebas. `0010` verificada en un PostgreSQL temporal (upgrade, `alembic check`,
+  restricciones, downgrade y upgrade); no se tocó Neon. Supuestos documentados en `contrato-equipo1.md` (redondeo,
+  `confidence` opcional, 404 por parcela inexistente). Pendiente: configurar la clave en Render, aplicar `0010` en Neon y
+  HU_09 en la app.
 
 - **2026-10-24 (Simon + Claude), HU_08:** actividad productiva completa (formulario con «Insumos usados» en una sola
   transacción, ciclo activo obligatorio, sección en el detalle de la parcela, pestaña Actividades, «Actividad: …» en el
