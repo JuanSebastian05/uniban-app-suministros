@@ -153,6 +153,14 @@ private fun RegisterForm(
         modifier = Modifier.testTag("register-confirm"),
     )
     state.error?.let { ErrorBanner(stringResource(it.messageRes())) }
+    if (state.isLoading) {
+        Text(
+            stringResource(R.string.server_wakeup_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testTag("server-wakeup-hint"),
+        )
+    }
     Button(
         onClick = onSubmit,
         enabled = enabled,
@@ -189,6 +197,7 @@ private fun RegisterError.messageRes(): Int = when (this) {
         AuthError.AccountDisabled -> R.string.login_error_disabled
         AuthError.NotConfigured -> R.string.login_error_not_configured
         AuthError.EmailInUse -> R.string.register_error_email_in_use
+        AuthError.DocumentInUse -> R.string.register_error_document_in_use
         AuthError.WeakPassword -> R.string.register_error_weak_password
         AuthError.Server -> R.string.register_error_server
         AuthError.Unknown -> R.string.register_error_unknown

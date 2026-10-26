@@ -2,15 +2,19 @@ package co.edu.udea.uniban.suministros
 
 import co.edu.udea.uniban.suministros.data.auth.AuthError
 import co.edu.udea.uniban.suministros.data.auth.AuthException
+import co.edu.udea.uniban.suministros.data.auth.ProfileState
 import co.edu.udea.uniban.suministros.data.auth.Registration
+import co.edu.udea.uniban.suministros.data.auth.fetchProfileState
 import co.edu.udea.uniban.suministros.data.auth.sendProfile
 import co.edu.udea.uniban.suministros.data.remote.RegisterProfileDto
 import co.edu.udea.uniban.suministros.data.remote.UserApi
 import java.io.IOException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import retrofit2.Response
 
@@ -19,8 +23,14 @@ class ProfileRegistrationTest {
 
     private class RecordingApi(val reply: () -> Response<Unit>) : UserApi {
         val calls = mutableListOf<Pair<String, RegisterProfileDto>>()
+        val meCalls = mutableListOf<String>()
         override suspend fun register(authorization: String, profile: RegisterProfileDto): Response<Unit> {
             calls += authorization to profile
+            return reply()
+        }
+
+        override suspend fun me(authorization: String): Response<Unit> {
+            meCalls += authorization
             return reply()
         }
     }
@@ -48,8 +58,62 @@ class ProfileRegistrationTest {
     }
 
     @Test
+    fun duplicateDocumentIsItsOwnError() = runTest {
+        val body = """{"detail":{"code":"DUPLICATE_DOCUMENT","message":"Ya existe una cuenta con este documento."}}"""
+        val api = RecordingApi { Response.error(409, body.toResponseBody()) }
+        assertEquals(AuthError.DocumentInUse, sendProfile(api, "t", registration).error())
+    }
+
+    @Test
+    fun otherConflictsAreServerErrors() = runTest {
+        listOf("{}", """{"detail":{"code":"OTHER"}}""", "no es json").forEach { body ->
+            val api = RecordingApi { Response.error(409, body.toResponseBody()) }
+            assertEquals(AuthError.Server, sendProfile(api, "t", registration).error())
+        }
+    }
+
+    @Test
     fun noConnectionIsNetworkError() = runTest {
         val api = RecordingApi { throw IOException("sin red") }
         assertEquals(AuthError.Network, sendProfile(api, "t", registration).error())
+    }
+
+    // --- P-02: cuenta sin perfil en el backend ---
+
+    @Test
+    fun existingProfileIsComplete() = runTest {
+        val api = RecordingApi { Response.success(200, Unit) }
+        assertEquals(ProfileState.Complete, fetchProfileState(api, "token-1"))
+        assertEquals(listOf("Bearer token-1"), api.meCalls)
+    }
+
+    @Test
+    fun unregisteredAccountIsMissing() = runTest {
+        val api = RecordingApi { Response.error(404, """{"detail":"Usuario no registrado."}""".toResponseBody()) }
+        assertEquals(ProfileState.Missing, fetchProfileState(api, "t"))
+    }
+
+    @Test
+    fun failuresThatDoNotProveAMissingProfileAreUnknown() = runTest {
+        listOf(401, 403, 500, 503).forEach { code ->
+            val api = RecordingApi { Response.error(code, "{}".toResponseBody()) }
+            assertEquals("código $code", ProfileState.Unknown, fetchProfileState(api, "t"))
+        }
+    }
+
+    @Test
+    fun noConnectionOrAnyOtherErrorLeavesTheProfileUnknown() = runTest {
+        assertEquals(ProfileState.Unknown, fetchProfileState(RecordingApi { throw IOException("sin red") }, "t"))
+        assertEquals(ProfileState.Unknown, fetchProfileState(RecordingApi { throw IllegalStateException("x") }, "t"))
+    }
+
+    @Test
+    fun cancellationIsNotSwallowed() = runTest {
+        val api = RecordingApi { throw CancellationException("cancelado") }
+        try {
+            fetchProfileState(api, "t")
+            fail("debía propagar la cancelación")
+        } catch (_: CancellationException) {
+        }
     }
 }

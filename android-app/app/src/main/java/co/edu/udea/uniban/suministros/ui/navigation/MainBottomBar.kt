@@ -2,6 +2,7 @@ package co.edu.udea.uniban.suministros.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -14,11 +15,12 @@ import androidx.compose.ui.platform.testTag
 
 /**
  * Pestañas principales (mockups: Inicio, Parcelas, Inventario, Actividades). Solo se muestran las
- * que ya tienen pantallas; Inicio y Actividades se agregan cuando existan (regla de hu04.md).
+ * que ya tienen pantallas; Inicio se agrega cuando exista (regla de hu04.md).
  */
 enum class MainTab(val route: String, val label: String, val icon: ImageVector) {
     PARCELS(AppDestinations.PARCELS, "Parcelas", Icons.Filled.Place),
     INVENTORY(AppDestinations.INVENTORY, "Inventario", Icons.AutoMirrored.Filled.List),
+    ACTIVITIES(AppDestinations.ACTIVITIES, "Actividades", Icons.Filled.DateRange),
 }
 
 @Composable

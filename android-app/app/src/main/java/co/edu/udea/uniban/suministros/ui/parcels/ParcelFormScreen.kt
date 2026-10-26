@@ -29,9 +29,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import co.edu.udea.uniban.suministros.R
 import co.edu.udea.uniban.suministros.data.CycleStatus
 import co.edu.udea.uniban.suministros.ui.inventory.BottomAction
 import co.edu.udea.uniban.suministros.ui.inventory.InventoryScaffold
@@ -147,6 +149,14 @@ fun ParcelFormScreen(
             }
 
             state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            if (state.saving) {
+                Text(
+                    stringResource(R.string.server_wakeup_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("server-wakeup-hint"),
+                )
+            }
             Text(
                 "La parcela se registra en el servidor: se necesita conexión a internet. " +
                     "Después podrás verla también sin conexión.",

@@ -2,6 +2,7 @@ package co.edu.udea.uniban.suministros.data.remote
 
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 
@@ -17,6 +18,13 @@ interface UserApi {
         @Header("Authorization") authorization: String,
         @Body profile: RegisterProfileDto,
     ): Response<Unit>
+
+    /**
+     * Perfil de la cuenta del token (`/api/v1/users/me`): 200 = tiene perfil, 404 = la cuenta
+     * existe en Firebase pero nunca se registró en el backend (cuenta huérfana, P-02).
+     */
+    @GET("users/me")
+    suspend fun me(@Header("Authorization") authorization: String): Response<Unit>
 }
 
 data class RegisterProfileDto(val name: String, val document: String, val phone: String?)

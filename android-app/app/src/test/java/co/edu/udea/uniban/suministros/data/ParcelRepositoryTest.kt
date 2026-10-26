@@ -1,5 +1,6 @@
 package co.edu.udea.uniban.suministros.data
 
+import android.app.Application
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
@@ -23,10 +24,12 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import retrofit2.Response
 
 /** Registro de parcelas (HU_14): se guarda localmente solo si el servidor la aceptó. */
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28], manifest = Config.NONE, application = Application::class)
 class ParcelRepositoryTest {
     private lateinit var database: InventoryDatabase
     private val api = FakeParcelApi()

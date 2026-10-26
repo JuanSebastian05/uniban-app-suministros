@@ -2,8 +2,8 @@
 
 Repositorio para la realización del proyecto **Uniban – Proyecto Integrador 1 de la Universidad de Antioquia (UdeA)**.
 
-> **Estado actual: HU_01 (inicio de sesión y registro), HU_02 (consulta de parcelas), HU_03, HU_04, HU_05 (consumos y pérdidas), HU_06, HU_07 (historial) y HU_14 (registro de parcelas) implementadas.**
-> La primera entrega se limita a **HU_01, HU_03, HU_04 y HU_06**.
+> **Estado actual: HU_01 a HU_08, HU_13 y HU_14 implementadas** (incluye los ajustes de inventario). Pendientes: HU_09 a HU_12 y el tipo SALIDA. El estado detallado, las ramas y los pendientes están en [`docs/estado-proyecto.md`](docs/estado-proyecto.md).
+> La primera entrega se limitó a HU_01, HU_03, HU_04 y HU_06.
 
 ## Objetivo
 
@@ -100,7 +100,7 @@ uvicorn app.main:app --reload
 - `GET http://localhost:8000/health` → `{"status": "ok"}` (endpoint técnico, no es una HU)
 - Documentación OpenAPI: `http://localhost:8000/docs`
 - Pruebas: `pytest`
-- Tablas: `alembic upgrade head` (hasta la migración `0005`: parcelas y ciclos de HU_14, consumos y pérdidas de HU_05).
+- Tablas: `alembic upgrade head` (hasta la migración `0009`: parcelas y ciclos, consumos y pérdidas, documento único, ajustes y actividades; la `0006` está reservada para aforamientos. Antes de desplegar, aplicarlas en Neon: ver [docs/avisos-equipo.md](docs/avisos-equipo.md)).
 
 Más detalles en [`backend/README.md`](backend/README.md).
 
@@ -132,6 +132,9 @@ Ningún secreto (contraseñas, cadenas de conexión, claves) debe subirse al rep
 - **Modelo de datos:** [`MERv2.drawio`](docs/modelo-datos/MERv2.drawio).
 - **Mockups:** [`MockupsFigma.zip`](docs/mockups/MockupsFigma.zip).
 - **Arquitectura:** [`docs/arquitectura/README.md`](docs/arquitectura/README.md).
+- **Estado del proyecto y avisos del equipo:** [`docs/estado-proyecto.md`](docs/estado-proyecto.md) y [`docs/avisos-equipo.md`](docs/avisos-equipo.md).
+- **Probar y desplegar:** [`docs/guia-prueba-celular.md`](docs/guia-prueba-celular.md), [`docs/lista-verificacion-despliegue.md`](docs/lista-verificacion-despliegue.md) y [`docs/despliegue-render.md`](docs/despliegue-render.md).
+- **Integración con los Equipos 1 y 2:** [`docs/guia-integracion-equipos.md`](docs/guia-integracion-equipos.md) y [`docs/contrato-equipo2.md`](docs/contrato-equipo2.md).
 
 ## Estado actual
 
@@ -141,20 +144,25 @@ Ningún secreto (contraseñas, cadenas de conexión, claves) debe subirse al rep
 - [x] Esqueleto backend FastAPI con `/health`, `/api/v1` y configuración por entorno.
 - [x] HU_01: inicio y cierre de sesión con Firebase Authentication (ver [`docs/hu01.md`](docs/hu01.md)).
 - [x] Registro de usuarios: cuenta en Firebase y perfil de productor en PostgreSQL (`/api/v1/users/register`).
-- [x] HU_03: consulta de inventario y movimientos recientes sin conexión, con saldo consistente con su historial (RT_10). Ver [`docs/hu03.md`](docs/hu03.md). Falta separar los datos locales por sesión y usar el catálogo real.
+- [x] HU_03: consulta de inventario y movimientos recientes sin conexión, con saldo consistente con su historial (RT_10). Ver [`docs/hu03.md`](docs/hu03.md). El inventario ya es propio de cada cuenta; el catálogo sigue siendo el inicial de demostración.
 - [x] HU_05: consumos (con parcela y ciclo activo) y pérdidas (con motivo) que restan existencia sin dejarla negativa, sin conexión y sincronizados. Ver [`docs/hu05.md`](docs/hu05.md).
 - [x] HU_06: sincronización de movimientos con PostgreSQL (Neon) vía FastAPI, WorkManager y `SYNCED/ERROR`. Ver [`docs/hu06.md`](docs/hu06.md).
 - [x] HU_02: lista de parcelas y detalle con su ciclo activo (fechas y etapa) o aviso sin ciclo; funciona sin conexión. Ver [`docs/hu02.md`](docs/hu02.md).
 - [x] HU_07: historial de movimientos por insumo (con resumen inicial + entradas − consumos − pérdidas = existencia) y general, con filtros por insumo, tipo, parcela y fechas; sin conexión. Ver [`docs/hu07.md`](docs/hu07.md).
 - [x] HU_14: registro de parcelas con ciclo productivo opcional (`/api/v1/parcels`), copia local en Room (versión 2) y barra inferior Parcelas / Inventario. Ver [`docs/hu14.md`](docs/hu14.md).
 
-La guía de implementación y demostración está en [`docs/hu04.md`](docs/hu04.md).
+- [x] HU_13: registro con documento único y recuperación de cuentas sin perfil. Ver [`docs/hu13.md`](docs/hu13.md).
+- [x] Ajustes de inventario: correcciones de existencia con sentido y motivo. Ver [`docs/hu05.md`](docs/hu05.md#ajustes-ajuste-24102026).
+- [x] HU_08: actividades productivas con sus insumos en una sola transacción, pestaña Actividades y sincronización. Ver [`docs/hu08.md`](docs/hu08.md).
+- [x] Autorización por rol (RT_13): el backend solo atiende el rol PRODUCTOR; cualquier otro recibe 403.
+
+La guía de cada historia (implementación y demostración) está en `docs/huNN.md`; la de la primera entrega, con el paso a paso de HU_04, en [`docs/hu04.md`](docs/hu04.md).
 
 ## Próximos pasos
 
-- HU de ajustes de inventario (AJUSTE) y definición del tipo SALIDA (ver [`docs/hu05.md`](docs/hu05.md#pendiente)).
+- HU_09 a HU_12 y el tipo SALIDA (ver [`docs/estado-proyecto.md`](docs/estado-proyecto.md)); integración con los Equipos 1 y 2 (contrato del Equipo 2 en [`docs/contrato-equipo2.md`](docs/contrato-equipo2.md)).
 - Pendientes de HU_14 (ver [`docs/hu14.md`](docs/hu14.md#pendientes-del-equipo)): actualizar el MER y acordar `id_parcela` con el Equipo 1.
-- Cada cambio del esquema local exige subir la versión de Room y versionar el nuevo `app/schemas/.../N.json` (HU_14 usa `AutoMigration` 1 → 2 y HU_05, 2 → 3).
+- Cada cambio del esquema local exige subir la versión de Room y versionar el nuevo `app/schemas/.../N.json` (HU_14: 1 → 2, HU_05: 2 → 3, ajustes: 3 → 4, HU_08: 4 → 5; la siguiente libre es la 6).
 
 ## Equipo
 

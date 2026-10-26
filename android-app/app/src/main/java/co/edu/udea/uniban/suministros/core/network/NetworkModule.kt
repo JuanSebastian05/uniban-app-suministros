@@ -1,10 +1,16 @@
 package co.edu.udea.uniban.suministros.core.network
 
 import co.edu.udea.uniban.suministros.BuildConfig
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 /**
@@ -24,13 +30,19 @@ object NetworkModule {
     const val API_VERSION_PATH = "api/v1/"
     private const val TIMEOUT_SECONDS = 30L
 
+    /**
+     * Render duerme el servicio a los 15 min y despierta en ≈ 1 min: la primera petición se queda
+     * esperando la respuesta. Con 30 s fallaba el registro y la creación de parcelas; 90 s da margen.
+     */
+    const val READ_TIMEOUT_SECONDS = 90L
+
     val apiBaseUrl: String
         get() = BuildConfig.API_BASE_URL + API_VERSION_PATH
 
     fun createOkHttpClient(): OkHttpClient {
         val builder = OkHttpClient.Builder()
             .connectTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
 
         if (BuildConfig.DEBUG) {
@@ -40,6 +52,20 @@ object NetworkModule {
         }
         return builder.build()
     }
+
+    /**
+     * Despierta el servidor sin esperar su respuesta: un `GET /health` (sin datos del usuario) al abrir la
+     * app para que, cuando el productor termine de llenar el registro, el servicio ya esté arriba.
+     */
+    fun warmUp(client: OkHttpClient, baseUrl: String = BuildConfig.API_BASE_URL) {
+        val url = (baseUrl + HEALTH_PATH).toHttpUrlOrNull() ?: return
+        client.newCall(Request.Builder().url(url).build()).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) = Unit
+            override fun onResponse(call: Call, response: Response) = response.close()
+        })
+    }
+
+    private const val HEALTH_PATH = "health"
 
     fun createRetrofit(client: OkHttpClient = createOkHttpClient()): Retrofit =
         Retrofit.Builder()

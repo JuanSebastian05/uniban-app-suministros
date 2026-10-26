@@ -10,6 +10,7 @@ import co.edu.udea.uniban.suministros.data.InsufficientStockException
 import co.edu.udea.uniban.suministros.data.InventoryRepository
 import co.edu.udea.uniban.suministros.data.Quantity
 import co.edu.udea.uniban.suministros.data.SavedEntry
+import co.edu.udea.uniban.suministros.data.local.AdjustDirection
 import co.edu.udea.uniban.suministros.data.local.LossReason
 import co.edu.udea.uniban.suministros.data.local.MovementType
 import java.time.LocalDate
@@ -18,10 +19,12 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 data class EntryUiState(
-    /** HU_05: ENTRADA, CONSUMO o PERDIDA. */
+    /** ENTRADA, CONSUMO, PERDIDA o AJUSTE. */
     val type: String = MovementType.ENTRADA,
     val parcelId: String = "",
     val lossReason: LossReason? = null,
+    /** Ajuste: aumenta o disminuye la existencia. */
+    val adjustDirection: AdjustDirection? = null,
     val parcelError: String? = null,
     val reasonError: String? = null,
     val inventoryId: String = "",
@@ -47,6 +50,7 @@ class EntryViewModel(
         type = savedState["type"] ?: MovementType.ENTRADA,
         parcelId = savedState["parcelId"] ?: "",
         lossReason = LossReason.fromCode(savedState["lossReason"]),
+        adjustDirection = AdjustDirection.fromCode(savedState["adjustDirection"]),
         inventoryId = savedState["inventoryId"] ?: "",
         quantity = savedState["quantity"] ?: "",
         date = savedState.get<String>("date")?.let(LocalDate::parse) ?: LocalDate.now(),
@@ -86,6 +90,11 @@ class EntryViewModel(
         state = state.copy(lossReason = value, reasonError = null, error = null)
     }
 
+    fun selectAdjustDirection(value: AdjustDirection) {
+        savedState["adjustDirection"] = value.name
+        state = state.copy(adjustDirection = value, reasonError = null, error = null)
+    }
+
     fun selectItem(id: String) {
         savedState["inventoryId"] = id
         state = state.copy(inventoryId = id, itemError = null, error = null)
@@ -113,6 +122,11 @@ class EntryViewModel(
         val parcelError = if (state.type == MovementType.CONSUMO && state.parcelId.isBlank())
             "Selecciona la parcela donde se usó el insumo." else null
         val reasonError = when {
+            state.type == MovementType.AJUSTE -> when {
+                state.adjustDirection == null -> "Indica si el ajuste aumenta o disminuye la existencia."
+                state.observation.isBlank() -> "Describe el motivo del ajuste en la observación."
+                else -> null
+            }
             state.type != MovementType.PERDIDA -> null
             state.lossReason == null -> "Selecciona el motivo de la pérdida."
             state.lossReason == LossReason.OTRO && state.observation.isBlank() -> "Describe el motivo en la observación."
@@ -131,6 +145,7 @@ class EntryViewModel(
                 val saved = repository.registerMovement(
                     requestId, form.type, form.inventoryId, form.quantity, form.date, form.observation,
                     parcelId = form.parcelId.ifBlank { null }, lossReason = form.lossReason,
+                    adjustDirection = form.adjustDirection,
                 )
                 state = state.copy(saving = false, saved = saved)
             } catch (error: CancellationException) {

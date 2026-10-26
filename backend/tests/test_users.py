@@ -4,9 +4,12 @@ La verificación del token de Firebase se reemplaza por una identidad fija: no s
 ni un proyecto real. La base es SQLite en memoria.
 """
 
+import uuid
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -17,6 +20,7 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
 from app.models import Producer, User
+from app.models.user import document_key
 
 REGISTER = "/api/v1/users/register"
 ME = "/api/v1/users/me"
@@ -89,10 +93,74 @@ def test_reintentar_el_registro_no_duplica(client, session_factory):
 def test_cada_cuenta_tiene_su_propio_productor(client, session_factory, identity):
     client.post(REGISTER, json=BODY)
     identity["value"] = FirebaseIdentity(uid="uid-luis", email="luis@unibanagro.com")
-    other = client.post(REGISTER, json={**BODY, "name": "Luis"})
+    other = client.post(REGISTER, json={**BODY, "name": "Luis", "document": "52123456"})
     assert other.status_code == 201
     assert count(session_factory, User) == 2
     assert count(session_factory, Producer) == 2
+
+
+def _second_account(identity):
+    identity["value"] = FirebaseIdentity(uid="uid-luis", email="luis@unibanagro.com")
+
+
+@pytest.mark.parametrize("document", ["1020304050", " 1020304050 ", "1.020.304.050", "1 020 304 050", "1020-304-050"])
+def test_documento_repetido_se_rechaza_con_409(client, session_factory, identity, document):
+    assert client.post(REGISTER, json=BODY).status_code == 201
+    _second_account(identity)
+    response = client.post(REGISTER, json={**BODY, "name": "Luis", "document": document})
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == "DUPLICATE_DOCUMENT"
+    # No queda una cuenta ni un productor a medias.
+    assert count(session_factory, User) == 1
+    assert count(session_factory, Producer) == 1
+
+
+def test_documento_con_letras_ignora_mayusculas(client, identity):
+    assert client.post(REGISTER, json={**BODY, "document": "ab-123456"}).status_code == 201
+    _second_account(identity)
+    response = client.post(REGISTER, json={**BODY, "name": "Luis", "document": "AB 123456"})
+    assert response.status_code == 409
+
+
+def test_reintento_de_la_misma_cuenta_con_su_documento_no_es_conflicto(client, session_factory):
+    assert client.post(REGISTER, json=BODY).status_code == 201
+    retry = client.post(REGISTER, json={**BODY, "document": "1.020.304.050"})
+    assert retry.status_code == 200
+    assert count(session_factory, User) == 1
+
+
+def test_documento_distinto_se_acepta(client, identity):
+    assert client.post(REGISTER, json=BODY).status_code == 201
+    _second_account(identity)
+    assert client.post(REGISTER, json={**BODY, "name": "Luis", "document": "1020304051"}).status_code == 201
+
+
+@pytest.mark.parametrize("document", ["---", "...", "  .  "])
+def test_documento_sin_letras_ni_numeros_es_invalido(client, session_factory, document):
+    assert client.post(REGISTER, json={**BODY, "document": document}).status_code == 422
+    assert count(session_factory, User) == 0
+
+
+def test_la_base_impide_dos_usuarios_con_el_mismo_documento(session_factory):
+    with session_factory() as db:
+        for index, uid in enumerate(("uid-a", "uid-b")):
+            producer = Producer(id=uuid.uuid4(), name=f"P{index}")
+            db.add(producer)
+            db.flush()
+            db.add(User(firebase_uid=uid, email=f"{uid}@x.co", name="N", document="1.0", document_key="10",
+                        producer_id=producer.id))
+            if index == 0:
+                db.commit()
+        with pytest.raises(IntegrityError):
+            db.commit()
+
+
+@pytest.mark.parametrize(
+    ("document", "key"),
+    [("1.020.304.050", "1020304050"), (" ab-12 ", "AB12"), ("é 1", "É1"), ("---", "")],
+)
+def test_clave_del_documento(document, key):
+    assert document_key(document) == key
 
 
 def test_telefono_es_opcional(client):

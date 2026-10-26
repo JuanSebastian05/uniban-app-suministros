@@ -72,6 +72,10 @@ class Movement(Base):
             "loss_reason IS NULL OR loss_reason IN ('DESPERDICIO', 'MAL_MANEJO', 'CLIMA', 'OTRO')",
             name="ck_movements_loss_reason",
         ),
+        CheckConstraint(
+            "adjust_direction IS NULL OR adjust_direction IN ('AUMENTO', 'DISMINUCION')",
+            name="ck_movements_adjust_direction",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
@@ -87,3 +91,7 @@ class Movement(Base):
     parcel_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("parcels.id"), index=True)
     cycle_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("production_cycles.id"))
     loss_reason: Mapped[str | None] = mapped_column(String(20))
+    # Ajuste (corrección): la cantidad siempre es positiva y esta columna dice si suma o resta.
+    adjust_direction: Mapped[str | None] = mapped_column(String(12))
+    # HU_08: actividad a la que pertenece el consumo (nula si se registró suelto desde el inventario).
+    activity_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("activities.id"), index=True)
