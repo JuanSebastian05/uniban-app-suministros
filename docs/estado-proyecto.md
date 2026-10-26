@@ -2,7 +2,7 @@
 
 > Documento vivo. **Quien trabaje (persona o IA) lo actualiza en cada PR**: estado de las HU, ramas,
 > pendientes y bitácora. Está pensado para retomar el trabajo sin conversaciones previas.
-> Última actualización: **2026-10-21**, tras P-02 (Simon, con Claude).
+> Última actualización: **2026-10-25**, tras migrar Neon a `0009` y pasar `develop` a `main` (Simon, con Claude).
 
 ## Cómo retomar (para una IA o una persona nueva)
 
@@ -31,10 +31,20 @@
 | HU_07 Historial | Hecha | Mostrar la actividad en cada movimiento: llega con HU_08. |
 | HU_13 Registrarse | **Cerrada el 21/10** (documento único + robustez, P-02) | Ver [`hu13.md`](hu13.md). |
 | HU_14 Registrar parcela | Hecha | Actualizar el MER y avisar al Equipo 1 (equipo, Juan José). |
-| **HU_08 Actividad productiva** | **Implementada el 24/10 (Simon)**, en PR | Ver [`hu08.md`](hu08.md). Falta verificar en emulador y aplicar `0009` en Neon. |
+| **HU_08 Actividad productiva** | **Implementada el 24/10 (Simon)**, en PR | Ver [`hu08.md`](hu08.md). Verificada en emulador (25/10); migración `0009` ya aplicada en Neon y desplegada en `main`. |
 | HU_09–12, SALIDA | Compañero | — |
 
-## Ramas y PR (de Simon, al 21/10/2026)
+## Producción (25/10/2026)
+
+- **Neon: migración `0009` (cabeza).** Se ensayó antes en una rama de desarrollo de Neon (sin errores), se creó una
+  rama de respaldo y luego se aplicó en la base compartida (`0005` → `0009`).
+- **`main` = `develop`** (merge del PR #22). Render redesplegó y sirve `/api/v1/activities` (comprobado en `/openapi.json`).
+- **Primer despliegue:** Render quedó «Live» pero con el código anterior hasta que quien administra el servicio lanzó
+  un *Manual Deploy*. Tras un merge a `main`, comprobar siempre que `/openapi.json` liste las rutas nuevas.
+- **Siguiente migración: `0010`** (aforamientos, compañero), con el mismo procedimiento: rama de ensayo → compartida → `main`
+  ([`lista-verificacion-despliegue.md`](lista-verificacion-despliegue.md)).
+
+## Ramas y PR (de Simon, al 21/10/2026; los PR #15 a #19 ya están mezclados en `develop`)
 
 | Rama | PR | Contenido | Siguiente paso |
 | --- | --- | --- | --- |

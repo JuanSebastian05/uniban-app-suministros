@@ -145,9 +145,9 @@ Esto aplica a **toda** migración nueva, no solo a la `0007`.
 | `0005` | HU_05 | En `develop` | `0004` |
 | `0006` | — | **Descartada** (ver nota): no se usa | — |
 | `0010` | Aforamientos (HU_09, compañero) | Por hacer | `0009` |
-| `0007` | HU_13 (documento único, Simon) | En PR | `0005` **provisional** |
-| `0008` | Ajustes de inventario (Simon, 24/10) | En PR | `0007` |
-| `0009` | HU_08 (actividades, Simon, 24/10) | En PR | `0008` |
+| `0007` | HU_13 (documento único, Simon) | En Neon (25/10) | `0005` **provisional** |
+| `0008` | Ajustes de inventario (Simon, 24/10) | En Neon (25/10) | `0007` |
+| `0009` | HU_08 (actividades, Simon, 24/10) | En Neon (25/10) | `0008` |
 
 **Qué hacer:**
 
