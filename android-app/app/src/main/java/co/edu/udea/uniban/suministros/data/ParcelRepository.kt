@@ -1,10 +1,12 @@
 package co.edu.udea.uniban.suministros.data
 
 import androidx.room.withTransaction
+import co.edu.udea.uniban.suministros.data.local.AforamientoEntity
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
 import co.edu.udea.uniban.suministros.data.local.ParcelEntity
 import co.edu.udea.uniban.suministros.data.local.ProductionCycleEntity
 import co.edu.udea.uniban.suministros.data.local.StarterInventory
+import co.edu.udea.uniban.suministros.data.remote.AforamientoDto
 import co.edu.udea.uniban.suministros.data.remote.ApiErrorDto
 import co.edu.udea.uniban.suministros.data.remote.CycleDto
 import co.edu.udea.uniban.suministros.data.remote.CycleResponseDto
@@ -20,6 +22,7 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
 import retrofit2.Response
 
 /** Estados del ciclo productivo (mockups). [name] es el valor que viaja al backend. */
@@ -105,6 +108,27 @@ object ParcelValidation {
     }
 }
 
+/** Resultado de consultar al servidor el aforamiento de una parcela (HU_09). */
+enum class AforamientoRefresh {
+    /** El servidor entregó el aforamiento más reciente y quedó guardado en el dispositivo. */
+    UPDATED,
+
+    /** El servidor respondió que la parcela todavía no tiene aforamientos. */
+    NONE,
+
+    /** No se pudo consultar (sin red, servidor dormido o sesión no válida): se conserva la última copia local. */
+    FAILED,
+}
+
+/** Lo que necesita la pantalla del aforamiento; permite probar su ViewModel sin Room ni red (RT_08). */
+interface AforamientoSource {
+    /** Última copia local del aforamiento de la parcela (nula si no hay): funciona sin conexión. */
+    fun observeAforamiento(parcelId: String): Flow<AforamientoEntity?>
+
+    /** Consulta el servidor y actualiza la copia local. */
+    suspend fun refreshAforamiento(parcelId: String): AforamientoRefresh
+}
+
 /**
  * Parcelas de una sola cuenta (HU_14). Se registran **en el servidor** (se necesita conexión) y
  * se guarda una copia en la base local de la cuenta para verlas sin conexión.
@@ -118,9 +142,36 @@ class ParcelRepository(
     private val api: ParcelApi,
     private val ownerUid: String,
     private val idToken: suspend () -> String?,
-) {
+) : AforamientoSource {
     private val dao = database.parcelDao()
     val parcels = dao.observeParcels()
+
+    override fun observeAforamiento(parcelId: String) = dao.observeAforamiento(parcelId)
+
+    /**
+     * Pide `GET /parcels/{id}/aforamiento` y guarda la copia. El backend responde 404 mientras la parcela no tiene
+     * aforamientos; cualquier otro fallo deja la última copia local intacta.
+     */
+    override suspend fun refreshAforamiento(parcelId: String): AforamientoRefresh {
+        if (isDemo) return AforamientoRefresh.NONE // sin servidor no hay aforamientos
+        return try {
+            val token = idToken() ?: return AforamientoRefresh.FAILED
+            val response = api.aforamiento("Bearer $token", parcelId)
+            val body = response.body()
+            when {
+                response.isSuccessful && body != null -> {
+                    dao.upsertAforamientos(listOf(body.toEntity()))
+                    AforamientoRefresh.UPDATED
+                }
+                response.code() == 404 -> AforamientoRefresh.NONE
+                else -> AforamientoRefresh.FAILED
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            AforamientoRefresh.FAILED
+        }
+    }
 
     /** Consumos registrados en la parcela [parcelId] (HU_05). Se leen del dispositivo: funcionan sin conexión. */
     fun consumptions(parcelId: String) = database.inventoryDao().observeParcelConsumptions(parcelId)
@@ -196,6 +247,7 @@ class ParcelRepository(
             if (!response.isSuccessful || remote == null) return false
             database.withTransaction {
                 dao.deleteAllParcels()
+                dao.deleteAllAforamientos() // sin FK a parcels: no se borran solos (A-04)
                 saveLocalInTransaction(remote)
             }
             true
@@ -216,7 +268,18 @@ class ParcelRepository(
         dao.upsertCycles(parcels.mapNotNull { parcel ->
             parcel.activeCycle?.let { ProductionCycleEntity(it.id, parcel.id, it.startDate, it.endDate, it.status) }
         })
+        dao.upsertAforamientos(parcels.mapNotNull { parcel -> parcel.aforamiento?.toEntity(parcel.id) })
     }
+
+    // El área y la confianza se guardan con los decimales del contrato (2 y 3) para mostrarlas sin ruido.
+    private fun AforamientoDto.toEntity(forParcel: String = parcelId) = AforamientoEntity(
+        parcelId = forParcel,
+        aforamientoId = id,
+        date = date,
+        areaHa = areaHa.setScale(2, RoundingMode.HALF_UP).toPlainString(),
+        estimatedPlants = estimatedPlants,
+        confidence = confidence?.setScale(3, RoundingMode.HALF_UP)?.toPlainString(),
+    )
 
     private fun ParcelDto.toResponse() = ParcelResponseDto(
         id = id,

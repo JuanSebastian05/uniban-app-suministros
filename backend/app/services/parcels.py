@@ -11,12 +11,14 @@ Reglas:
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
-from app.models import Parcel, ProductionCycle
+from app.models import Aforamiento, Parcel, ProductionCycle
 from app.models.parcel import name_key
+from app.schemas.aforamientos import AforamientoOut
+from app.services.aforamientos import aforamiento_out
 from app.schemas.parcels import CycleOut, ParcelIn, ParcelOut, ServiceParcelOut
 
 DUPLICATE_NAME = "DUPLICATE_NAME"
@@ -38,8 +40,11 @@ def _active_cycle(db: Session, parcel_id: uuid.UUID) -> ProductionCycle | None:
     )
 
 
-def _to_out(parcel: Parcel, cycle: ProductionCycle | None) -> ParcelOut:
+def _to_out(
+    parcel: Parcel, cycle: ProductionCycle | None, aforamiento: AforamientoOut | None = None,
+) -> ParcelOut:
     return ParcelOut(
+        aforamiento=aforamiento,
         id=parcel.id,
         name=parcel.name,
         # Siempre con dos decimales: igual al crear que al leer de la base.
@@ -127,7 +132,28 @@ def list_parcels(db: Session, producer_id: uuid.UUID) -> list[ParcelOut]:
         .where(Parcel.producer_id == producer_id)
         .order_by(Parcel.name_key)
     ).all()
-    return [_to_out(parcel, cycle) for parcel, cycle in rows]
+    latest = _latest_by_parcel(db, [parcel.id for parcel, _ in rows])
+    return [_to_out(parcel, cycle, latest.get(parcel.id)) for parcel, cycle in rows]
+
+
+def _latest_by_parcel(db: Session, parcel_ids: list[uuid.UUID]) -> dict[uuid.UUID, AforamientoOut]:
+    """El aforamiento más reciente de cada parcela en una sola consulta (mismo orden que ``latest_aforamiento``)."""
+    if not parcel_ids:
+        return {}
+    ranked = (
+        select(
+            Aforamiento,
+            func.row_number().over(
+                partition_by=Aforamiento.parcel_id,
+                order_by=(Aforamiento.date.desc(), Aforamiento.received_at.desc(), Aforamiento.id),
+            ).label("rank"),
+        )
+        .where(Aforamiento.parcel_id.in_(parcel_ids))
+        .subquery()
+    )
+    latest = aliased(Aforamiento, ranked)
+    rows = db.scalars(select(latest).where(ranked.c.rank == 1)).all()
+    return {row.parcel_id: aforamiento_out(row) for row in rows}
 
 
 def list_all_parcels(db: Session) -> list[ServiceParcelOut]:

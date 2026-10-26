@@ -1,12 +1,16 @@
 """Parcelas del usuario autenticado (HU_14). Cada usuario ve y registra solo las de su productor."""
 
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models import User
+from app.schemas.aforamientos import AforamientoOut
 from app.schemas.parcels import ParcelIn, ParcelOut
+from app.services.aforamientos import ParcelNotFound, latest_for_producer
 from app.services.parcels import ParcelConflict, create_parcel, list_parcels
 
 router = APIRouter()
@@ -54,3 +58,24 @@ def register_parcel(
 )
 def my_parcels(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[ParcelOut]:
     return list_parcels(db, user.producer_id)
+
+
+@router.get(
+    "/{parcel_id}/aforamiento",
+    response_model=AforamientoOut,
+    summary="Aforamiento más reciente de una parcela del usuario (HU_09)",
+    responses={
+        **_AUTH_RESPONSES,
+        404: {"description": "La parcela no existe (o es de otro productor) o todavía no tiene aforamientos."},
+    },
+)
+def latest_parcel_aforamiento(
+    parcel_id: uuid.UUID, user: User = Depends(get_current_user), db: Session = Depends(get_db),
+) -> AforamientoOut:
+    try:
+        aforamiento = latest_for_producer(db, parcel_id, user.producer_id)
+    except ParcelNotFound as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+    if aforamiento is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="La parcela no tiene aforamientos.")
+    return aforamiento

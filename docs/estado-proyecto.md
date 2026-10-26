@@ -33,7 +33,7 @@
 | HU_14 Registrar parcela | Hecha | Actualizar el MER y avisar al Equipo 1 (equipo, Juan José). |
 | **HU_08 Actividad productiva** | **Implementada el 24/10 (Simon)**, en PR | Ver [`hu08.md`](hu08.md). Verificada en emulador (25/10); migración `0009` ya aplicada en Neon y desplegada en `main`. |
 | **Integración Equipo 1 (backend)** | **Implementada el 26/10**, rama `feat/integracion-equipo1` | Clave de servicio, `GET /service/parcels`, `POST /aforamientos` y migración `0010`. Ver [`contrato-equipo1.md`](contrato-equipo1.md) y A-08. Falta: configurar `SERVICE_API_KEY` en Render y aplicar `0010` en Neon (Simon). |
-| HU_09 (app) | Compañero, en curso | Consulta del aforamiento en el detalle de la parcela (Room v6). |
+| **HU_09 Consultar aforamiento** | **Implementada el 26/10**, rama `feat/hu09-aforamiento` (parte de `feat/integracion-equipo1`; mezclar después) | Ver [`hu09.md`](hu09.md). Room v6, `GET /parcels` con `aforamiento` y `GET /parcels/{id}/aforamiento`. Sin probar en emulador; depende de `0010` en Neon. |
 | HU_10–12, SALIDA | Compañero | — |
 
 ## Producción (25/10/2026)
@@ -102,6 +102,12 @@ No se probó en emulador ni en celular (P-06).
 - 15/10/2026 (HU_05): el stock nunca queda negativo; SALIDA y AJUSTE quedaron para después (`hu05.md`).
 
 ## Bitácora
+
+- **2026-10-26 (Claude), HU_09:** el detalle de la parcela muestra el aforamiento más reciente del Equipo 1 (fecha, «Área
+  aforada», plantas, confianza) con estados consultando / datos / «Sin aforamiento recibido» / error, y funciona sin
+  conexión con la última copia. Backend: campo `aforamiento` en `GET /parcels` y `GET /parcels/{id}/aforamiento`
+  (404 sin aforamientos o de otro productor). App: Room v6 (`parcel_aforamientos`, sin FK a `parcels`). Backend 198 → 211,
+  app 210 → 241. Sin probar en emulador.
 
 - **2026-10-26 (Claude), integración Equipo 1 (backend):** `SERVICE_API_KEY` y `require_service_key` (401 sin clave o con
   clave incorrecta, 503 sin configurar), `GET /api/v1/service/parcels` (solo id, nombre y área de todas las parcelas),

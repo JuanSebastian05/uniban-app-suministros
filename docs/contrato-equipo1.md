@@ -77,6 +77,11 @@ Los aforamientos son de **solo inserción**: una corrección se envía con otro 
   recomendación (ver [`contrato-equipo2.md`](contrato-equipo2.md)).
 - **404 vs 409 por parcela inexistente:** se usa `404`, porque el recurso referenciado no existe.
 
+## Cómo lo consulta la app (HU_09)
+
+La app no habla con el Equipo 1. Lee lo recibido con el token de Firebase: `GET /api/v1/parcels` (campo `aforamiento` de cada
+parcela, nulo si no hay) y `GET /api/v1/parcels/{id}/aforamiento` (404 si no hay). Detalle en [`hu09.md`](hu09.md).
+
 ## Modelo de datos
 
 Tabla `aforamientos` (migración `0010`, sobre la `0009`): `id UUID PK`, `parcel_id UUID FK → parcels.id`, `date DATE`,

@@ -1,14 +1,17 @@
 package co.edu.udea.uniban.suministros.ui.parcels
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import android.app.Application
+import co.edu.udea.uniban.suministros.data.local.AforamientoEntity
 import co.edu.udea.uniban.suministros.data.local.ParcelConsumption
 import co.edu.udea.uniban.suministros.data.local.ParcelSummary
 import java.time.LocalDate
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -28,6 +31,8 @@ class ParcelDetailScreenTest {
         parcel: ParcelSummary,
         offline: Boolean = false,
         consumptions: List<ParcelConsumption> = emptyList(),
+        aforamiento: AforamientoUiState = AforamientoUiState(loading = false),
+        onRetryAforamiento: () -> Unit = {},
     ) = compose.setContent {
         ParcelDetailScreen(
             parcelId = parcel.id,
@@ -37,6 +42,8 @@ class ParcelDetailScreenTest {
             onRetry = {},
             today = LocalDate.of(2024, 1, 24),
             consumptions = consumptions,
+            aforamiento = aforamiento,
+            onRetryAforamiento = onRetryAforamiento,
         )
     }
 
@@ -56,7 +63,7 @@ class ParcelDetailScreenTest {
 
     @Test fun sinConexionMuestraLosDatosGuardados() {
         show(withCycle, offline = true)
-        compose.onNodeWithText("Sin conexión: datos guardados en este dispositivo.").assertIsDisplayed()
+        compose.onNodeWithText("Sin conexión: datos guardados en este dispositivo.").performScrollTo().assertIsDisplayed()
     }
 
     @Test fun parcelaInexistente() {
@@ -79,5 +86,77 @@ class ParcelDetailScreenTest {
     @Test fun sinConsumosLoIndica() {
         show(withCycle)
         compose.onNodeWithTag("no-consumptions").performScrollTo().assertIsDisplayed()
+    }
+
+    // --- HU_09: aforamiento ---
+
+    private val aforamiento = AforamientoEntity("p1", "a1", "2026-10-29", "2.41", 1850, "0.870")
+
+    @Test fun muestraElAforamientoConFechaAreaPlantasYConfianza() {
+        show(withCycle, aforamiento = AforamientoUiState(loading = false, aforamiento = aforamiento))
+        compose.onNodeWithText("AFORAMIENTO").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("aforamiento-card").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("29/10/2026").assertIsDisplayed()
+        compose.onNodeWithText("Área aforada").assertIsDisplayed()
+        compose.onNodeWithText("2,41 ha").assertIsDisplayed()
+        compose.onNodeWithText("Plantas estimadas").assertIsDisplayed()
+        compose.onNodeWithText("1.850").assertIsDisplayed()
+        compose.onNodeWithText("Confianza").assertIsDisplayed()
+        compose.onNodeWithText("87 %").assertIsDisplayed()
+        // El área de la parcela sigue aparte, en el encabezado.
+        compose.onNodeWithText("2,4 ha").assertIsDisplayed()
+    }
+
+    @Test fun sinConfianzaNoMuestraEsaFila() {
+        show(withCycle, aforamiento = AforamientoUiState(loading = false, aforamiento = aforamiento.copy(confidence = null)))
+        compose.onNodeWithTag("aforamiento-card").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Confianza").assertDoesNotExist()
+    }
+
+    @Test fun sinAforamientoLoIndica() {
+        show(withCycle)
+        compose.onNodeWithTag("aforamiento-empty").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Sin aforamiento recibido").assertIsDisplayed()
+        compose.onNodeWithTag("aforamiento-card").assertDoesNotExist()
+    }
+
+    @Test fun mientrasConsultaMuestraCargando() {
+        show(withCycle, aforamiento = AforamientoUiState(loading = true))
+        compose.onNodeWithTag("aforamiento-loading").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Sin aforamiento recibido").assertDoesNotExist()
+    }
+
+    @Test fun sinConexionYConCopiaMuestraLaCopiaYElAviso() {
+        show(withCycle, aforamiento = AforamientoUiState(loading = false, aforamiento = aforamiento, refreshFailed = true))
+        compose.onNodeWithTag("aforamiento-card").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("aforamiento-stale").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("aforamiento-error").assertDoesNotExist()
+    }
+
+    @Test fun sinCopiaYConFalloMuestraErrorYPermiteReintentar() {
+        var retries = 0
+        show(withCycle, aforamiento = AforamientoUiState(loading = false, refreshFailed = true), onRetryAforamiento = { retries++ })
+        compose.onNodeWithTag("aforamiento-error").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Sin aforamiento recibido").assertDoesNotExist()
+        compose.onNodeWithTag("aforamiento-retry").performClick()
+        assertEquals(1, retries)
+    }
+
+    @Test fun elAforamientoTambienSeMuestraEnUnaParcelaSinCiclo() {
+        show(withoutCycle, aforamiento = AforamientoUiState(loading = false, aforamiento = aforamiento.copy(parcelId = "p2")))
+        compose.onNodeWithTag("aforamiento-card").performScrollTo().assertIsDisplayed()
+    }
+
+    // --- Formato ---
+
+    @Test fun formatoDeConfianzaYPlantas() {
+        assertEquals("87 %", formatConfidence("0.870"))
+        assertEquals("87,5 %", formatConfidence("0.875"))
+        assertEquals("100 %", formatConfidence("1.000"))
+        assertEquals("0 %", formatConfidence("0.000"))
+        assertEquals("texto", formatConfidence("texto"))
+        assertEquals("1.850", formatPlants(1850))
+        assertEquals("0", formatPlants(0))
+        assertEquals("1.234.567", formatPlants(1234567))
     }
 }

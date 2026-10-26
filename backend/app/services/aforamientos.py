@@ -87,9 +87,20 @@ def latest_aforamiento(db: Session, parcel_id: uuid.UUID) -> AforamientoOut | No
         .order_by(Aforamiento.date.desc(), Aforamiento.received_at.desc(), Aforamiento.id)
         .limit(1)
     )
-    if row is None:
-        return None
+    return None if row is None else aforamiento_out(row)
+
+
+def aforamiento_out(row: Aforamiento) -> AforamientoOut:
     return AforamientoOut(
         id=row.id, parcel_id=row.parcel_id, date=row.date, area_ha=_area(row.area_ha),
         estimated_plants=row.estimated_plants, confidence=_fraction(row.confidence),
     )
+
+
+def latest_for_producer(db: Session, parcel_id: uuid.UUID, producer_id: uuid.UUID) -> AforamientoOut | None:
+    """Aforamiento más reciente de una parcela **del productor**; ``ParcelNotFound`` si no existe o es de otro."""
+    parcel = db.get(Parcel, parcel_id)
+    if parcel is None or parcel.producer_id != producer_id:
+        # Mismo error para «no existe» y «es de otro productor»: no se revela la existencia de parcelas ajenas.
+        raise ParcelNotFound("La parcela no existe.")
+    return latest_aforamiento(db, parcel_id)

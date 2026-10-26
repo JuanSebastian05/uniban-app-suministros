@@ -43,6 +43,7 @@ import co.edu.udea.uniban.suministros.ui.auth.LoginViewModel
 import co.edu.udea.uniban.suministros.ui.auth.RegisterScreen
 import co.edu.udea.uniban.suministros.ui.auth.RegisterViewModel
 import co.edu.udea.uniban.suministros.ui.inventory.*
+import co.edu.udea.uniban.suministros.ui.parcels.AforamientoViewModel
 import co.edu.udea.uniban.suministros.ui.parcels.ParcelDetailScreen
 import co.edu.udea.uniban.suministros.ui.parcels.ParcelFormScreen
 import co.edu.udea.uniban.suministros.ui.parcels.ParcelFormViewModel
@@ -272,6 +273,16 @@ fun AppNavHost(
                         .collectAsStateWithLifecycle(emptyList())
                     val activities by remember(id) { parcelsViewModel.activities(id) }
                         .collectAsStateWithLifecycle(emptyList())
+                    // ViewModel propio del detalle: cada vez que se abre vuelve a consultar el aforamiento (HU_09).
+                    val aforamientoViewModel: AforamientoViewModel = viewModel(
+                        key = "aforamiento-$id",
+                        factory = remember(id) {
+                            viewModelFactory {
+                                initializer { AforamientoViewModel(checkNotNull(currentParcelRepository), id) }
+                            }
+                        },
+                    )
+                    val aforamiento by aforamientoViewModel.state.collectAsStateWithLifecycle()
                     ParcelDetailScreen(
                         parcelId = id,
                         state = state,
@@ -280,6 +291,8 @@ fun AppNavHost(
                         onRetry = parcelsViewModel::load,
                         consumptions = consumptions,
                         activities = activities,
+                        aforamiento = aforamiento,
+                        onRetryAforamiento = aforamientoViewModel::reload,
                         onNewActivity = {
                             navController.navigate(AppDestinations.activityNew(id)) { launchSingleTop = true }
                         },
