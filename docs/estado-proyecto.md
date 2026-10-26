@@ -106,7 +106,7 @@ No se probó en emulador ni en celular (P-06).
 - **2026-10-26 (Claude), HU_09:** el detalle de la parcela muestra el aforamiento más reciente del Equipo 1 (fecha, «Área
   aforada», plantas, confianza) con estados consultando / datos / «Sin aforamiento recibido» / error, y funciona sin
   conexión con la última copia. Backend: campo `aforamiento` en `GET /parcels` y `GET /parcels/{id}/aforamiento`
-  (404 sin aforamientos o de otro productor). App: Room v6 (`parcel_aforamientos`, sin FK a `parcels`). Backend 198 → 211,
+  (404 sin aforamientos o de otro productor). App: Room v6 (`parcel_aforamientos`, sin FK a `parcels`). Backend 213 → 226,
   app 210 → 241. Sin probar en emulador.
 
 - **2026-10-26 (Claude), integración Equipo 1 (backend):** `SERVICE_API_KEY` y `require_service_key` (401 sin clave o con
