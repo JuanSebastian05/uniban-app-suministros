@@ -25,6 +25,24 @@ interface ParcelDao {
     @Query("SELECT name FROM parcels")
     suspend fun names(): List<String>
 
+    /** Aforamiento más reciente guardado de la parcela (HU_09); nulo si no hay ninguno. */
+    @Query("SELECT * FROM parcel_aforamientos WHERE parcelId = :parcelId")
+    fun observeAforamiento(parcelId: String): Flow<AforamientoEntity?>
+
+    /** Última recomendación guardada de la parcela (HU_12); nula si no hay ninguna. */
+    @Query("SELECT * FROM parcel_recommendations WHERE parcelId = :parcelId")
+    fun observeRecommendation(parcelId: String): Flow<RecommendationEntity?>
+
+    @Upsert
+    suspend fun upsertRecommendation(recommendation: RecommendationEntity)
+
+    @Upsert
+    suspend fun upsertAforamientos(aforamientos: List<AforamientoEntity>)
+
+    /** Solo al reemplazar la copia local por la del servidor (la tabla no tiene FK a `parcels`). */
+    @Query("DELETE FROM parcel_aforamientos")
+    suspend fun deleteAllAforamientos()
+
     @Upsert
     suspend fun upsertParcels(parcels: List<ParcelEntity>)
 

@@ -6,6 +6,7 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.Path
 
 /**
  * Parcelas del usuario autenticado (`/api/v1/parcels`, HU_14).
@@ -22,6 +23,13 @@ interface ParcelApi {
 
     @GET("parcels")
     suspend fun list(@Header("Authorization") authorization: String): Response<List<ParcelResponseDto>>
+
+    /** Aforamiento más reciente de la parcela (HU_09): 200 = lo trae, 404 = la parcela aún no tiene (o no existe). */
+    @GET("parcels/{id}/aforamiento")
+    suspend fun aforamiento(
+        @Header("Authorization") authorization: String,
+        @Path("id") parcelId: String,
+    ): Response<AforamientoDto>
 }
 
 data class CycleDto(val id: String, val startDate: String, val status: String)
@@ -36,6 +44,18 @@ data class ParcelResponseDto(
     val name: String,
     val areaHa: BigDecimal,
     val activeCycle: CycleResponseDto?,
+    /** Aforamiento más reciente del Equipo 1 (HU_09); nulo si la parcela no tiene o el servidor es anterior. */
+    val aforamiento: AforamientoDto? = null,
+)
+
+/** Aforamiento del Equipo 1 tal como lo entrega el backend; [confidence] es una fracción entre 0 y 1 (opcional). */
+data class AforamientoDto(
+    val id: String,
+    val parcelId: String,
+    val date: String,
+    val areaHa: BigDecimal,
+    val estimatedPlants: Int,
+    val confidence: BigDecimal?,
 )
 
 /** Cuerpo de un 409: `{"detail": {"code": "...", "message": "..."}}`. */

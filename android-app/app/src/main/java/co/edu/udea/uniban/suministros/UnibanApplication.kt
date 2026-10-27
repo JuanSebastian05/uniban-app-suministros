@@ -5,15 +5,20 @@ import co.edu.udea.uniban.suministros.core.network.NetworkModule
 import co.edu.udea.uniban.suministros.data.InventoryRepository
 import co.edu.udea.uniban.suministros.data.MovementSyncRepository
 import co.edu.udea.uniban.suministros.data.ParcelRepository
+import co.edu.udea.uniban.suministros.data.RecommendationRepository
 import co.edu.udea.uniban.suministros.data.auth.AuthRepository
 import co.edu.udea.uniban.suministros.data.auth.FirebaseAuthRepository
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
 import co.edu.udea.uniban.suministros.data.remote.ActivityApi
 import co.edu.udea.uniban.suministros.data.remote.MovementApi
 import co.edu.udea.uniban.suministros.data.remote.ParcelApi
+import co.edu.udea.uniban.suministros.data.remote.RecommendationApi
 import co.edu.udea.uniban.suministros.data.remote.UserApi
 import co.edu.udea.uniban.suministros.sync.SyncScheduler
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class UnibanApplication : Application() {
     /** Una base local por cuenta (uid de Firebase); se abre la primera vez que se usa. */
@@ -26,6 +31,15 @@ class UnibanApplication : Application() {
     private val movementApi by lazy { retrofit.create(MovementApi::class.java) }
 
     private val parcelApi by lazy { retrofit.create(ParcelApi::class.java) }
+
+    /** Cliente con espera larga solo para las recomendaciones (síncronas, HU_12). El resto usa [httpClient]. */
+    private val recommendationHttpClient by lazy {
+        httpClient.newBuilder().readTimeout(NetworkModule.RECOMMENDATION_READ_TIMEOUT_SECONDS, TimeUnit.SECONDS).build()
+    }
+
+    private val recommendationApi by lazy {
+        retrofit.newBuilder().client(recommendationHttpClient).build().create(RecommendationApi::class.java)
+    }
 
     private val activityApi by lazy { retrofit.create(ActivityApi::class.java) }
 
@@ -47,6 +61,13 @@ class UnibanApplication : Application() {
     /** Parcelas de la cuenta [uid] (HU_14): se registran en el backend con el token de esa cuenta. */
     fun parcelRepository(uid: String): ParcelRepository =
         ParcelRepository(database(uid), parcelApi, uid) { authRepository.idToken(uid) }
+
+    /** Recomendaciones de la cuenta [uid] (HU_12): las pide nuestro backend al Equipo 2; la app no lo llama (RT_11). */
+    fun recommendationRepository(uid: String): RecommendationRepository =
+        RecommendationRepository(
+            database(uid), recommendationApi, uid,
+            warmUp = { withContext(Dispatchers.IO) { NetworkModule.warmUpAndWait(recommendationHttpClient) } },
+        ) { authRepository.idToken(uid) }
 
     /** Sincroniza los movimientos de [uid] con el token de esa misma cuenta. */
     fun movementSyncRepository(uid: String): MovementSyncRepository =

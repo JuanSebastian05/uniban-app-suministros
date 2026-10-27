@@ -44,8 +44,8 @@ import java.time.LocalDate
  * ciclo), o un aviso explícito si no tiene ciclo activo. Lee la copia local: funciona sin conexión.
  *
  * «Actividades» lista las actividades de la parcela (HU_08) y «Insumos consumidos» sus consumos (HU_05).
- * Las secciones del mockup de aforamiento y recomendaciones corresponden a HU_09 y HU_12; no se
- * muestran hasta que existan.
+ * «Aforamiento» muestra el más reciente recibido del Equipo 1 (HU_09). «Recomendaciones» muestra la última del
+ * Equipo 2 (HU_12) y solo aparece si se entrega [recommendation].
  */
 @Composable
 fun ParcelDetailScreen(
@@ -59,6 +59,12 @@ fun ParcelDetailScreen(
     // HU_08: actividades de la parcela y acceso al formulario. Sin [onNewActivity] no se muestra el botón.
     activities: List<ParcelActivity> = emptyList(),
     onNewActivity: (() -> Unit)? = null,
+    // HU_09: aforamiento más reciente de la parcela (copia local) y reintento de la consulta.
+    aforamiento: AforamientoUiState = AforamientoUiState(loading = false),
+    onRetryAforamiento: () -> Unit = {},
+    // HU_12: última recomendación del Equipo 2 y botón para pedir una nueva. Nulo = no se muestra la sección.
+    recommendation: RecommendationUiState? = null,
+    onRequestRecommendation: () -> Unit = {},
 ) {
     val parcel = state.parcels.find { it.id == parcelId }
     InventoryScaffold(
@@ -83,6 +89,22 @@ fun ParcelDetailScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     if (parcel.cycleStartDate == null) NoActiveCycle() else ActiveCycle(parcel, today)
+                    Text(
+                        "AFORAMIENTO",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                    AforamientoSection(aforamiento, onRetryAforamiento)
+                    if (recommendation != null) {
+                        Text(
+                            "RECOMENDACIONES",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                        RecommendationSection(recommendation, onRequestRecommendation)
+                    }
                     Text(
                         "ACTIVIDADES",
                         style = MaterialTheme.typography.labelMedium,

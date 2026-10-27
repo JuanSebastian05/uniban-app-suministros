@@ -29,6 +29,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import co.edu.udea.uniban.suministros.data.InventoryRepository
 import co.edu.udea.uniban.suministros.data.ParcelRepository
+import co.edu.udea.uniban.suministros.data.RecommendationSource
 import co.edu.udea.uniban.suministros.data.auth.AuthRepository
 import co.edu.udea.uniban.suministros.data.auth.ProfileState
 import co.edu.udea.uniban.suministros.data.auth.SessionState
@@ -43,11 +44,13 @@ import co.edu.udea.uniban.suministros.ui.auth.LoginViewModel
 import co.edu.udea.uniban.suministros.ui.auth.RegisterScreen
 import co.edu.udea.uniban.suministros.ui.auth.RegisterViewModel
 import co.edu.udea.uniban.suministros.ui.inventory.*
+import co.edu.udea.uniban.suministros.ui.parcels.AforamientoViewModel
 import co.edu.udea.uniban.suministros.ui.parcels.ParcelDetailScreen
 import co.edu.udea.uniban.suministros.ui.parcels.ParcelFormScreen
 import co.edu.udea.uniban.suministros.ui.parcels.ParcelFormViewModel
 import co.edu.udea.uniban.suministros.ui.parcels.ParcelsScreen
 import co.edu.udea.uniban.suministros.ui.parcels.ParcelsViewModel
+import co.edu.udea.uniban.suministros.ui.parcels.RecommendationViewModel
 
 /**
  * [repositoryFor] entrega el inventario de una cuenta (su propia base local): cada usuario que
@@ -62,6 +65,8 @@ fun AppNavHost(
     authRepository: AuthRepository,
     modifier: Modifier = Modifier,
     parcelRepositoryFor: ((uid: String) -> ParcelRepository)? = null,
+    // HU_12: recomendaciones de la cuenta. Si es nulo, el detalle de la parcela no muestra esa sección.
+    recommendationRepositoryFor: ((uid: String) -> RecommendationSource)? = null,
 ) {
     val session by authRepository.sessionState.collectAsStateWithLifecycle()
     val profile by authRepository.profileState.collectAsStateWithLifecycle()
@@ -76,6 +81,10 @@ fun AppNavHost(
     val currentRepository by rememberUpdatedState(repository)
     val parcelRepository = remember(uid, parcelRepositoryFor) { uid?.let { parcelRepositoryFor?.invoke(it) } }
     val currentParcelRepository by rememberUpdatedState(parcelRepository)
+    val recommendationRepository = remember(uid, recommendationRepositoryFor) {
+        uid?.let { recommendationRepositoryFor?.invoke(it) }
+    }
+    val currentRecommendationRepository by rememberUpdatedState(recommendationRepository)
 
     if (session is SessionState.Loading) {
         Box(
@@ -272,6 +281,28 @@ fun AppNavHost(
                         .collectAsStateWithLifecycle(emptyList())
                     val activities by remember(id) { parcelsViewModel.activities(id) }
                         .collectAsStateWithLifecycle(emptyList())
+                    // ViewModel propio del detalle: cada vez que se abre vuelve a consultar el aforamiento (HU_09).
+                    val aforamientoViewModel: AforamientoViewModel = viewModel(
+                        key = "aforamiento-$id",
+                        factory = remember(id) {
+                            viewModelFactory {
+                                initializer { AforamientoViewModel(checkNotNull(currentParcelRepository), id) }
+                            }
+                        },
+                    )
+                    val aforamiento by aforamientoViewModel.state.collectAsStateWithLifecycle()
+                    // HU_12: ViewModel propio del detalle; al abrirlo trae la última recomendación guardada en el servidor.
+                    val recommendationViewModel: RecommendationViewModel? = if (recommendationRepositoryFor != null) {
+                        viewModel(
+                            key = "recommendation-$id",
+                            factory = remember(id) {
+                                viewModelFactory {
+                                    initializer { RecommendationViewModel(checkNotNull(currentRecommendationRepository), id) }
+                                }
+                            },
+                        )
+                    } else null
+                    val recommendation = recommendationViewModel?.state?.collectAsStateWithLifecycle()?.value
                     ParcelDetailScreen(
                         parcelId = id,
                         state = state,
@@ -280,6 +311,10 @@ fun AppNavHost(
                         onRetry = parcelsViewModel::load,
                         consumptions = consumptions,
                         activities = activities,
+                        aforamiento = aforamiento,
+                        onRetryAforamiento = aforamientoViewModel::reload,
+                        recommendation = recommendation,
+                        onRequestRecommendation = { recommendationViewModel?.request() },
                         onNewActivity = {
                             navController.navigate(AppDestinations.activityNew(id)) { launchSingleTop = true }
                         },
