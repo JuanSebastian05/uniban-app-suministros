@@ -1,63 +1,68 @@
-# Despliegue del backend en Render
+# Despliegue del backend en Render y base Neon
 
-> URL pública: **https://uniban-app-suministros.onrender.com/**
+> Guía actualizada el 26/10/2026. En esta revisión no se consultó el panel de Render ni Neon. El usuario informó que SERVICE_API_KEY está configurada en Render y que la migración 0010 llegó a main.
 
-El backend FastAPI está publicado en Render (plan gratuito) para que la app en el celular y los otros equipos
-(Equipo 1 y Equipo 2) puedan usarlo sin depender de un computador encendido. La base de datos sigue siendo la
-de **Neon**, compartida por el equipo.
+## Servicio
 
-## Configuración del servicio
-
-| Campo | Valor |
+| Campo | Configuración documentada |
 | --- | --- |
-| Repositorio | `JuanSebastian05/uniban-app-suministros` |
-| Rama | `main` (cada push a `main` redespliega) |
-| Root Directory | `backend` |
-| Runtime | Python 3 |
-| Build Command | `pip install -r requirements.txt` |
-| Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
-| Instancia | Free |
+| URL | https://uniban-app-suministros.onrender.com |
+| Repositorio | JuanSebastian05/uniban-app-suministros |
+| Rama | main |
+| Directorio raíz | backend |
+| Build | pip install -r requirements.txt |
+| Inicio | uvicorn app.main:app --host 0.0.0.0 --port $PORT |
+| Base de datos | PostgreSQL en Neon |
 
-### Variables de entorno (se cargan en el panel de Render, nunca en el repositorio)
+Confirma estos valores en el panel si cambia el servicio o la rama.
 
-| Variable | Valor |
+## Variables de entorno
+
+Se configuran en el panel Environment de Render. No se guardan en Git ni se copian en documentos o capturas.
+
+| Variable | Uso |
 | --- | --- |
-| `DATABASE_URL` | Cadena de Neon con el prefijo `postgresql+psycopg://` y `sslmode=require` (**secreto**). |
-| `FIREBASE_PROJECT_ID` | ID del proyecto de Firebase. |
-| `ENVIRONMENT` | `production` |
-| `PYTHON_VERSION` | `3.12.7` |
+| DATABASE_URL | Conexión secreta a Neon en formato SQLAlchemy/psycopg y con SSL. |
+| FIREBASE_PROJECT_ID | Proyecto que firma los tokens de Firebase usados por la app. |
+| SERVICE_API_KEY | Clave para X-API-Key en las rutas del Equipo 1. Según el usuario, ya está configurada. |
+| EQUIPO2_BASE_URL | URL del servicio del Equipo 2; el backend tiene una URL por defecto. |
+| EQUIPO2_API_KEY | Opcional según el contrato del Equipo 2. |
+| ENVIRONMENT | Entorno del servicio; usar production para Render. |
+| CORS_ORIGINS | Solo se necesita si un cliente web requiere CORS. |
 
-`CORS_ORIGINS` no es necesario: la app Android no usa CORS. Ningún valor secreto debe subirse al repositorio (RT_14).
+Si cambia una variable, guardar y esperar a que Render complete el redeploy. Para rotar SERVICE_API_KEY, coordinar el nuevo valor con el Equipo 1 por un canal privado.
 
-## Comprobar que funciona
+## Migraciones de base de datos
 
-1. <https://uniban-app-suministros.onrender.com/health> debe responder `{"status":"ok"}`.
-2. <https://uniban-app-suministros.onrender.com/docs> muestra la documentación OpenAPI.
-3. En la app, registrar un movimiento: el contador de pendientes baja a cero.
+Render ejecuta la API, pero no aplica las migraciones de Alembic automáticamente. El historial de esta copia del repositorio llega hasta 0011_recomendaciones.
 
-## Conectar la app Android
+Antes de cada despliegue que incorpore cambios de esquema:
 
-En `android-app/local.properties` (no se versiona):
+1. Revisa la revisión actual en Neon y confirma que la aplicación local apunta a la base correcta.
+2. Ensaya la migración en una rama o base temporal con alembic upgrade head y verifica la revisión.
+3. Aplica en la base compartida según el procedimiento acordado por el equipo.
+4. Despliega el código compatible con el esquema.
+5. Comprueba el estado del servicio, OpenAPI y el flujo funcional afectado.
 
-```
-api.baseUrl=https://uniban-app-suministros.onrender.com/
-```
+El usuario indicó que la migración 0010 llegó a main. No se conoce aquí si la 0011 llegó a main, se aplicó en Neon o quedó desplegada. Consulta la [lista de verificación](lista-verificacion-despliegue.md) y el [estado del proyecto](estado-proyecto.md); no uses esta frase como evidencia de la revisión de producción.
 
-La URL termina en `/`. Recompilar e instalar **sobre** la versión anterior (sin desinstalar), para no perder
-movimientos pendientes. Ya no se necesita `adb reverse` ni `uvicorn` local.
+## Comprobaciones del servicio
 
-## Cosas a tener en cuenta
+- Salud: https://uniban-app-suministros.onrender.com/health
+- Swagger: https://uniban-app-suministros.onrender.com/docs
+- OpenAPI: https://uniban-app-suministros.onrender.com/openapi.json
 
-- **Se duerme tras 15 minutos sin uso.** La primera petición tarda cerca de un minuto. La app lo tiene en cuenta
-  (P-02): espera hasta 90 s por la respuesta (`NetworkModule.READ_TIMEOUT_SECONDS`), manda un `GET /health` al
-  abrirse para despertarlo mientras el productor llena el formulario, y el registro y la creación de parcelas
-  avisan «puede tardar hasta un minuto». Los movimientos pendientes siguen reintentándose. Antes de una prueba o
-  demo conviene abrir `/health` en el navegador.
-- **Migraciones:** no se ejecutan en Render. Se aplican con `alembic upgrade head` desde un equipo con la
-  `DATABASE_URL` de Neon (idealmente en una rama de desarrollo de Neon antes de tocar la base compartida).
-  El código desplegado debe corresponder a la versión de la base: hoy, migración `0009` (desde el 25/10/2026). Tras cada merge a `main`, comprueba que `/openapi.json` liste las rutas nuevas: Render puede quedar «Live» con el código anterior y requerir un *Manual Deploy*.
-- **Base compartida:** el servidor y los equipos de desarrollo usan la misma base de Neon.
-- **Autenticación:** todas las rutas de `/api/v1` exigen el token de Firebase de un productor registrado. Los otros
-  equipos necesitarán una clave de servicio (pendiente de implementar, ver integración con Equipo 1 y Equipo 2).
-- **Solución de problemas:** `Could not open requirements file` → el *Root Directory* no es `backend` o la rama
-  no contiene esa carpeta. Errores `500` tras actualizar → la base no tiene la última migración.
+Render en plan gratuito puede detener el servicio cuando queda inactivo; la primera solicitud tras la pausa puede tardar. La app contempla tiempos de espera largos para el despertar del backend. Antes de una demostración, abre /health y luego valida las rutas que se usarán.
+
+Ver una ruta en OpenAPI no demuestra que la migración esté aplicada ni que el flujo end-to-end funcione.
+
+## Configurar la app para Render
+
+En android-app/local.properties, configura la URL base https://uniban-app-suministros.onrender.com/. Instala la actualización sin desinstalar la aplicación para conservar los datos locales pendientes. No publiques google-services.json ni local.properties.
+
+## Estado informado por el usuario
+
+- SERVICE_API_KEY quedó configurada en Render.
+- La migración 0010 llegó a main.
+- La migración 0011 y su despliegue no están confirmados en esta revisión.
+- No se confirmó una prueba productiva conjunta con el Equipo 1 ni una llamada real al servicio del Equipo 2.

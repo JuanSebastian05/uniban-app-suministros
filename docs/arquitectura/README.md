@@ -1,53 +1,62 @@
-# Arquitectura de la app
+# Arquitectura de la aplicación
 
-La app es **offline-first**: todo se escribe primero en Room (con UUID y estado `PENDING`) y un
-trabajo de WorkManager lo envía al backend FastAPI cuando hay red. La app solo habla con nuestro backend
-(RT_11); los Equipos 1 y 2 también.
+La app está diseñada offline-first: la información operativa se guarda primero en Room y se sincroniza con el backend cuando hay conexión. La base local es independiente por cuenta de Firebase. El backend central valida identidad y permisos, persiste los datos en PostgreSQL y actúa como puente entre los equipos.
 
-Estado de las historias y de las ramas: [`../estado-proyecto.md`](../estado-proyecto.md). Cada historia tiene
-su guía en `docs/huNN.md`.
+El estado y los límites actuales están en [estado del proyecto](../estado-proyecto.md).
 
-## Flujo
+## Recorrido de datos
 
-```text
-Compose → ViewModel → Repository → Room (siempre)  ──►  WorkManager (SyncWorker) → Retrofit → FastAPI /api/v1 → PostgreSQL (Neon)
-Compose → LoginViewModel / RegisterViewModel / CompleteProfileViewModel → AuthRepository → Firebase Auth (+ POST /users/register)
-AppNavHost observa AuthRepository.sessionState y profileState (SessionGuard) y protege las rutas internas
-```
+~~~text
+Pantallas Compose → ViewModel → Repository → Room
+                              ↘ Retrofit → FastAPI /api/v1 → PostgreSQL
 
-La UI no conoce el DAO ni la red (RT_08). La navegación crea los ViewModel y les entrega el repositorio de la
-cuenta con sesión abierta: cada cuenta tiene **su propia base Room** (`inventory-<uid>.db`), así que nunca ve los
-datos de otra.
+WorkManager → sincronización de actividades y movimientos pendientes
+Firebase Authentication → identidad del productor
+Equipo 1 → rutas de servicio FastAPI → aforamientos en PostgreSQL → app
+App → rutas FastAPI de recomendación → servicio del Equipo 2 → respuesta guardada
+~~~
 
-## Paquetes
+La UI no accede directamente al DAO ni conoce detalles HTTP. El Equipo 1 se autentica con una clave de servicio; el Equipo 2 es llamado por el backend. La app solo habla con nuestro backend.
+
+## Módulos Android
 
 | Ubicación | Responsabilidad |
 | --- | --- |
-| `ui/auth` | Login, registro, completar perfil (cuenta sin perfil en el backend) y sus ViewModel. |
-| `ui/inventory` | Inventario, detalle, formulario de movimientos (entrada, consumo, pérdida, ajuste) e historial. |
-| `ui/parcels` | Lista, detalle y registro de parcelas (con sus actividades y consumos). |
-| `ui/activities` | Formulario de actividad productiva y la pestaña Actividades (HU_08). |
-| `ui/navigation` | Rutas, pestañas, `SessionGuard` y creación de ViewModel. |
-| `data/auth` | `AuthRepository`, implementación Firebase, estado de sesión y de perfil, mapeo de errores. |
-| `data` | `InventoryRepository` (movimientos, actividades, historial), `ParcelRepository`, `MovementSyncRepository`, `Quantity`. |
-| `data/local` | Entidades, DAO y base Room (versión 5; esquemas exportados en `android-app/app/schemas`). |
-| `data/remote` | Interfaces Retrofit (`MovementApi`, `ActivityApi`, `ParcelApi`, `UserApi`). |
-| `sync` | `SyncScheduler` y `SyncWorker` (WorkManager). |
-| `core/network` | `NetworkModule`: cliente HTTP (espera de 90 s por el servidor dormido) y calentamiento al abrir. |
+| ui/auth | Inicio de sesión, registro y completar el perfil del productor. |
+| ui/inventory | Inventario, detalle, entradas, consumos, pérdidas, ajustes e historial. |
+| ui/parcels | Lista, registro y detalle de parcelas; secciones de ciclo, actividades, aforamiento y recomendación. |
+| ui/activities | Registro y lista de actividades productivas. |
+| ui/navigation | Navegación, protección de sesión y pestañas principales. |
+| data/auth | Estado de sesión y perfil; integración con Firebase. |
+| data | Repositorios de inventario, parcelas, sincronización e integración con recomendaciones. |
+| data/local | Entidades, DAO y base Room, versión 7. Esquemas exportados en android-app/app/schemas. |
+| data/remote | Interfaces Retrofit para usuarios, movimientos, actividades, parcelas y recomendaciones. |
+| sync | Programación y ejecución de sincronización con WorkManager. |
+| core/network | Cliente HTTP, URL base y tiempos de espera. |
 
-## Reglas que sostienen el diseño
-
-- **Movimientos solo de inserción** (RT_07); las correcciones son ajustes. La existencia se actualiza en la misma
-  transacción que el movimiento (RT_10) y nunca queda negativa.
-- **Sincronización idempotente por UUID**: reenviar no duplica. Las actividades viajan antes que sus consumos.
-- **Autenticación y autorización separadas** (RT_05, RT_13): Firebase solo aporta identidad; el backend valida el
-  token, que la cuenta tenga perfil y que su rol sea PRODUCTOR.
-- **Tablas locales sin clave foránea hacia `parcels`**: `ParcelRepository.refresh()` borra y reinserta las parcelas.
-- Cada cambio del esquema local sube la versión de Room, con `AutoMigration` y su `N.json`.
-- Repositorios concretos e inyección manual; no se agregan capas vacías ni un framework de inyección.
+Cada cuenta utiliza una base local con nombre asociado a su UID. Las tablas locales de parcelas, aforamientos y recomendaciones no dependen de una clave foránea hacia parcelas; esto permite reemplazar las copias sincronizadas sin borrar datos locales relacionados.
 
 ## Backend
 
-`api/v1` (rutas), `schemas` (contratos camelCase), `services` (reglas), `models` y `db`, con migraciones de Alembic
-(una sola cabeza). Ver [`../../backend/README.md`](../../backend/README.md) y, para el despliegue,
-[`../despliegue-render.md`](../despliegue-render.md).
+La API organiza rutas en api/v1, contratos Pydantic en schemas, reglas de negocio en services, modelos SQLAlchemy en models y sesiones de base de datos en db. Alembic mantiene el esquema PostgreSQL; la revisión más reciente en este repositorio es 0011_recomendaciones.
+
+### Rutas principales
+
+- Usuarios: registro y perfil.
+- Inventario y movimientos: consulta y recepción idempotente de movimientos.
+- Actividades: recepción idempotente.
+- Parcelas: registro y consulta del productor, con ciclo y aforamiento reciente.
+- Aforamientos: escritura autenticada por clave de servicio desde el Equipo 1.
+- Servicio de parcelas: consulta global mínima autenticada por clave de servicio para el Equipo 1.
+- Recomendaciones: el productor solicita y consulta la última recomendación de su parcela; el backend llama al Equipo 2.
+
+## Reglas que protegen los datos
+
+- Un productor solo accede a sus datos; las rutas de negocio exigen token válido y perfil.
+- Movimientos y actividades se identifican por UUID para tolerar reintentos sin duplicar registros.
+- El movimiento y el cambio de existencia se guardan de forma consistente; no se permite saldo negativo.
+- Las actividades se sincronizan antes que sus consumos relacionados.
+- Las claves de servicio y las conexiones de base de datos se configuran como secretos fuera del repositorio.
+- El backend conserva los registros centrales; Room permite seguir trabajando offline, pero la app no descarga el inventario completo para restaurar un teléfono nuevo.
+
+Para las variables y los pasos de ejecución, ver [README del backend](../../backend/README.md). Para producción, ver [despliegue](../despliegue-render.md).

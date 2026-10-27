@@ -8,6 +8,9 @@ import co.edu.udea.uniban.suministros.data.InventoryRepository
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
 import co.edu.udea.uniban.suministros.data.local.InventoryEntity
 import co.edu.udea.uniban.suministros.data.local.MovementEntity
+import co.edu.udea.uniban.suministros.data.local.LossReason
+import co.edu.udea.uniban.suministros.data.local.MovementType
+import co.edu.udea.uniban.suministros.data.local.StarterInventory
 import java.time.LocalDate
 import java.util.UUID
 import kotlinx.coroutines.async
@@ -60,7 +63,7 @@ class InventoryRepositoryTest {
         openDatabase()
         repository.initializeDemo()
 
-        assertEquals(6, repository.inventory.first().size)
+        assertEquals(9, repository.inventory.first().size)
         val updated = repository.inventory.first().first { it.id == item.id }
         assertEquals(item.quantity + 1.25f, updated.quantity, 0.001f)
         val movement = repository.movements.first().single()
@@ -72,6 +75,69 @@ class InventoryRepositoryTest {
         assertTrue(movement.createdAt.isNotBlank())
         assertEquals(movement.createdAt, movement.updatedAt)
         assertEquals(id, repository.findSavedEntry(id)?.id)
+    }
+
+    @Test
+    fun packagingStartsAtZeroWithTheAgreedNamesAndUnits() = runBlocking {
+        val packaging = repository.inventory.first().filter { it.category == "Empaque" }
+        assertEquals(setOf("cajas", "carton", "bolsas"), packaging.map { it.name }.toSet())
+        assertEquals(3, packaging.size)
+        assertTrue(packaging.all { it.unit == "unidad" && it.quantity == 0f })
+        assertTrue(repository.movements.first().isEmpty())
+        assertEquals(0, repository.pendingCount.first())
+    }
+
+    @Test
+    fun existingAccountGetsPackagingWithoutChangingItsStockOrHistory() = runBlocking {
+        val legacyDb = Room.inMemoryDatabaseBuilder(context, InventoryDatabase::class.java).build()
+        try {
+            val starter = StarterInventory("legacy-owner")
+            val dao = legacyDb.inventoryDao()
+            val agriculturalSupplies = starter.supplies.filter { it.category != "Empaque" }
+            val agriculturalIds = agriculturalSupplies.map { it.id }.toSet()
+            dao.insertProducer(starter.producer)
+            dao.insertLocation(starter.location)
+            dao.insertSupplies(agriculturalSupplies)
+            dao.insertInventory(starter.inventory.filter { it.supplyId in agriculturalIds })
+            val legacy = InventoryRepository(legacyDb, "legacy-owner")
+            val originalItem = legacy.inventory.first().first()
+            legacy.registerEntry(UUID.randomUUID().toString(), originalItem.id, "5", LocalDate.now(), "Compra anterior")
+            val balancesBefore = legacy.balances.first()
+            val movementsBefore = legacy.movements.first()
+
+            // Abrir la cuenta repetidas veces no debe duplicar materiales ni cambiar sus datos anteriores.
+            repeat(3) { legacy.initializeDemo() }
+
+            val balancesAfter = legacy.balances.first().associateBy { it.id }
+            balancesBefore.forEach { assertEquals(it, balancesAfter[it.id]) }
+            assertEquals(9, legacy.inventory.first().size)
+            assertEquals(movementsBefore, legacy.movements.first())
+            assertEquals(1, legacy.pendingCount.first())
+            assertTrue(legacy.inventory.first().filter { it.category == "Empaque" }.all { it.quantity == 0f })
+        } finally {
+            legacyDb.close()
+        }
+    }
+
+    @Test
+    fun packagingMovementsAndBalancesSurviveReopeningWithoutDuplicates() = runBlocking {
+        val packaging = repository.inventory.first().filter { it.category == "Empaque" }
+        for (item in packaging) {
+            repository.registerEntry(UUID.randomUUID().toString(), item.id, "100", LocalDate.now(), "Compra de empaque")
+            repository.registerMovement(UUID.randomUUID().toString(), MovementType.PERDIDA, item.id, "5",
+                LocalDate.now(), "", lossReason = LossReason.MAL_MANEJO)
+        }
+        val movementsBefore = repository.movements.first()
+        database.close()
+        openDatabase()
+        repeat(2) { repository.initializeDemo() }
+
+        val packagingAfter = repository.inventory.first().filter { it.category == "Empaque" }
+        assertEquals(packaging.map { it.id }.toSet(), packagingAfter.map { it.id }.toSet())
+        assertEquals(3, packagingAfter.size)
+        assertTrue(packagingAfter.all { it.quantity == 95f })
+        assertEquals(movementsBefore, repository.movements.first())
+        assertEquals(6, repository.pendingCount.first())
     }
 
     @Test
