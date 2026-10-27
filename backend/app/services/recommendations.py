@@ -12,8 +12,10 @@ Reglas:
 - Cada recomendación exitosa se guarda (solo inserción); ``GET`` sirve la última sin volver a llamarlo.
 """
 
+import hashlib
 import logging
 import time
+import unicodedata
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from typing import Callable
@@ -40,8 +42,9 @@ logger = logging.getLogger(__name__)
 RECOMMEND_PATH = "/api/v1/recomendar"
 HEALTH_PATH = "/salud"  # su endpoint de salud: sirve para despertarlo antes de pedir la recomendación
 
-# Ventana de consumos y pérdidas que se envían al Equipo 2 (supuesto, ver docs/contrato-equipo2.md).
+# Ventana de consumos y pérdidas que se envían al Equipo 2 (ver docs/contrato-equipo2.md).
 RECENT_DAYS = 90
+PACKAGING_NAMES = ("cajas", "carton", "bolsas")
 
 
 class RecommendationError(Exception):
@@ -171,6 +174,40 @@ def _number(value) -> float:
     return float(value)
 
 
+def _packaging_name(value: str) -> str | None:
+    """Devuelve el nombre acordado del empaque, tolerando mayúsculas y tildes antiguas."""
+    normalized = unicodedata.normalize("NFKD", value.strip())
+    normalized = "".join(char for char in normalized if not unicodedata.combining(char)).casefold()
+    return normalized if normalized in PACKAGING_NAMES else None
+
+
+def _starter_supply_id(firebase_uid: str, name: str) -> str:
+    """Replica UUID.nameUUIDFromBytes de Android para un producto cero que aún no llegó al backend."""
+    digest = hashlib.md5(f"{firebase_uid}/{name}".encode("utf-8"), usedforsecurity=False).digest()
+    return str(uuid.UUID(bytes=digest, version=3))
+
+
+def _packaging_inventory(db: Session, producer_id: uuid.UUID, firebase_uid: str) -> list[dict]:
+    """Entrega exactamente los tres empaques; agrega ubicaciones y completa productos todavía en cero."""
+    grouped: dict[str, list] = {name: [] for name in PACKAGING_NAMES}
+    for item in list_inventory(db, producer_id):
+        name = _packaging_name(item.name)
+        if name is not None:
+            grouped[name].append(item)
+
+    result = []
+    for name in PACKAGING_NAMES:
+        items = grouped[name]
+        result.append({
+            "supplyId": str(items[0].supply_id) if items else _starter_supply_id(firebase_uid, name),
+            "name": name,
+            "category": "Empaque",
+            "unit": "unidad",
+            "quantity": sum((_number(item.quantity) for item in items), 0.0),
+        })
+    return result
+
+
 def _owned_parcel(db: Session, parcel_id: uuid.UUID, producer_id: uuid.UUID) -> Parcel:
     parcel = db.get(Parcel, parcel_id)
     if parcel is None or parcel.producer_id != producer_id:
@@ -201,7 +238,7 @@ def _movements(db: Session, producer_id: uuid.UUID, movement_type: str, since: d
 
 
 def build_request_body(
-    db: Session, parcel: Parcel, aforamiento: Aforamiento, producer_id: uuid.UUID, today: date,
+    db: Session, parcel: Parcel, aforamiento: Aforamiento, producer_id: uuid.UUID, firebase_uid: str, today: date,
 ) -> dict:
     """Cuerpo de ``contrato-equipo2.md`` (nombres camelCase) más los campos directos del Equipo 2.
 
@@ -231,21 +268,19 @@ def build_request_body(
             "estimatedPlants": aforamiento.estimated_plants,
             "confidence": confidence,
         },
-        "inventory": [
-            {"supplyId": str(item.supply_id), "name": item.name, "category": item.category, "unit": item.unit,
-             "quantity": _number(item.quantity)}
-            for item in list_inventory(db, producer_id)
-        ],
+        "inventory": _packaging_inventory(db, producer_id, firebase_uid),
         "consumptions": [
-            {"supplyId": str(supply.id), "name": supply.name, "unit": supply.unit,
+            {"supplyId": str(supply.id), "name": _packaging_name(supply.name), "unit": "unidad",
              "quantity": _number(movement.quantity), "date": movement.date.isoformat()}
             for movement, supply in _movements(db, producer_id, "CONSUMO", since, parcel.id)
+            if _packaging_name(supply.name) is not None
         ],
         "losses": [
-            {"supplyId": str(supply.id), "name": supply.name, "unit": supply.unit,
+            {"supplyId": str(supply.id), "name": _packaging_name(supply.name), "unit": "unidad",
              "quantity": _number(movement.quantity), "date": movement.date.isoformat(),
              "reason": movement.loss_reason}
             for movement, supply in _movements(db, producer_id, "PERDIDA", since, None)
+            if _packaging_name(supply.name) is not None
         ],
         # Formato directo del Equipo 2.
         "parcela_id": str(parcel.id),
@@ -284,7 +319,8 @@ def _to_out(recommendation_id: uuid.UUID, parcel_id: uuid.UUID, generated_at: da
 
 
 def request_recommendation(
-    db: Session, client: Equipo2Client, parcel_id: uuid.UUID, producer_id: uuid.UUID, today: date | None = None,
+    db: Session, client: Equipo2Client, parcel_id: uuid.UUID, producer_id: uuid.UUID, firebase_uid: str,
+    today: date | None = None,
 ) -> RecommendationOut:
     """Pide una recomendación nueva al Equipo 2, la guarda y la devuelve."""
     parcel = _owned_parcel(db, parcel_id, producer_id)
@@ -293,7 +329,7 @@ def request_recommendation(
         raise NoAforamiento(
             "Esta parcela todavía no tiene aforamiento. Cuando el Equipo 1 lo envíe podrás pedir la recomendación."
         )
-    body = build_request_body(db, parcel, aforamiento, producer_id, today or date.today())
+    body = build_request_body(db, parcel, aforamiento, producer_id, firebase_uid, today or date.today())
     # La llamada puede tardar minutos (el servicio se duerme): se suelta la conexión de la base mientras tanto.
     db.rollback()
 

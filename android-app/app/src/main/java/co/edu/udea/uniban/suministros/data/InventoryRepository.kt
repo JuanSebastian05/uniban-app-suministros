@@ -73,13 +73,19 @@ class InventoryRepository(
     /** Saldo inicial y existencia de cada insumo, para el resumen del historial (HU_07). */
     val balances = dao.observeBalances()
 
-    /** Crea el inventario inicial de la cuenta la primera vez que se abre. */
+    /** Crea el inventario inicial y completa el catálogo de empaque sin sobrescribir saldos ni movimientos. */
     suspend fun initializeDemo() = database.withTransaction {
         if (!dao.hasProducer(starter.producer.id)) {
             dao.insertProducer(starter.producer)
             dao.insertLocation(starter.location)
             dao.insertSupplies(starter.supplies)
             dao.insertInventory(starter.inventory)
+        } else {
+            // Cuentas anteriores: solo insertar los materiales faltantes, con saldo inicial cero.
+            val supplyIds = dao.supplyIds().toSet()
+            dao.insertSupplies(starter.packagingSupplies.filterNot { it.id in supplyIds })
+            val inventoryIds = dao.inventoryIds().toSet()
+            dao.insertInventory(starter.packagingInventory.filterNot { it.id in inventoryIds })
         }
     }
 

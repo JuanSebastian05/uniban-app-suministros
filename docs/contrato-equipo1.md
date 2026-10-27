@@ -1,98 +1,90 @@
-# Contrato con el Equipo 1 (aforamiento)
+# Integración con el Equipo 1: parcelas y aforamientos
 
-> Estado: **implementado en el backend** (26/10/2026, rama `feat/integracion-equipo1`). El Equipo 1 aceptó el
-> contrato propuesto el 25/10 (ver [`guia-integracion-equipos.md`](guia-integracion-equipos.md)). La clave de servicio
-> la genera y configura Simon en Render; **nunca** va en el repositorio.
+> Estado actualizado el 26/10/2026 a partir del código del repositorio y de lo reportado por el usuario. Las rutas están implementadas. El usuario indicó que SERVICE_API_KEY está en Render y que la migración 0010 llegó a main; esta revisión no verificó el servidor ni Neon. Coordinar una prueba conjunta antes de tratar la integración desplegada como validada.
 
-El Equipo 1 **llama a nuestro backend** con dos peticiones HTTP. La app Android no habla con ellos (RT_11): consulta lo
-recibido a través de nuestro backend (HU_09).
+El Equipo 1 consulta las parcelas registradas en el Equipo 3 y envía los aforamientos. La app Android no se comunica directamente con el Equipo 1; consulta al backend del Equipo 3.
 
-| Dato | Valor |
-| --- | --- |
-| URL base | `https://uniban-app-suministros.onrender.com` (Render se duerme a los 15 min; la primera petición tarda ≈ 1 min) |
-| Autenticación | Cabecera `X-API-Key: <clave de servicio>` en **ambas** rutas. No usan el token de Firebase. |
-| Documentación | `/docs` y `/openapi.json` del mismo servidor |
+## Dirección y autenticación
 
-## Clave de servicio
+- Servidor: https://uniban-app-suministros.onrender.com
+- Las dos rutas usan la cabecera X-API-Key con la clave compartida.
+- No se requiere token de Firebase.
+- La clave se guarda en los secretos de Render y en la configuración privada del servidor del Equipo 1. No se incluye en este documento, el JSON ni el repositorio.
+- El usuario reportó que la variable SERVICE_API_KEY ya se configuró en Render. La entrega segura de la clave al otro equipo y la prueba contra producción deben confirmarse con ellos.
 
-| Respuesta | Cuándo |
-| --- | --- |
-| `401` | Falta la cabecera `X-API-Key` o no coincide (comparación en tiempo constante). |
-| `503` | El servidor no tiene configurada `SERVICE_API_KEY` (nunca se acepta una clave vacía). |
+## 1. Consultar parcelas
 
-## `GET /api/v1/service/parcels`
+~~~http
+GET /api/v1/service/parcels
+X-API-Key: SU_CLAVE
+~~~
 
-Devuelve **todas** las parcelas de todos los productores, ordenadas por nombre, solo con lo necesario (sin productor,
-documento, ciclo ni más datos):
+Ejemplo de respuesta que entrega actualmente el backend:
 
-```json
-[{ "id": "6f1c0a52-…", "name": "La Esperanza", "areaHa": "2.40" }]
-```
+~~~json
+[
+  {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "name": "La Esperanza",
+    "areaHa": "2.40"
+  }
+]
+~~~
 
-`areaHa` sale con **dos decimales y como texto** (`"2.40"`), el mismo formato que `ParcelOut` en el resto de la API.
-Si el Equipo 1 la necesita como número, avisar (cambio pequeño).
+Diferencia que requiere acuerdo: el ejemplo del acuerdo inicial representa areaHa como número (2.40), pero la respuesta actual serializa el área como texto ("2.40"). Confirmar con el Equipo 1 que puede convertirlo a número o ajustar el esquema si necesitan recibir un número JSON.
 
-## `POST /api/v1/aforamientos`
+La lista incluye las parcelas existentes de todos los productores, con solo identificador, nombre y área. Se debe usar el id recibido como parcelId al enviar el aforamiento.
 
-```json
+## 2. Enviar un aforamiento
+
+~~~http
+POST /api/v1/aforamientos
+X-API-Key: SU_CLAVE
+Content-Type: application/json
+~~~
+
+~~~json
 {
-  "id": "uuid generado por el Equipo 1",
-  "parcelId": "uuid de una parcela de GET /service/parcels",
+  "id": "22222222-2222-4222-8222-222222222222",
+  "parcelId": "11111111-1111-4111-8111-111111111111",
   "date": "2026-10-29",
   "areaHa": 2.40,
   "estimatedPlants": 1850,
   "confidence": 0.87
 }
-```
+~~~
 
-| Campo | Regla |
+| Campo | Regla implementada |
 | --- | --- |
-| `id` | UUID, obligatorio. Hace idempotente el reenvío. |
-| `parcelId` | UUID de una parcela existente. |
-| `date` | `AAAA-MM-DD`. |
-| `areaHa` | Número o texto numérico (`2.4` o `"2.4"`; punto decimal, no coma). Mayor que 0 y hasta 99999,99. **Informativa**: no se contrasta con el área de la parcela. |
-| `estimatedPlants` | Entero entre 0 y 2.147.483.647. |
-| `confidence` | **Opcional**, entre 0 y 1. Número o texto numérico (`0.87` o `"0.87"`). |
+| id | UUID generado por el Equipo 1. Identifica el aforamiento y permite reintentos idempotentes. |
+| parcelId | UUID existente obtenido de la lista de parcelas. |
+| date | Fecha calendario en formato AAAA-MM-DD. |
+| areaHa | Área aforada en hectáreas, mayor que cero. Es informativa y no se compara con el área de la parcela. |
+| estimatedPlants | Número entero mayor o igual a cero. |
+| confidence | Opcional; número de 0 a 1. |
 
-| Respuesta | Cuándo |
-| --- | --- |
-| `201` `{ "id", "status": "CREATED" }` | Primera vez. |
-| `200` `{ "id", "status": "DUPLICATE" }` | Mismo `id` y mismo contenido: no se duplica. |
-| `404` | La parcela no existe. |
-| `409` | Mismo `id` con contenido distinto. |
-| `422` | Fecha inválida, `areaHa` ≤ 0, plantas negativas o no enteras, `confidence` fuera de 0 a 1, UUID inválido. |
-| `401` / `503` | Clave de servicio ausente o incorrecta / no configurada. |
+### Respuestas
 
-Los aforamientos son de **solo inserción**: una corrección se envía con otro `id`. La app muestra el más reciente por
-`date` (empata por `received_at`).
+- 201 CREATED: primer envío aceptado.
+- 200 DUPLICATE: mismo id y mismo contenido, no crea otro registro.
+- 401: clave ausente o incorrecta.
+- 404: la parcela indicada no existe.
+- 409: se reutilizó el id con contenido distinto.
+- 422: formato o valor inválido.
+- 503: SERVICE_API_KEY no está configurada en el servidor.
 
-## Supuestos (no definidos con el Equipo 1; decididos aquí)
+Si no reciben respuesta, reintenten con el mismo id y el mismo contenido. Un nuevo aforamiento debe usar un UUID nuevo.
 
-- **Número o texto.** `areaHa` y `confidence` se aceptan en ambos formatos y un reenvío en otro formato del mismo valor es idempotente (200, no 409). La coma decimal, el texto vacío o no numérico, `NaN` e `Infinity` dan `422`.
-- **Redondeo.** `areaHa` se redondea a 2 decimales y `confidence` a 3 (mitad hacia arriba) al guardar. Reenviar el mismo
-  `id` con más decimales sigue siendo idempotente porque se compara ya redondeado.
-- **`confidence` ausente** se guarda como nulo y la app no muestra el dato (la HU dice «si existe»).
-- **Varios aforamientos por parcela y fecha** se aceptan con ids distintos.
-- **`period`** (semana ISO que pide el Equipo 2) **no lo envía el Equipo 1**: se derivará de `date` al armar la
-  recomendación (ver [`contrato-equipo2.md`](contrato-equipo2.md)).
-- **404 vs 409 por parcela inexistente:** se usa `404`, porque el recurso referenciado no existe.
+## Uso en la app y datos
 
-## Cómo lo consulta la app (HU_09)
+El productor consulta el aforamiento más reciente en el detalle de la parcela. La app usa su propia autenticación Firebase al consultar los endpoints de parcelas; el Equipo 1 no necesita llamarlos.
 
-La app no habla con el Equipo 1. Lee lo recibido con el token de Firebase: `GET /api/v1/parcels` (campo `aforamiento` de cada
-parcela, nulo si no hay) y `GET /api/v1/parcels/{id}/aforamiento` (404 si no hay). Detalle en [`hu09.md`](hu09.md).
+La migración 0010 crea la tabla central de aforamientos. El código local también contiene HU_09 y la migración 0011 para recomendaciones. Según el usuario, 0010 está en main; el estado actual de Neon y del despliegue de Render debe comprobarse por separado.
 
-## Modelo de datos
+## Prueba de integración propuesta
 
-Tabla `aforamientos` (migración `0010`, sobre la `0009`): `id UUID PK`, `parcel_id UUID FK → parcels.id`, `date DATE`,
-`area_ha NUMERIC(9,2)`, `estimated_plants INTEGER`, `confidence NUMERIC(4,3)` nulo, `received_at TIMESTAMPTZ`; restricciones
-`area_ha > 0`, `estimated_plants >= 0` y `confidence` entre 0 y 1; índice `(parcel_id, date)`.
-
-## Cómo entregar la clave al Equipo 1
-
-1. Generarla (en tu máquina, sin guardarla en ningún archivo del repo):
-   `python -c "import secrets; print(secrets.token_urlsafe(32))"`
-2. Render → servicio del backend → **Environment** → agregar `SERVICE_API_KEY` con ese valor → guardar (Render redespliega).
-3. Pasársela al Equipo 1 por un canal privado y pedirles que la envíen en `X-API-Key`.
-4. Comprobar: `GET /api/v1/service/parcels` sin cabecera responde `401`, y con ella `200`.
-5. Rotarla: repetir 1 y 2 y avisarles; la anterior deja de valer al redesplegar.
+1. El Equipo 1 consulta las parcelas con X-API-Key.
+2. Envía un aforamiento usando un parcelId real.
+3. Reenvía el mismo cuerpo y UUID: debe recibir DUPLICATE.
+4. El Equipo 3 confirma que aparece el aforamiento en la parcela.
+5. Se documenta la prueba conjunta y se confirma si areaHa como texto en la consulta de parcelas es aceptable.

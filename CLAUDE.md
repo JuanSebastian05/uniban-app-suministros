@@ -6,11 +6,10 @@ contradicen, gana el repo: verifica y corrige este archivo.
 
 ## Antes de empezar (obligatorio)
 
-1. Lee [`docs/avisos-equipo.md`](docs/avisos-equipo.md): cambios y acuerdos que te afectan, con la acción
-   que tienes que hacer.
-2. Lee [`docs/estado-proyecto.md`](docs/estado-proyecto.md): qué está hecho, qué falta, en qué rama está
-   cada cosa y por dónde retomar.
-3. `git pull origin develop` y `git status`. Trabaja siempre en una rama propia, nunca directo en `develop` ni `main`.
+1. Lee [`docs/avisos-equipo.md`](docs/avisos-equipo.md) y [`docs/estado-proyecto.md`](docs/estado-proyecto.md).
+2. Revisa `git status`, la rama actual y el código pertinente antes de concluir que una nota documental sigue vigente.
+3. No cambies de rama ni actualices desde un remoto sin comprobar primero si hay trabajo local que preservar.
+   Sigue el flujo de ramas acordado por el usuario/equipo para la tarea actual.
 
 ## Qué es
 
@@ -46,7 +45,7 @@ No agregues tecnologías fuera de esta lista sin acordarlo con el equipo (Cierre
 ## Comandos (Windows, PowerShell)
 
 ```powershell
-# Android (JDK 17; el proyecto usa rutas con tildes: ya está overridePathCheck)
+# Android (JDK 17 o 21, según el Gradle JDK configurado)
 cd android-app
 $env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-17.0.20.101-hotspot"   # ajusta a tu JDK 17
 .\gradlew.bat testDebugUnitTest          # todas las pruebas unitarias (≈ 1 min)
@@ -80,12 +79,12 @@ cd backend; .venv\Scripts\python.exe -m alembic upgrade head
 
 - **Cero secretos en el repo** (es público): `backend/.env`, `android-app/app/google-services.json` y
   `android-app/local.properties` están en `.gitignore`. Nunca imprimas ni pegues sus valores.
-- **No pruebes migraciones contra la base compartida de Neon.** Orden de despliegue: migrar Neon **antes**
-  del merge a `main` (ver A-02 en avisos).
+- **No pruebes migraciones contra la base compartida de Neon.** Ensáyalas en una base temporal o rama de desarrollo;
+  para producción consulta el procedimiento vigente en `docs/lista-verificacion-despliegue.md`.
 - **Movimientos de inventario:** solo de inserción; las correcciones son AJUSTE; la existencia nunca queda
   negativa; se actualizan en la misma transacción (RT_10). Todo registro nace en el dispositivo con UUID y
   `PENDING`; el backend es idempotente por UUID.
-- **Migraciones:** una sola cabeza de Alembic y numeración coordinada (A-01). El esquema de Room se versiona
+- **Migraciones:** una sola cabeza de Alembic y numeración coordinada con el estado real de la base. El esquema de Room se versiona
   (`AutoMigration` + `app/schemas/.../N.json` en el mismo commit).
 - **Tablas locales nuevas sin clave foránea hacia `parcels`** (`ParcelRepository.refresh()` borra y reinserta).
 - **Pruebas Robolectric:** `@Config(sdk = [28], manifest = Config.NONE, application = Application::class)`; las de
@@ -102,7 +101,8 @@ cd backend; .venv\Scripts\python.exe -m alembic upgrade head
 | Guía de cada HU (qué se hizo y cómo demostrarlo) | `docs/hu01.md` … `docs/hu14.md` |
 | Modelo de datos (MER) y mockups | `docs/modelo-datos/MERv2.drawio`, `docs/mockups/MockupsFigma.zip` |
 | Despliegue en Render + Neon | [`docs/despliegue-render.md`](docs/despliegue-render.md) |
-| Arquitectura | `docs/arquitectura/README.md` (parcialmente desactualizado: ver estado) |
+| Arquitectura | [`docs/arquitectura/README.md`](docs/arquitectura/README.md) |
+| Integración con los Equipos 1 y 2 | [`docs/guia-integracion-equipos.md`](docs/guia-integracion-equipos.md) y contratos individuales |
 
 ## Trampas conocidas
 
