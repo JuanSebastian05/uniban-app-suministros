@@ -104,10 +104,10 @@ No se probó en emulador ni en celular (P-06).
 
 ## Bitácora
 
-- **2026-10-26 (Claude), integración Equipo 2 (backend):** cliente HTTP (90 s, un reintento; sin respuesta → 503, respuesta
+- **2026-10-26 (Claude), integración Equipo 2 (backend):** cliente HTTP (calentamiento `GET /salud`, 90 s, un reintento; sin respuesta → 503, respuesta
   inválida o rechazo → 502), solicitud en formato del contrato más campos directos, `POST/GET /parcels/{id}/recommendation`,
   tabla `recommendations` (migración `0011`, JSONB en PostgreSQL) y `httpx` como dependencia de ejecución. Sin aforamiento no se
-  llama al Equipo 2 (409). Backend 226 → 271 pruebas (ninguna llama a la red). `0011` y las consultas verificadas en un
+  llama al Equipo 2 (409). Backend 226 → 275 pruebas (ninguna llama a la red). `0011` y las consultas verificadas en un
   PostgreSQL temporal; no se tocó Neon. El OpenAPI del Equipo 2 no pide autenticación ni campos obligatorios: ver brechas en
   `contrato-equipo2.md`.
 

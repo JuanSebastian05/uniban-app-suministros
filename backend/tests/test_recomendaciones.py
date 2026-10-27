@@ -427,7 +427,7 @@ URL = "https://equipo2.invalid/api/v1/recomendar"
 
 def make_client(handler, **kwargs) -> tuple[Equipo2Client, list]:
     sleeps: list[float] = []
-    options = dict(retry_delay=5.0, transport=httpx.MockTransport(handler), sleep=sleeps.append)
+    options = dict(retry_delay=5.0, transport=httpx.MockTransport(handler), sleep=sleeps.append, warm_up=False)
     options.update(kwargs)
     return Equipo2Client("https://equipo2.invalid/", **options), sleeps
 
@@ -461,10 +461,44 @@ def test_la_clave_opcional_va_en_la_cabecera_solo_si_esta_configurada():
     assert seen["key"] == "clave-falsa-de-prueba"
 
 
-def test_por_defecto_espera_90_segundos_y_reintenta_una_vez():
+def test_por_defecto_calienta_espera_90_segundos_y_reintenta_una_vez():
     client = Equipo2Client("https://equipo2.invalid")
     assert client._timeout == 90.0
     assert client._attempts == 2
+    assert client._warm_up is True
+    assert client._health_url == "https://equipo2.invalid/salud"
+
+
+def test_calienta_con_un_get_a_salud_antes_del_post():
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append((request.method, request.url.path))
+        return httpx.Response(200, json=reply() if request.method == "POST" else {"estado": "ok"})
+
+    client, sleeps = make_client(handler, warm_up=True)
+    assert client.recommend({})["periodo"] == "2026-W44"
+    assert seen == [("GET", "/salud"), ("POST", "/api/v1/recomendar")]
+    assert sleeps == []
+
+
+@pytest.mark.parametrize("failure", [
+    httpx.ReadTimeout("dormido"), httpx.ConnectError("sin red"), httpx.Response(503, text="despertando"),
+])
+def test_si_el_calentamiento_falla_igual_se_intenta_la_recomendacion(failure):
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.method)
+        if request.method == "GET":
+            if isinstance(failure, Exception):
+                raise failure
+            return failure
+        return httpx.Response(200, json=reply())
+
+    client, _ = make_client(handler, warm_up=True)
+    assert client.recommend({})["periodo"] == "2026-W44"
+    assert seen == ["GET", "POST"]
 
 
 def test_tiempo_agotado_se_reintenta_y_luego_funciona():

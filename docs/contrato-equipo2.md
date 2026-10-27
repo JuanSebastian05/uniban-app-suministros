@@ -88,7 +88,7 @@ valida y guarda la respuesta; `GET` devuelve la última guardada. Detalle y API 
 | Tema | Decisión |
 | --- | --- |
 | Variables | `EQUIPO2_BASE_URL` (por defecto `https://platano-logistica-api.onrender.com`) y `EQUIPO2_API_KEY` (opcional; hoy su API no la pide; si se configura, va en `X-API-Key`). |
-| Espera | 90 s por intento y **un reintento** (5 s después) ante tiempo agotado, error de red o 5xx. Un 4xx no se reintenta. |
+| Espera | Antes del POST, una **llamada de calentamiento** `GET /salud` (hasta 60 s, de mejor esfuerzo: se ignora su resultado) para despertar su servicio en Render. Luego el POST con 90 s por intento y **un reintento** (5 s después) ante tiempo agotado, error de red o 5xx. Un 4xx no se reintenta. Peor caso ≈ 4 min. |
 | Fallos | Sin respuesta → `503` `EQUIPO2_UNAVAILABLE`; respuesta que no cumple su contrato o solicitud rechazada → `502` `EQUIPO2_BAD_RESPONSE`. El detalle del error de ellos nunca se reenvía a la app. |
 | Solicitud | Formato del contrato (camelCase) **y** campos directos (`parcela_id`, `periodo`, `num_plantas_estimado`, `calidad_confianza`, `area_ha`). Así no dependemos de cómo mapeen los objetos anidados. |
 | `period` | Semana ISO de la **fecha del último aforamiento**: `2026-W44`. Supuesto: el contrato solo decía «parece ISO semana». |

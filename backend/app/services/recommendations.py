@@ -38,6 +38,7 @@ from app.services.inventory_query import list_inventory
 logger = logging.getLogger(__name__)
 
 RECOMMEND_PATH = "/api/v1/recomendar"
+HEALTH_PATH = "/salud"  # su endpoint de salud: sirve para despertarlo antes de pedir la recomendación
 
 # Ventana de consumos y pérdidas que se envían al Equipo 2 (supuesto, ver docs/contrato-equipo2.md).
 RECENT_DAYS = 90
@@ -86,8 +87,13 @@ class Equipo2Client:
         retry_delay: float = 5.0,
         transport: httpx.BaseTransport | None = None,
         sleep: Callable[[float], None] = time.sleep,
+        warm_up: bool = True,
+        warm_up_timeout: float = 60.0,
     ):
         self._url = base_url.rstrip("/") + RECOMMEND_PATH
+        self._health_url = base_url.rstrip("/") + HEALTH_PATH
+        self._warm_up = warm_up
+        self._warm_up_timeout = warm_up_timeout
         self._headers = {"Content-Type": "application/json"}
         if api_key:
             # Su OpenAPI no declara autenticación; si algún día la piden, la clave va por variable de entorno.
@@ -98,8 +104,21 @@ class Equipo2Client:
         self._transport = transport
         self._sleep = sleep
 
+    def _wake_up(self) -> None:
+        """Llamada de calentamiento: despierta su servicio (Render) para que el POST no gaste en ello su espera.
+
+        Es de mejor esfuerzo: cualquier resultado, incluso un fallo, se ignora; el POST decide si hay servicio.
+        """
+        try:
+            with httpx.Client(timeout=self._warm_up_timeout, transport=self._transport) as http:
+                http.get(self._health_url)
+        except httpx.HTTPError:
+            logger.info("El calentamiento del Equipo 2 no obtuvo respuesta; se intenta igual la recomendación.")
+
     def recommend(self, body: dict) -> dict:
-        """POST con un reintento. Devuelve el JSON; lanza ``Equipo2Unavailable`` o ``Equipo2BadResponse``."""
+        """Calienta y hace POST con un reintento. Devuelve el JSON; lanza ``Equipo2Unavailable`` o ``Equipo2BadResponse``."""
+        if self._warm_up:
+            self._wake_up()
         last_problem = "sin respuesta"
         for attempt in range(1, self._attempts + 1):
             try:

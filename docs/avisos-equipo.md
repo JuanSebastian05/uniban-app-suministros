@@ -29,7 +29,7 @@
 Rama `feat/integracion-equipo2` (PR a `develop`, apilada sobre las de aforamientos y HU_09: mezclar **después** de ellas).
 
 - **Rutas nuevas** (token de Firebase): `POST /api/v1/parcels/{id}/recommendation` (pide al Equipo 2, guarda y devuelve; puede
-  tardar hasta ≈ 3 min si su servicio está dormido) y `GET …/recommendation` (la última guardada).
+  tardar hasta ≈ 4 min si su servicio está dormido (calentamiento + 90 s + un reintento)) y `GET …/recommendation` (la última guardada).
 - **Migración `0011`** (tabla `recommendations`, `down_revision` `0010`; `payload` es JSONB). Verificada en un PostgreSQL
   temporal; **no aplicada en Neon**.
 - **Variables opcionales** en Render: `EQUIPO2_BASE_URL` (por defecto la URL del Equipo 2) y `EQUIPO2_API_KEY` (hoy su API no
@@ -38,7 +38,7 @@ Rama `feat/integracion-equipo2` (PR a `develop`, apilada sobre las de aforamient
   Equipo 1 no envíe aforamientos, ninguna parcela podrá pedirla.
 - **Qué hacer:** Simon, aplicar `0011` en Neon (rama de ensayo → compartida → merge a `main`, A-02). Quien haga SALIDA o
   cualquier migración nueva: parte de la `0011`.
-- Backend: 226 → 271 pruebas en verde. Brechas pendientes con el Equipo 2: ver [`contrato-equipo2.md`](contrato-equipo2.md).
+- Backend: 226 → 275 pruebas en verde. Brechas pendientes con el Equipo 2: ver [`contrato-equipo2.md`](contrato-equipo2.md).
 
 ## A-08 · 2026-10-26 · Integración con el Equipo 1 (backend): clave de servicio y aforamientos
 
