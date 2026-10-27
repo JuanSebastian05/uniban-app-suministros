@@ -7,8 +7,9 @@ from app.models.activity import Activity
 from app.models.aforamiento import Aforamiento
 from app.models.inventory import Inventory, Location, Movement, Producer, Supply
 from app.models.parcel import Parcel, ProductionCycle
+from app.models.recommendation import Recommendation
 from app.models.user import User
 
 __all__ = [
-    "Activity", "Aforamiento", "Inventory", "Location", "Movement", "Parcel", "Producer", "ProductionCycle", "Supply", "User",
+    "Activity", "Aforamiento", "Inventory", "Location", "Movement", "Parcel", "Producer", "ProductionCycle", "Recommendation", "Supply", "User",
 ]

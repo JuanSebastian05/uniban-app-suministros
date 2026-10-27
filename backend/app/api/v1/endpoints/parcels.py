@@ -10,7 +10,16 @@ from app.db.session import get_db
 from app.models import User
 from app.schemas.aforamientos import AforamientoOut
 from app.schemas.parcels import ParcelIn, ParcelOut
+from app.schemas.recommendations import RecommendationOut
 from app.services.aforamientos import ParcelNotFound, latest_for_producer
+from app.services.recommendations import (
+    Equipo2Client,
+    NoRecommendation,
+    RecommendationError,
+    get_equipo2_client,
+    latest_recommendation,
+    request_recommendation,
+)
 from app.services.parcels import ParcelConflict, create_parcel, list_parcels
 
 router = APIRouter()
@@ -79,3 +88,54 @@ def latest_parcel_aforamiento(
     if aforamiento is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="La parcela no tiene aforamientos.")
     return aforamiento
+
+
+def _recommendation_error(error: RecommendationError) -> HTTPException:
+    return HTTPException(error.status_code, detail={"code": error.code, "message": error.message})
+
+
+@router.post(
+    "/{parcel_id}/recommendation",
+    response_model=RecommendationOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Pedir una recomendación nueva al Equipo 2 para la parcela y guardarla (HU_12)",
+    responses={
+        **_AUTH_RESPONSES,
+        404: {"description": "La parcela no existe o es de otro productor."},
+        409: {"description": "`detail.code` = NO_AFORAMIENTO: la parcela aún no tiene aforamiento del Equipo 1."},
+        502: {"description": "El servicio del Equipo 2 respondió algo inválido o rechazó la solicitud."},
+        503: {"description": "El servicio del Equipo 2 no está disponible (puede tardar hasta ≈ 3 min en agotar los intentos)."},
+    },
+)
+def request_parcel_recommendation(
+    parcel_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    client: Equipo2Client = Depends(get_equipo2_client),
+) -> RecommendationOut:
+    try:
+        return request_recommendation(db, client, parcel_id, user.producer_id)
+    except ParcelNotFound as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+    except RecommendationError as error:
+        raise _recommendation_error(error) from error
+
+
+@router.get(
+    "/{parcel_id}/recommendation",
+    response_model=RecommendationOut,
+    summary="Última recomendación guardada de la parcela (HU_12)",
+    responses={
+        **_AUTH_RESPONSES,
+        404: {"description": "La parcela no existe (o es de otro productor) o todavía no tiene recomendaciones."},
+    },
+)
+def latest_parcel_recommendation(
+    parcel_id: uuid.UUID, user: User = Depends(get_current_user), db: Session = Depends(get_db),
+) -> RecommendationOut:
+    try:
+        return latest_recommendation(db, parcel_id, user.producer_id)
+    except ParcelNotFound as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+    except NoRecommendation as error:
+        raise _recommendation_error(error) from error

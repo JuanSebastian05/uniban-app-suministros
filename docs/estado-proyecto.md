@@ -34,6 +34,7 @@
 | **HU_08 Actividad productiva** | **Implementada el 24/10 (Simon)**, en PR | Ver [`hu08.md`](hu08.md). Verificada en emulador (25/10); migración `0009` ya aplicada en Neon y desplegada en `main`. |
 | **Integración Equipo 1 (backend)** | **Implementada el 26/10**, rama `feat/integracion-equipo1` | Clave de servicio, `GET /service/parcels`, `POST /aforamientos` y migración `0010`. Ver [`contrato-equipo1.md`](contrato-equipo1.md) y A-08. Falta: configurar `SERVICE_API_KEY` en Render y aplicar `0010` en Neon (Simon). |
 | **HU_09 Consultar aforamiento** | **Implementada el 26/10**, rama `feat/hu09-aforamiento` (parte de `feat/integracion-equipo1`; mezclar después) | Ver [`hu09.md`](hu09.md). Room v6, `GET /parcels` con `aforamiento` y `GET /parcels/{id}/aforamiento`. Sin probar en emulador; depende de `0010` en Neon. |
+| **Integración Equipo 2 (backend)** | **Implementada el 26/10**, rama `feat/integracion-equipo2` (apilada sobre `feat/hu09-aforamiento`) | Cliente del Equipo 2, `POST/GET /parcels/{id}/recommendation` y migración `0011`. Ver [`contrato-equipo2.md`](contrato-equipo2.md) y A-09. Falta aplicar `0011` en Neon. |
 | HU_10–12, SALIDA | Compañero | — |
 
 ## Producción (25/10/2026)
@@ -102,6 +103,13 @@ No se probó en emulador ni en celular (P-06).
 - 15/10/2026 (HU_05): el stock nunca queda negativo; SALIDA y AJUSTE quedaron para después (`hu05.md`).
 
 ## Bitácora
+
+- **2026-10-26 (Claude), integración Equipo 2 (backend):** cliente HTTP (90 s, un reintento; sin respuesta → 503, respuesta
+  inválida o rechazo → 502), solicitud en formato del contrato más campos directos, `POST/GET /parcels/{id}/recommendation`,
+  tabla `recommendations` (migración `0011`, JSONB en PostgreSQL) y `httpx` como dependencia de ejecución. Sin aforamiento no se
+  llama al Equipo 2 (409). Backend 226 → 271 pruebas (ninguna llama a la red). `0011` y las consultas verificadas en un
+  PostgreSQL temporal; no se tocó Neon. El OpenAPI del Equipo 2 no pide autenticación ni campos obligatorios: ver brechas en
+  `contrato-equipo2.md`.
 
 - **2026-10-26 (Claude), HU_09:** el detalle de la parcela muestra el aforamiento más reciente del Equipo 1 (fecha, «Área
   aforada», plantas, confianza) con estados consultando / datos / «Sin aforamiento recibido» / error, y funciona sin
