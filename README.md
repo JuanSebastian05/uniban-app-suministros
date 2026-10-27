@@ -2,7 +2,7 @@
 
 Aplicación Android offline-first para que productores de plátano gestionen inventario, movimientos, parcelas y actividades. Un backend FastAPI central sincroniza los datos, recibe aforamientos del Equipo 1 y consulta recomendaciones del Equipo 2.
 
-> **Estado de referencia: 26/10/2026.** HU_01–09, HU_12–14 y las integraciones de servicio con los Equipos 1 y 2 están implementadas en el código. HU_10 y HU_11 están parcialmente implementadas. El tipo de movimiento **SALIDA** todavía no se puede registrar desde la app. El estado del código y las verificaciones de despliegue se distinguen en [estado del proyecto](docs/estado-proyecto.md).
+> **Estado de referencia: 27/10/2026.** HU_01–10, HU_12–14 y las integraciones de servicio con los Equipos 1 y 2 están implementadas en el código local. HU_11 está parcialmente implementada. El tipo de movimiento **SALIDA** todavía no se puede registrar desde la app. El estado del código y las verificaciones de despliegue se distinguen en [estado del proyecto](docs/estado-proyecto.md).
 
 ## Qué resuelve
 
@@ -22,7 +22,7 @@ La app Android se comunica únicamente con nuestro backend. El Equipo 1 escribe 
 | App Android | Kotlin, Jetpack Compose, Room, Retrofit, WorkManager; uso offline-first. |
 | Identidad | Firebase Authentication; el backend verifica el token y el rol de productor. |
 | Backend | FastAPI, SQLAlchemy, Alembic y PostgreSQL. |
-| Base local | Room, actualmente versión 7. |
+| Base local | Room, actualmente versión 8. |
 | Base central | PostgreSQL; configuración de producción documentada para Neon. |
 | Servicio web | Render, URL https://uniban-app-suministros.onrender.com. |
 
@@ -83,7 +83,7 @@ Copy-Item .env.example .env
 - [Arquitectura Android y backend](docs/arquitectura/README.md)
 - [Historias de usuario](docs/hu01.md) a [HU_14](docs/hu14.md), incluyendo [HU_10](docs/hu10.md) y [HU_11](docs/hu11.md)
 - [Contrato y guía operativa del Equipo 1](docs/contrato-equipo1.md) y [TXT para compartir](docs/integracion-equipo1.txt)
-- [Contrato del Equipo 2](docs/contrato-equipo2.md)
+- [Contrato del Equipo 2](docs/contrato-equipo2.md) y [TXT para compartir](docs/integracion-equipo2.txt)
 - [Despliegue Render y Neon](docs/despliegue-render.md) y [lista de migraciones](docs/lista-verificacion-despliegue.md)
 - [Guía de prueba manual](docs/guia-prueba-celular.md)
 - [Actualización técnica del 26/10/2026](docs/avances/Actualizacion-tecnica-y-avances-2026-10-26.pdf). El PDF de avances de semanas 5–6 se conserva como registro histórico.
@@ -93,5 +93,5 @@ Copy-Item .env.example .env
 
 - La app registra ENTRADA, CONSUMO, PERDIDA y AJUSTE; SALIDA no está habilitada en el formulario.
 - La sincronización actual es de subida de movimientos y actividades; el backend sí expone consultas de inventario y parcelas, pero la app no reconstruye todo el inventario desde el servidor al reinstalar.
-- La solicitud de recomendación envía cajas, carton y bolsas, incluso con saldo cero; los movimientos incluidos se limitan a esos empaques. Los campos de consumos y pérdidas no aparecen en el esquema Swagger del Equipo 2 y se deben confirmar con ellos.
+- La solicitud de recomendación envía cajas, carton y bolsas, incluso con saldo cero; conserva consumos de empaque para posible uso futuro, pero omite pérdidas. Incluye una ventana sintética de despacho de 06:00 a 16:00 para el día después del aforamiento.
 - El contrato exacto del Equipo 2 y algunos despliegues de producción requieren confirmación conjunta; consulte los contratos antes de tratar las muestras como acuerdos cerrados.

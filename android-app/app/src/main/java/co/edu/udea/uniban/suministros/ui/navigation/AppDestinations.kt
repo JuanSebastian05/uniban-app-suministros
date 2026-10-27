@@ -10,6 +10,7 @@ object AppDestinations {
     /** Grafo anidado con las pantallas internas; solo accesible con sesión. */
     const val MAIN = "main"
     const val INVENTORY = "inventory"
+    const val SYNC_STATUS = "sync-status"
     const val DETAIL = "inventory/{inventoryId}"
     const val ENTRY = "entry?inventoryId={inventoryId}"
 

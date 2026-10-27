@@ -77,6 +77,26 @@ interface InventoryDao {
     """)
     fun observePendingCount(): Flow<Int>
 
+    /** Registros que WorkManager está enviando en este momento (HU_10). */
+    @Query("""
+        SELECT (SELECT COUNT(*) FROM movements WHERE syncStatus = 'SYNCING') +
+            (SELECT COUNT(*) FROM activities WHERE syncStatus = 'SYNCING')
+    """)
+    fun observeSyncingCount(): Flow<Int>
+
+    /** Movimientos cuyo último intento falló, para el centro de sincronización (HU_10). */
+    @Query("""
+        SELECT m.id, m.type, s.name AS supplyName, s.unit, m.quantity, m.date,
+            p.name AS parcelName, m.syncError
+        FROM movements m
+        JOIN inventory i ON m.inventoryId = i.id
+        JOIN supplies s ON i.supplyId = s.id
+        LEFT JOIN parcels p ON m.parcelId = p.id
+        WHERE m.syncStatus = 'ERROR'
+        ORDER BY m.date DESC, m.createdAt DESC
+    """)
+    fun observeMovementSyncErrors(): Flow<List<MovementSyncError>>
+
     @Query("SELECT EXISTS(SELECT 1 FROM producers WHERE id = :id)")
     suspend fun hasProducer(id: String): Boolean
 
@@ -119,11 +139,14 @@ interface InventoryDao {
     suspend fun findSyncable(): List<MovementEntity>
 
     /** Toma el movimiento para enviarlo; devuelve 0 si otro proceso ya lo tomó o ya está SYNCED. */
-    @Query("UPDATE movements SET syncStatus = 'SYNCING' WHERE id = :id AND syncStatus IN ('PENDING', 'ERROR')")
+    @Query("UPDATE movements SET syncStatus = 'SYNCING', syncError = NULL WHERE id = :id AND syncStatus IN ('PENDING', 'ERROR')")
     suspend fun markSyncing(id: String): Int
 
-    @Query("UPDATE movements SET syncStatus = :status WHERE id = :id AND syncStatus = 'SYNCING'")
+    @Query("UPDATE movements SET syncStatus = :status, syncError = NULL WHERE id = :id AND syncStatus = 'SYNCING'")
     suspend fun finishSyncing(id: String, status: String): Int
+
+    @Query("UPDATE movements SET syncStatus = :status, syncError = :error WHERE id = :id AND syncStatus = 'SYNCING'")
+    suspend fun finishSyncingWithError(id: String, status: String, error: String): Int
 
     /** Un SYNCING que sobrevive a un cierre de la app se retoma como PENDING. */
     @Query("UPDATE movements SET syncStatus = 'PENDING' WHERE syncStatus = 'SYNCING'")

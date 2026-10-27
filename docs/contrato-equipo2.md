@@ -1,6 +1,6 @@
 # Integración con el Equipo 2: recomendaciones
 
-> Actualizado el 27/10/2026 contra el código local, el endpoint compartido por el Equipo 2 y su OpenAPI publicado. El consumo de la respuesta coincide con el esquema, pero faltan acuerdos sobre autenticación, campos operativos y uso de consumos/pérdidas.
+> Actualizado el 27/10/2026 con la aceptación del JSON por el Equipo 2. Se conserva `consumptions` para posible calibración futura, se excluye `losses` y se incorpora una ventana de despacho sintética de 10 horas. La autenticación adicional sigue pendiente de confirmar porque no aparece en OpenAPI.
 
 ## Flujo
 
@@ -14,9 +14,9 @@ El productor solicita una recomendación en la app. La app llama al backend del 
 - La app Android no llama directamente al Equipo 2.
 - Las rutas de nuestro backend se autentican con token Firebase del productor.
 
-## Información que se propuso enviar
+## Solicitud acordada y enviada por el código
 
-La estructura siguiente corresponde a la propuesta compartida por el usuario. Debe confirmarse con el Equipo 2 antes de considerarla un contrato aceptado:
+El Equipo 2 confirmó que acepta el JSON que envía nuestro backend. Para la ventana pidió un margen superior a tres horas; el acuerdo de demostración usa 06:00–16:00 del día siguiente al aforamiento. `consumptions` se conserva aunque actualmente el Equipo 2 no lo procesa. `losses` ya no se envía.
 
 ~~~json
 {
@@ -69,16 +69,15 @@ La estructura siguiente corresponde a la propuesta compartida por el usuario. De
       "date": "2026-10-05"
     }
   ],
-  "losses": [
-    {
-      "supplyId": "77777777-7777-4777-8777-777777777777",
-      "name": "bolsas",
-      "unit": "unidad",
-      "quantity": 2,
-      "date": "2026-10-10",
-      "reason": "CLIMA"
-    }
-  ]
+  "ventana_despacho": {
+    "inicio": "2026-10-30T06:00:00",
+    "fin": "2026-10-30T16:00:00"
+  },
+  "parcela_id": "11111111-1111-4111-8111-111111111111",
+  "periodo": "2026-W44",
+  "num_plantas_estimado": 1850,
+  "area_ha": 2.41,
+  "calidad_confianza": 0.87
 }
 ~~~
 
@@ -86,7 +85,7 @@ La estructura siguiente corresponde a la propuesta compartida por el usuario. De
 
 El backend ya arma una solicitud para el servicio. Además del formato anidado anterior, agrega campos directos que aparecen en el OpenAPI del Equipo 2: parcela, periodo, plantas estimadas, área y, cuando existe, confianza.
 
-El cuerpo actual contiene estos datos:
+El cuerpo contiene estos datos:
 
 | Dato | Regla actual |
 | --- | --- |
@@ -95,7 +94,8 @@ El cuerpo actual contiene estos datos:
 | aforamiento | El más reciente por fecha; el periodo se deriva como semana ISO. Sin aforamiento no se llama al Equipo 2 y nuestra API responde 409 NO_AFORAMIENTO. |
 | inventario | Solo cajas, carton y bolsas. Suma las existencias por ubicación; si un empaque aún no tiene un movimiento sincronizado, se envía con cantidad cero. Los nombres y la unidad se normalizan a lo acordado. |
 | consumos | Registros CONSUMO de la parcela dentro de los últimos 90 días, solo si corresponden a uno de los tres empaques. |
-| pérdidas | Registros PERDIDA del productor dentro de los últimos 90 días, solo si corresponden a uno de los tres empaques; el modelo no las asocia a una parcela. |
+| pérdidas | No se envían al Equipo 2. La app las conserva internamente para inventario e historial. |
+| ventana de despacho | Sintética para la demostración: día siguiente a la fecha del aforamiento, de 06:00 a 16:00 (10 horas). Se envía como `YYYY-MM-DDTHH:MM:SS`, sin zona horaria, igual al ejemplo del Equipo 2. |
 | ajustes | No se envían como eventos; su efecto ya está en el saldo actual del inventario. |
 
 Aunque los productos de saldo cero todavía no existen como filas sincronizadas en el backend, la solicitud los incluye con identificadores estables generados con el mismo criterio del catálogo Android. Esto no sincroniza esas filas a la tabla de inventario central; solo completa el cuerpo enviado al Equipo 2.
@@ -104,13 +104,9 @@ Los nombres son cajas, carton y bolsas, en minúscula y sin tildes; categoría E
 
 ## Qué está confirmado y qué falta acordar
 
-El OpenAPI publicado confirma la ruta, la cabecera `Content-Type`, campos directos (`parcela_id`, `periodo`, `num_plantas_estimado`, `area_ha`, `calidad_confianza`), los objetos de Equipo 3 (`producerId`, `parcel`, `aforamiento`, `inventory`) y el esquema de respuesta. El arreglo `inventory` acepta objetos genéricos; el esquema no describe sus propiedades internas. En particular se deben confirmar:
+El Equipo 2 confirmó que acepta el JSON actual y pidió una ventana de despacho con más de tres horas de amplitud. El ejemplo acordado usa diez horas. El OpenAPI publicado confirma la ruta, la cabecera `Content-Type`, los campos directos (`parcela_id`, `periodo`, `num_plantas_estimado`, `area_ha`, `calidad_confianza`), los objetos anidados y el esquema de respuesta. `consumptions` se conserva para uso futuro, aunque actualmente el Equipo 2 no lo utiliza; `losses` se excluyó.
 
 - si requiere autenticación adicional a la cabecera `Content-Type` documentada;
-- si procesa `consumptions` y `losses`, que no aparecen en el modelo `SolicitudRecomendacion` de Swagger;
-- si los nombres `cajas`, `carton` y `bolsas` y unidad `unidad` son las claves que usa para cruzar recomendaciones;
-- si los valores por defecto de acarreo, vehículo, capacidad y ventana son válidos para nuestra operación;
-- cómo tratar una parcela sin ciclo activo y una confianza ausente;
 - qué representa cada fecha, cantidad, déficit y observación devuelta.
 
 El backend local ya coincide con el endpoint y el esquema de respuesta publicados. No se ha hecho una llamada real de recomendación con datos de productor, por lo que la integración productiva todavía debe validarse conjuntamente.
@@ -160,7 +156,7 @@ La respuesta documentada no incluye un campo de exceso. La app no calcula exceso
 - El backend consulta el servicio externo con reintento ante fallos temporales; la app permite una espera más larga para esta operación.
 - Si el servicio no responde, nuestro backend informa indisponibilidad. Si la respuesta externa no corresponde al esquema esperado, devuelve error de respuesta.
 - `EQUIPO2_BASE_URL` permite cambiar la URL. `EQUIPO2_API_KEY` se admite como configuración opcional, pero el OpenAPI no declara esa autenticación y el usuario no ha reportado que el equipo la exija.
-- La migración 0011 crea la tabla central de recomendaciones. El código Android usa Room 7 para guardar la última por parcela.
+- La migración 0011 crea la tabla central de recomendaciones. El código Android usa Room 8 para guardar la última por parcela y el estado local de sincronización.
 
 ## Estado de despliegue
 

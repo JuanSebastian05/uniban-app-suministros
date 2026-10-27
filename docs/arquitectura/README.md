@@ -23,13 +23,13 @@ La UI no accede directamente al DAO ni conoce detalles HTTP. El Equipo 1 se aute
 | Ubicación | Responsabilidad |
 | --- | --- |
 | ui/auth | Inicio de sesión, registro y completar el perfil del productor. |
-| ui/inventory | Inventario, detalle, entradas, consumos, pérdidas, ajustes e historial. |
+| ui/inventory | Inventario, detalle, entradas, consumos, pérdidas, ajustes, historial y estado de sincronización. |
 | ui/parcels | Lista, registro y detalle de parcelas; secciones de ciclo, actividades, aforamiento y recomendación. |
 | ui/activities | Registro y lista de actividades productivas. |
 | ui/navigation | Navegación, protección de sesión y pestañas principales. |
 | data/auth | Estado de sesión y perfil; integración con Firebase. |
 | data | Repositorios de inventario, parcelas, sincronización e integración con recomendaciones. |
-| data/local | Entidades, DAO y base Room, versión 7. Esquemas exportados en android-app/app/schemas. |
+| data/local | Entidades, DAO y base Room, versión 8. Esquemas exportados en android-app/app/schemas. |
 | data/remote | Interfaces Retrofit para usuarios, movimientos, actividades, parcelas y recomendaciones. |
 | sync | Programación y ejecución de sincronización con WorkManager. |
 | core/network | Cliente HTTP, URL base y tiempos de espera. |
