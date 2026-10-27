@@ -12,6 +12,8 @@ import co.edu.udea.uniban.suministros.data.local.StarterInventory
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 
 data class SavedEntry(
     val id: String,
@@ -25,6 +27,15 @@ data class SavedEntry(
 data class ActivitySupply(val inventoryId: String, val quantityText: String)
 
 data class SavedActivity(val id: String, val type: ActivityType, val cycleId: String, val consumptions: Int)
+
+/** Registro que requiere atención en el centro de sincronización (HU_10). */
+data class SyncIssue(
+    val id: String,
+    val title: String,
+    val date: String,
+    val context: String,
+    val reason: String,
+)
 
 /** Lo que el formulario de actividades necesita del repositorio (HU_08); permite probar el ViewModel sin Room. */
 interface ActivityRegistrar {
@@ -59,6 +70,41 @@ class InventoryRepository(
     val inventory = dao.observeInventory()
     val movements = dao.observeMovements()
     val pendingCount = dao.observePendingCount()
+    val syncingCount = dao.observeSyncingCount()
+    val lastSuccessfulSyncAt = database.syncMetadataDao().observeLastSuccessfulAt()
+    val syncIssues: Flow<List<SyncIssue>> = combine(
+        dao.observeMovementSyncErrors(),
+        database.activityDao().observeActivitySyncErrors(),
+    ) { movements, activities ->
+        val movementIssues = movements.map { issue ->
+            val context = buildList {
+                add("Cantidad: ${Quantity.format(issue.quantity)} ${issue.unit}")
+                issue.parcelName?.let { add("Parcela: $it") }
+            }.joinToString(" · ")
+            SyncIssue(
+                id = "movement:${issue.id}",
+                title = "${MovementType.label(issue.type)} · ${issue.supplyName}",
+                date = issue.date,
+                context = context,
+                reason = issue.syncError ?: DEFAULT_SYNC_ERROR,
+            )
+        }
+        val activityIssues = activities.map { issue ->
+            val label = ActivityType.fromCode(issue.type)?.label ?: issue.type
+            val context = buildList {
+                issue.parcelName?.let { add("Parcela: $it") }
+                add(if (issue.consumptionCount == 1) "1 consumo asociado" else "${issue.consumptionCount} consumos asociados")
+            }.joinToString(" · ")
+            SyncIssue(
+                id = "activity:${issue.id}",
+                title = "Actividad · $label",
+                date = issue.date,
+                context = context,
+                reason = issue.syncError ?: DEFAULT_SYNC_ERROR,
+            )
+        }
+        (movementIssues + activityIssues).sortedByDescending(SyncIssue::date)
+    }
 
     /** Movimientos recientes de un insumo, para el detalle del inventario (HU_03). */
     fun recentMovements(inventoryId: String, limit: Int = RECENT_MOVEMENTS) =
@@ -69,6 +115,9 @@ class InventoryRepository(
 
     /** Actividades productivas de la cuenta, con el nombre de su parcela (HU_08). */
     val activities = database.activityDao().observeActivities()
+
+    /** Solicita un nuevo intento con el mismo planificador que usan los registros nuevos. */
+    fun requestSync() = onMovementSaved()
 
     /** Saldo inicial y existencia de cada insumo, para el resumen del historial (HU_07). */
     val balances = dao.observeBalances()
@@ -250,6 +299,7 @@ class InventoryRepository(
 
     companion object {
         const val RECENT_MOVEMENTS = 20
+        private const val DEFAULT_SYNC_ERROR = "El último intento falló. Intenta sincronizar de nuevo."
     }
 }
 

@@ -16,15 +16,16 @@ Ver [contrato de Equipo 1](contrato-equipo1.md) y [texto para compartir](integra
 
 - El cliente, el almacenamiento de recomendaciones y las rutas de solicitud/consulta están implementados en el código.
 - El Equipo 2 compartió el endpoint `POST /api/v1/recomendar` y su Swagger. El cliente local usa la URL acordada y envía el encabezado obligatorio `Content-Type: application/json`.
-- El backend ya limita el cuerpo a cajas, carton y bolsas, incluso cuando alguna no tiene movimientos sincronizados (saldo enviado: cero). Los movimientos también se filtran por esos nombres.
-- Swagger no declara consumos ni pérdidas, aunque el contrato propuesto los incluye; confirmar con el Equipo 2 si los usa. También confirmar si requiere autenticación adicional y si sus valores operativos por defecto son suficientes.
+- El Equipo 2 aceptó el JSON. El backend limita inventario y consumos a cajas, carton y bolsas; mantiene `consumptions` para uso futuro, aunque hoy el equipo no lo procesa. `losses` ya no se envía.
+- Se envía una ventana sintética de 06:00 a 16:00 para el día siguiente al aforamiento (10 horas). No es un horario operativo real; vehículo, capacidad y acarreo siguen usando sus valores.
+- Sigue pendiente confirmar si el Equipo 2 exige autenticación adicional a `Content-Type: application/json` y cerrar el contrato de respuesta.
 - Los nombres de empaque son minúsculos y sin tildes, categoría Empaque, unidad unidad y saldo inicial cero.
 
-Ver [contrato de Equipo 2](contrato-equipo2.md).
+Ver [contrato de Equipo 2](contrato-equipo2.md) y [TXT para compartir](integracion-equipo2.txt).
 
 ## Versiones de esquema y despliegue
 
-- En este repositorio, Alembic tiene cabeza 0011_recomendaciones y Room está en versión 7.
+- En este repositorio, Alembic tiene cabeza 0011_recomendaciones y Room está en versión 8 (HU_10: estado de sincronización local).
 - La revisión real de Neon no se puede deducir de la rama main ni del código que Render expone. Consultar la revisión antes de modificar la base.
 - Render no ejecuta Alembic automáticamente. Ensayar en una base temporal, aplicar el esquema compatible y luego desplegar el código.
 - Antes de una nueva migración, comprobar que Alembic tenga una sola cabeza y que la revisión pueda subirse desde la versión real de la base.

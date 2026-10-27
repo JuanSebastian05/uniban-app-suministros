@@ -112,6 +112,9 @@ fun AppNavHost(
     val inventoryFactory = remember {
         viewModelFactory { initializer { InventoryViewModel(checkNotNull(currentRepository)) } }
     }
+    val syncStatusFactory = remember {
+        viewModelFactory { initializer { SyncStatusViewModel(checkNotNull(currentRepository)) } }
+    }
     val entryFactory = remember {
         viewModelFactory { initializer { EntryViewModel(checkNotNull(currentRepository), createSavedStateHandle()) } }
     }
@@ -195,6 +198,16 @@ fun AppNavHost(
                         { MainBottomBar(MainTab.INVENTORY, openTab) }
                     } else null,
                     onHistory = { navController.navigate(AppDestinations.history()) { launchSingleTop = true } },
+                    onSyncStatus = { navController.navigate(AppDestinations.SYNC_STATUS) { launchSingleTop = true } },
+                )
+            }
+            composable(AppDestinations.SYNC_STATUS) {
+                val syncStatusViewModel: SyncStatusViewModel = viewModel(factory = syncStatusFactory)
+                val state by syncStatusViewModel.state.collectAsStateWithLifecycle()
+                SyncStatusScreen(
+                    state = state,
+                    onBack = { navController.popBackStack() },
+                    onRetry = syncStatusViewModel::retry,
                 )
             }
             composable(

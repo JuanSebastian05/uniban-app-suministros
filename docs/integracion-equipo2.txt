@@ -1,0 +1,153 @@
+INTEGRACIÓN UNIBÁN: EQUIPO 3 → EQUIPO 2
+Solicitud de recomendación de logística e insumos de empaque
+
+Este documento resume el acuerdo vigente para la solicitud. El Equipo 2 aceptó el JSON que enviamos; la forma definitiva de la respuesta todavía la define el Equipo 2.
+
+1. ENDPOINT COMPARTIDO
+
+POST https://platano-logistica-api.onrender.com/api/v1/recomendar
+Content-Type: application/json
+
+Swagger: https://platano-logistica-api.onrender.com/docs
+
+Nuestra app no llama directamente a este endpoint. La app solicita la recomendación a nuestro backend y este realiza el POST al servicio del Equipo 2.
+
+En la documentación consultada no aparece autenticación por API Key. Por favor confirmen si basta con Content-Type: application/json o si debemos incluir otro mecanismo de autenticación.
+
+2. INFORMACIÓN QUE ENVIAMOS
+
+- Identificador del productor y de la parcela.
+- Nombre, área y ciclo activo de la parcela, si existe.
+- Fecha, periodo ISO, plantas estimadas y confianza del aforamiento más reciente.
+- Inventario de los tres insumos de empaque: cajas, carton y bolsas. Todos se envían con categoría Empaque y unidad unidad. Si un producto aún no tiene movimientos sincronizados, su cantidad se envía en cero.
+- Consumos de esos insumos asociados a la parcela dentro de los últimos 90 días.
+- Una ventana sintética de despacho, de 06:00 a 16:00 del día siguiente al aforamiento (10 horas, más de las 3 horas mínimas indicadas por el Equipo 2). Es un dato de demostración, no un horario operativo real.
+
+No enviamos los demás insumos agrícolas ni los ajustes como eventos. La cantidad del inventario ya refleja sus efectos.
+
+Además del formato anidado que aparece abajo, el backend agrega estos campos directos que figuran en Swagger: parcela_id, periodo, num_plantas_estimado, area_ha y calidad_confianza (si existe). areaHa corresponde al área de la parcela; area_ha corresponde al área registrada en el aforamiento.
+
+El Equipo 2 actualmente no utiliza `consumptions`, pero acordamos conservarlo para una posible calibración futura con datos reales. `losses` se quitó de la solicitud.
+
+3. EJEMPLO DEL JSON QUE ENVIARÍAMOS
+
+Los UUID y cantidades son ilustrativos; en una solicitud real se envían los identificadores y valores registrados para la cuenta y parcela.
+
+{
+  "producerId": "33333333-3333-4333-8333-333333333333",
+  "parcel": {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "name": "La Esperanza",
+    "areaHa": 2.4,
+    "activeCycle": {
+      "id": "44444444-4444-4444-8444-444444444444",
+      "startDate": "2026-01-15",
+      "status": "PRODUCCION"
+    }
+  },
+  "aforamiento": {
+    "date": "2026-10-29",
+    "period": "2026-W44",
+    "estimatedPlants": 1850,
+    "confidence": 0.87
+  },
+  "inventory": [
+    {
+      "supplyId": "55555555-5555-4555-8555-555555555555",
+      "name": "cajas",
+      "category": "Empaque",
+      "unit": "unidad",
+      "quantity": 80
+    },
+    {
+      "supplyId": "66666666-6666-4666-8666-666666666666",
+      "name": "carton",
+      "category": "Empaque",
+      "unit": "unidad",
+      "quantity": 120
+    },
+    {
+      "supplyId": "77777777-7777-4777-8777-777777777777",
+      "name": "bolsas",
+      "category": "Empaque",
+      "unit": "unidad",
+      "quantity": 200
+    }
+  ],
+  "consumptions": [
+    {
+      "supplyId": "55555555-5555-4555-8555-555555555555",
+      "name": "cajas",
+      "unit": "unidad",
+      "quantity": 20,
+      "date": "2026-10-25"
+    },
+    {
+      "supplyId": "66666666-6666-4666-8666-666666666666",
+      "name": "carton",
+      "unit": "unidad",
+      "quantity": 20,
+      "date": "2026-10-25"
+    },
+    {
+      "supplyId": "77777777-7777-4777-8777-777777777777",
+      "name": "bolsas",
+      "unit": "unidad",
+      "quantity": 20,
+      "date": "2026-10-25"
+    }
+  ],
+  "ventana_despacho": {
+    "inicio": "2026-10-30T06:00:00",
+    "fin": "2026-10-30T16:00:00"
+  },
+  "parcela_id": "11111111-1111-4111-8111-111111111111",
+  "periodo": "2026-W44",
+  "num_plantas_estimado": 1850,
+  "area_ha": 2.41,
+  "calidad_confianza": 0.87
+}
+
+4. RESPUESTA: PROPUESTA DEL EQUIPO 3, PENDIENTE DE DEFINICIÓN DEL EQUIPO 2
+
+Para que nuestra app pueda mostrar un resultado, necesitamos recibir una respuesta JSON con la recomendación calculada. El siguiente ejemplo refleja una propuesta de integración del Equipo 3 y la forma que actualmente se observa en Swagger. No pretende imponer el contrato: el Equipo 2 define los campos, tipos, reglas y significado final, y nosotros ajustaremos el backend y la app a ese contrato.
+
+{
+  "parcela_id": "11111111-1111-4111-8111-111111111111",
+  "periodo": "2026-W44",
+  "volumen_racimos": 1850,
+  "fecha_limite_corte": "2026-11-02T14:30:00",
+  "cumple_ventana": true,
+  "version_metodo": "v0.3.1",
+  "item_plan": {
+    "parcela_id": "11111111-1111-4111-8111-111111111111",
+    "fecha_corte": "2026-11-02T08:00:00",
+    "vehiculo_id": "V-3",
+    "orden": 1,
+    "carga_estimada_racimos": 420,
+    "cumple_ventana": true,
+    "motivo": null
+  },
+  "insumos": [
+    {
+      "insumo": "cajas",
+      "fecha": "2026-11-01",
+      "cantidad_requerida": 120,
+      "inventario_disponible": 80,
+      "deficit": 40
+    }
+  ],
+  "metricas": {
+    "cumplimiento_ventana": 1.0,
+    "uso_capacidad": 0.88
+  }
+}
+
+Por favor confirmen o propongan el JSON definitivo de respuesta y el significado/unidad de cada campo, en especial fechas y zonas horarias, volumen, cantidad requerida, inventario disponible, déficit, métricas y observaciones.
+
+5. PUNTOS QUE SIGUEN PENDIENTES
+
+1) ¿Se requiere autenticación adicional al encabezado Content-Type?
+2) ¿Cuál es el contrato definitivo de respuesta? La estructura del ejemplo sigue siendo una propuesta del Equipo 3, sujeta a la definición del Equipo 2.
+
+Cuando se acuerde la respuesta y la autenticación, hacemos una prueba conjunta con datos de prueba y ajustamos el contrato si hace falta.

@@ -5,6 +5,7 @@ import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
 import co.edu.udea.uniban.suministros.data.local.InventorySyncContext
 import co.edu.udea.uniban.suministros.data.local.MovementEntity
 import co.edu.udea.uniban.suministros.data.local.SyncStatus
+import co.edu.udea.uniban.suministros.data.local.SyncMetadataEntity
 import co.edu.udea.uniban.suministros.data.remote.ActivityApi
 import co.edu.udea.uniban.suministros.data.remote.ActivityDto
 import co.edu.udea.uniban.suministros.data.remote.InventoryDto
@@ -48,11 +49,12 @@ class MovementSyncRepository(
 ) {
     private val dao = database.inventoryDao()
     private val activityDao = database.activityDao()
+    private val syncMetadataDao = database.syncMetadataDao()
 
     private sealed interface Outcome {
         data object Accepted : Outcome
-        data object Rejected : Outcome // el servidor lo rechazó (4xx): reintentar sin cambios no ayuda ya
-        data object Unavailable : Outcome // sin red, tiempo agotado o error del servidor
+        data class Rejected(val message: String) : Outcome // el servidor rechazó el registro (4xx)
+        data class Unavailable(val message: String) : Outcome // sin red, tiempo agotado o error del servidor
     }
 
     suspend fun syncPending(): SyncSummary {
@@ -73,18 +75,26 @@ class MovementSyncRepository(
         if (activityApi != null) {
             val unavailable = pass(
                 items = activityDao.findSyncable(), id = ActivityEntity::id,
-                markSyncing = activityDao::markSyncing, finish = activityDao::finishSyncing,
+                markSyncing = activityDao::markSyncing,
+                finish = activityDao::finishSyncing,
+                finishWithError = activityDao::finishSyncingWithError,
                 send = { activity -> classify(activityApi.send(authorization, toDto(activity)).code()) },
                 totals = totals,
             )
-            if (unavailable) return SyncSummary(totals.synced, totals.failed, retryLater = true)
+            if (unavailable) {
+                saveLastSuccessfulIfNeeded(totals.synced)
+                return SyncSummary(totals.synced, totals.failed, retryLater = true)
+            }
         }
         pass(
             items = dao.findSyncable(), id = MovementEntity::id,
-            markSyncing = dao::markSyncing, finish = dao::finishSyncing,
+            markSyncing = dao::markSyncing,
+            finish = dao::finishSyncing,
+            finishWithError = dao::finishSyncingWithError,
             send = { movement -> send(movement, authorization) },
             totals = totals,
         )
+        saveLastSuccessfulIfNeeded(totals.synced)
         return SyncSummary(totals.synced, totals.failed, totals.retryLater)
     }
 
@@ -99,6 +109,7 @@ class MovementSyncRepository(
         id: (T) -> String,
         markSyncing: suspend (String) -> Int,
         finish: suspend (String, String) -> Int,
+        finishWithError: suspend (String, String, String) -> Int,
         send: suspend (T) -> Outcome,
         totals: Totals,
     ): Boolean {
@@ -111,21 +122,21 @@ class MovementSyncRepository(
                 withContext(NonCancellable) { finish(itemId, SyncStatus.PENDING) }
                 throw cancelled
             } catch (_: IOException) {
-                Outcome.Unavailable
+                Outcome.Unavailable("No se pudo conectar con el servidor. Se intentará de nuevo cuando haya conexión.")
             } catch (_: Exception) {
-                Outcome.Rejected
+                Outcome.Rejected("No se pudo preparar el registro para enviarlo. Revisa los datos y vuelve a intentarlo.")
             }
             when (outcome) {
                 Outcome.Accepted -> {
                     withContext(NonCancellable) { finish(itemId, SyncStatus.SYNCED) }
                     totals.synced++
                 }
-                Outcome.Rejected -> {
-                    withContext(NonCancellable) { finish(itemId, SyncStatus.ERROR) }
+                is Outcome.Rejected -> {
+                    withContext(NonCancellable) { finishWithError(itemId, SyncStatus.ERROR, outcome.message) }
                     totals.failed++
                 }
-                Outcome.Unavailable -> {
-                    withContext(NonCancellable) { finish(itemId, SyncStatus.ERROR) }
+                is Outcome.Unavailable -> {
+                    withContext(NonCancellable) { finishWithError(itemId, SyncStatus.ERROR, outcome.message) }
                     totals.failed++
                     totals.retryLater = true
                     return true // sin conexión no tiene sentido intentar el resto; siguen PENDING
@@ -136,16 +147,30 @@ class MovementSyncRepository(
     }
 
     private suspend fun send(movement: MovementEntity, authorization: String): Outcome {
-        val context = dao.findSyncContext(movement.inventoryId) ?: return Outcome.Rejected
+        val context = dao.findSyncContext(movement.inventoryId)
+            ?: return Outcome.Rejected("No se encontró el insumo asociado a este movimiento.")
         return classify(api.send(authorization, toDto(movement, context)).code())
     }
 
     private fun classify(code: Int): Outcome = when {
         code in 200..299 -> Outcome.Accepted
         // Token vencido o perfil aún sin crear: el registro no tiene la culpa; se reintenta.
-        code == 401 || code == 403 -> Outcome.Unavailable
-        code == 408 || code == 429 || code >= 500 -> Outcome.Unavailable
-        else -> Outcome.Rejected
+        code == 401 || code == 403 -> Outcome.Unavailable(
+            "La sesión no está autorizada para sincronizar. Vuelve a iniciar sesión e intenta de nuevo.",
+        )
+        code == 408 || code == 429 -> Outcome.Unavailable(
+            "El servidor tardó demasiado o está ocupado (HTTP $code). Se intentará de nuevo.",
+        )
+        code >= 500 -> Outcome.Unavailable("El servidor presentó un error (HTTP $code). Se intentará de nuevo.")
+        else -> Outcome.Rejected("El servidor rechazó el registro (HTTP $code). Revisa los datos antes de reintentarlo.")
+    }
+
+    private suspend fun saveLastSuccessfulIfNeeded(synced: Int) {
+        if (synced > 0) {
+            syncMetadataDao.saveLastSuccessfulAt(
+                SyncMetadataEntity(lastSuccessfulAtEpochMillis = System.currentTimeMillis()),
+            )
+        }
     }
 
     private fun toDto(activity: ActivityEntity) = ActivityDto(

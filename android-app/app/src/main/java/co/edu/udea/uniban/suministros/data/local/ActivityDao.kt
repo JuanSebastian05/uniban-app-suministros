@@ -31,16 +31,31 @@ interface ActivityDao {
     """)
     fun observeActivities(): Flow<List<ActivityListItem>>
 
+    /** Actividades cuyo último intento falló, para el centro de sincronización (HU_10). */
+    @Query("""
+        SELECT a.id, a.type, a.date, p.name AS parcelName,
+            (SELECT COUNT(*) FROM movements m WHERE m.activityId = a.id) AS consumptionCount,
+            a.syncError
+        FROM activities a
+        LEFT JOIN parcels p ON a.parcelId = p.id
+        WHERE a.syncStatus = 'ERROR'
+        ORDER BY a.date DESC, a.createdAt DESC
+    """)
+    fun observeActivitySyncErrors(): Flow<List<ActivitySyncError>>
+
     // --- Sincronización: las actividades viajan antes que sus consumos ---
 
     @Query("SELECT * FROM activities WHERE syncStatus IN ('PENDING', 'ERROR') ORDER BY createdAt, id")
     suspend fun findSyncable(): List<ActivityEntity>
 
-    @Query("UPDATE activities SET syncStatus = 'SYNCING' WHERE id = :id AND syncStatus IN ('PENDING', 'ERROR')")
+    @Query("UPDATE activities SET syncStatus = 'SYNCING', syncError = NULL WHERE id = :id AND syncStatus IN ('PENDING', 'ERROR')")
     suspend fun markSyncing(id: String): Int
 
-    @Query("UPDATE activities SET syncStatus = :status WHERE id = :id AND syncStatus = 'SYNCING'")
+    @Query("UPDATE activities SET syncStatus = :status, syncError = NULL WHERE id = :id AND syncStatus = 'SYNCING'")
     suspend fun finishSyncing(id: String, status: String): Int
+
+    @Query("UPDATE activities SET syncStatus = :status, syncError = :error WHERE id = :id AND syncStatus = 'SYNCING'")
+    suspend fun finishSyncingWithError(id: String, status: String, error: String): Int
 
     @Query("UPDATE activities SET syncStatus = 'PENDING' WHERE syncStatus = 'SYNCING'")
     suspend fun resetInterruptedSyncing(): Int
