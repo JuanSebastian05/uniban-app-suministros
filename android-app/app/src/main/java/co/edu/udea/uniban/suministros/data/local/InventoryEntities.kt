@@ -62,6 +62,8 @@ data class MovementEntity(
     val adjustDirection: String? = null,
     // HU_08: actividad a la que pertenece el consumo. Sin clave foránea: ver [ActivityEntity].
     val activityId: String? = null,
+    /** Causa más reciente del error de sincronización, si el último intento falló. */
+    val syncError: String? = null,
 )
 
 /**
@@ -80,6 +82,8 @@ data class ActivityEntity(
     val createdAt: String,
     val updatedAt: String,
     val syncStatus: String = "PENDING",
+    /** Causa más reciente del error de sincronización, si el último intento falló. */
+    val syncError: String? = null,
 )
 
 /** Actividad con la cantidad de consumos que se le asociaron, para el detalle de la parcela (HU_08). */

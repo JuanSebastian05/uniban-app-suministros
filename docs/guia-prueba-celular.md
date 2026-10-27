@@ -49,6 +49,10 @@ Con un insumo que tenga saldo, comprobar:
 ## 4. Sincronización y modo avión
 
 - Con backend disponible, crear movimiento y actividad; confirmar que los pendientes se sincronizan.
+- Desde Inventario, abrir “Estado de sincronización”; revisar el total, la hora del último envío exitoso y la sección de errores.
+- Con conexión disponible y registros pendientes, tocar “Reintentar ahora”; confirmar que el trabajo queda en cola y que los contadores se actualizan sin reiniciar la app.
+- Desconectar el backend o activar modo avión antes de registrar un movimiento; confirmar que queda pendiente y no se altera la última hora exitosa.
+- Provocar un rechazo 4xx controlado en un entorno de prueba; confirmar que el registro aparece en la lista central con un motivo legible. Restaurar el backend y reintentar.
 - Detener temporalmente el backend, crear un movimiento y una actividad y verificar que quedan pendientes localmente.
 - Reiniciar el backend y confirmar que la actividad se sincroniza antes que los consumos asociados.
 - Activar modo avión, cerrar y abrir la app, y consultar inventario e historial local.
@@ -74,7 +78,7 @@ Este paso llama al servicio externo real y puede crear tráfico o guardar datos.
 - Volver a abrir sin conexión; debe mostrarse la última respuesta local.
 - Registrar los campos enviados y recibidos sin incluir claves ni datos personales.
 
-El backend envía solo cajas, carton y bolsas, también cuando su saldo sea cero; los movimientos incluidos también se limitan a esos nombres. Antes de una prueba real, confirmar con el Equipo 2 si consume consumos y pérdidas (no declarados en Swagger), si requiere autenticación adicional y si acepta sus valores operativos por defecto. Ver [contrato-equipo2.md](contrato-equipo2.md).
+El backend envía solo cajas, carton y bolsas, también cuando su saldo sea cero; conserva consumos de esos empaques para posible uso futuro, excluye pérdidas y agrega una ventana sintética de 06:00 a 16:00 para el día siguiente al aforamiento. El Equipo 2 actualmente no procesa `consumptions`. Antes de una prueba real, confirmar autenticación adicional y registrar la respuesta recibida. Ver [contrato-equipo2.md](contrato-equipo2.md).
 
 ## 7. Evidencia y resultado
 

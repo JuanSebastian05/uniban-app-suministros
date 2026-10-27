@@ -216,8 +216,12 @@ def test_la_solicitud_al_equipo2_lleva_el_contrato_y_los_campos_directos(client,
     assert body["num_plantas_estimado"] == 1850
     assert body["calidad_confianza"] == 0.87
     assert body["area_ha"] == 2.41  # el área del aforamiento, no la de la parcela
-    # Datos operativos de ellos: no se envían (usan sus valores por defecto).
-    assert not {"ventana_despacho", "vehiculo_id", "capacidad_vehiculo_racimos", "tiempo_acarreo_min"} & set(body)
+    assert body["ventana_despacho"] == {
+        "inicio": "2026-10-30T06:00:00", "fin": "2026-10-30T16:00:00",
+    }
+    assert "losses" not in body
+    # La ventana es sintética; vehículo, capacidad y acarreo siguen bajo los valores del Equipo 2.
+    assert not {"vehiculo_id", "capacidad_vehiculo_racimos", "tiempo_acarreo_min"} & set(body)
 
 
 def test_solo_envia_empaques_y_sus_movimientos(client, session_factory, ready, equipo2):
@@ -247,11 +251,11 @@ def test_solo_envia_empaques_y_sus_movimientos(client, session_factory, ready, e
     assert [(i["name"], i["quantity"], i["unit"]) for i in body["inventory"]] == [
         ("cajas", 99.0, "unidad"), ("carton", 0.0, "unidad"), ("bolsas", 0.0, "unidad"),
     ]
-    # Solo se envían movimientos de empaque; los consumos y pérdidas agrícolas quedan fuera.
+    # Solo se envían consumos recientes de empaque; las pérdidas no se comparten con el Equipo 2.
     assert [(c["name"], c["quantity"], c["date"]) for c in body["consumptions"]] == [
         ("cajas", 1.0, (TODAY - timedelta(days=2)).isoformat()),
     ]
-    assert body["losses"] == []
+    assert "losses" not in body
     assert "Urea 46%" not in str(body)
 
 
@@ -273,7 +277,7 @@ def test_no_envia_datos_de_otro_productor(client, session_factory, identity, equ
     assert [(item["name"], item["quantity"]) for item in body["inventory"]] == [
         ("cajas", 0.0), ("carton", 0.0), ("bolsas", 0.0),
     ]
-    assert body["consumptions"] == [] and body["losses"] == []
+    assert body["consumptions"] == [] and "losses" not in body
     assert "Insumo de Luis" not in str(body)
 
 

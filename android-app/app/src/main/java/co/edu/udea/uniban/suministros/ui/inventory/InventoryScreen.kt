@@ -30,6 +30,8 @@ fun InventoryScreen(
     navigationBar: (@Composable () -> Unit)? = null,
     // HU_07: abre el historial de todos los insumos; nulo si la app no lo muestra.
     onHistory: (() -> Unit)? = null,
+    // HU_10: abre el centro de estado de sincronización.
+    onSyncStatus: (() -> Unit)? = null,
 ) {
     var search by rememberSaveable { mutableStateOf("") }
     var confirmLogout by rememberSaveable { mutableStateOf(false) }
@@ -75,6 +77,29 @@ fun InventoryScreen(
                         singleLine = true, shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth(),
                     )
+                }
+                if (onSyncStatus != null) item {
+                    OutlinedCard(
+                        onClick = onSyncStatus,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Estado de sincronización", style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    if (state.pendingCount == 0) "Consulta el estado de tus registros"
+                                    else "${state.pendingCount} ${if (state.pendingCount == 1) "registro pendiente o por revisar" else "registros pendientes o por revisar"}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                        }
+                    }
                 }
                 item {
                     Text("Inventario principal · ${filtered.size} insumos",

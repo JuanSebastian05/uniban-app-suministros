@@ -28,16 +28,18 @@ El backend tiene una ruta para pedir una recomendación para una parcela y otra 
 - exige que exista un aforamiento; sin este, devuelve un conflicto y no llama al Equipo 2;
 - forma un cuerpo con productor, parcela, ciclo activo, aforamiento e inventario de cajas, carton y bolsas;
 - calcula el periodo como semana ISO derivada de la fecha del aforamiento;
+- conserva consumos recientes de esos empaques para posible calibración futura, aunque el Equipo 2 actualmente no los procesa; no envía pérdidas;
+- agrega una ventana de despacho sintética de 06:00 a 16:00 para el día siguiente al aforamiento;
 - envía `Content-Type: application/json` a `POST https://platano-logistica-api.onrender.com/api/v1/recomendar`;
 - completa con saldo cero los empaques aún no sincronizados desde el celular y suma existencias entre ubicaciones;
 - procesa y guarda la respuesta del servicio.
 
-Los movimientos incluidos en el cuerpo se limitan a esos empaques y a los últimos 90 días. Swagger no declara los campos de consumos y pérdidas; confirmar si el Equipo 2 los procesa. La categoría de los productos es Empaque, la unidad es unidad y los nombres van en minúscula y sin tildes. Ver [contrato del Equipo 2](contrato-equipo2.md).
+Los consumos incluidos se limitan a esos empaques y a los últimos 90 días. La ventana de 10 horas es un dato sintético para la demostración, no un horario real. La categoría de los productos es Empaque, la unidad es unidad y los nombres van en minúscula y sin tildes. Ver [contrato del Equipo 2](contrato-equipo2.md).
 
 ## Verificación y acuerdos que faltan
 
 - Equipo 1: prueba contra el servidor desplegado, incluida respuesta idempotente al reenviar el mismo aforamiento y aceptación del formato actual de areaHa.
-- Equipo 2: confirmar si requiere autenticación adicional a `Content-Type`, si consume consumos/pérdidas (no declarados en Swagger) y si los valores por defecto de acarreo, vehículo, capacidad y ventana bastan.
+- Equipo 2: confirmar si requiere autenticación adicional a `Content-Type` y terminar de acordar la forma y significado de su respuesta.
 - Probar el cuerpo y respuesta con el servicio real usando una parcela de prueba autorizada; esta guía no registra una llamada productiva.
 - Confirmar versión de Render y revisión Alembic de Neon antes de una demostración productiva.
 

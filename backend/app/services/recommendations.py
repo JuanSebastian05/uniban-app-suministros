@@ -17,7 +17,7 @@ import logging
 import time
 import unicodedata
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time as time_of_day, timedelta, timezone
 from typing import Callable
 
 import httpx
@@ -243,8 +243,8 @@ def build_request_body(
     """Cuerpo de ``contrato-equipo2.md`` (nombres camelCase) más los campos directos del Equipo 2.
 
     El servicio acepta «formato directo o formato del Equipo 3»: se envían los dos para no depender de cómo mapee los
-    objetos anidados (su OpenAPI solo dice ``object``). No se envían ``ventana_despacho``, vehículo, capacidad ni tiempo
-    de acarreo: son datos operativos de ellos y usan sus valores por defecto.
+    objetos anidados (su OpenAPI solo dice ``object``). La ventana de despacho es sintética para la demostración:
+    va del día siguiente al aforamiento, de 06:00 a 16:00, con el formato local sin zona horaria del ejemplo acordado.
     """
     cycle = db.scalar(
         select(ProductionCycle).where(ProductionCycle.parcel_id == parcel.id, ProductionCycle.end_date.is_(None))
@@ -252,6 +252,7 @@ def build_request_body(
     period = iso_period(aforamiento.date)
     confidence = None if aforamiento.confidence is None else _number(aforamiento.confidence)
     since = today - timedelta(days=RECENT_DAYS)
+    dispatch_date = aforamiento.date + timedelta(days=1)
     body: dict = {
         "producerId": str(producer_id),
         "parcel": {
@@ -269,17 +270,14 @@ def build_request_body(
             "confidence": confidence,
         },
         "inventory": _packaging_inventory(db, producer_id, firebase_uid),
+        "ventana_despacho": {
+            "inicio": datetime.combine(dispatch_date, time_of_day(6, 0)).isoformat(timespec="seconds"),
+            "fin": datetime.combine(dispatch_date, time_of_day(16, 0)).isoformat(timespec="seconds"),
+        },
         "consumptions": [
             {"supplyId": str(supply.id), "name": _packaging_name(supply.name), "unit": "unidad",
              "quantity": _number(movement.quantity), "date": movement.date.isoformat()}
             for movement, supply in _movements(db, producer_id, "CONSUMO", since, parcel.id)
-            if _packaging_name(supply.name) is not None
-        ],
-        "losses": [
-            {"supplyId": str(supply.id), "name": _packaging_name(supply.name), "unit": "unidad",
-             "quantity": _number(movement.quantity), "date": movement.date.isoformat(),
-             "reason": movement.loss_reason}
-            for movement, supply in _movements(db, producer_id, "PERDIDA", since, None)
             if _packaging_name(supply.name) is not None
         ],
         # Formato directo del Equipo 2.
