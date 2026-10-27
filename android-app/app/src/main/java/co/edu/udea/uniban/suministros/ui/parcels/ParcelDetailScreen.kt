@@ -44,8 +44,8 @@ import java.time.LocalDate
  * ciclo), o un aviso explícito si no tiene ciclo activo. Lee la copia local: funciona sin conexión.
  *
  * «Actividades» lista las actividades de la parcela (HU_08) y «Insumos consumidos» sus consumos (HU_05).
- * «Aforamiento» muestra el más reciente recibido del Equipo 1 (HU_09). La sección de recomendaciones
- * corresponde a HU_12 y no se muestra hasta que exista.
+ * «Aforamiento» muestra el más reciente recibido del Equipo 1 (HU_09). «Recomendaciones» muestra la última del
+ * Equipo 2 (HU_12) y solo aparece si se entrega [recommendation].
  */
 @Composable
 fun ParcelDetailScreen(
@@ -62,6 +62,9 @@ fun ParcelDetailScreen(
     // HU_09: aforamiento más reciente de la parcela (copia local) y reintento de la consulta.
     aforamiento: AforamientoUiState = AforamientoUiState(loading = false),
     onRetryAforamiento: () -> Unit = {},
+    // HU_12: última recomendación del Equipo 2 y botón para pedir una nueva. Nulo = no se muestra la sección.
+    recommendation: RecommendationUiState? = null,
+    onRequestRecommendation: () -> Unit = {},
 ) {
     val parcel = state.parcels.find { it.id == parcelId }
     InventoryScaffold(
@@ -93,6 +96,15 @@ fun ParcelDetailScreen(
                         modifier = Modifier.padding(top = 8.dp),
                     )
                     AforamientoSection(aforamiento, onRetryAforamiento)
+                    if (recommendation != null) {
+                        Text(
+                            "RECOMENDACIONES",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                        RecommendationSection(recommendation, onRequestRecommendation)
+                    }
                     Text(
                         "ACTIVIDADES",
                         style = MaterialTheme.typography.labelMedium,

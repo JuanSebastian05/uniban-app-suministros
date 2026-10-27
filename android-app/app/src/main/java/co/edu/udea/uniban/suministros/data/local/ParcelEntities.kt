@@ -46,6 +46,25 @@ data class AforamientoEntity(
     val confidence: String?,
 )
 
+/**
+ * Copia local de la última recomendación del Equipo 2 para una parcela (HU_12), servida por nuestro backend. Una fila por
+ * parcela y **sin clave foránea hacia `parcels`** (A-04). [suppliesJson] guarda la lista de insumos como JSON (solo se
+ * muestra, nunca se consulta por insumo). Las fechas se guardan como texto ISO tal como llegan.
+ */
+@Entity(tableName = "parcel_recommendations")
+data class RecommendationEntity(
+    @PrimaryKey val parcelId: String,
+    val recommendationId: String,
+    val period: String,
+    val generatedAt: String,
+    val sourceVersion: String,
+    val volumeBunches: Double,
+    val cutDeadline: String,
+    val meetsWindow: Boolean,
+    val reason: String?,
+    val suppliesJson: String,
+)
+
 /** Parcela con su ciclo activo (si lo tiene), para la lista de parcelas. */
 data class ParcelSummary(
     val id: String,

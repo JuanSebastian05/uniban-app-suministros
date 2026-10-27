@@ -38,6 +38,7 @@ Rama `feat/integracion-equipo2` (PR a `develop`, apilada sobre las de aforamient
   Equipo 1 no envíe aforamientos, ninguna parcela podrá pedirla.
 - **Qué hacer:** Simon, aplicar `0011` en Neon (rama de ensayo → compartida → merge a `main`, A-02). Quien haga SALIDA o
   cualquier migración nueva: parte de la `0011`.
+- HU_12 (app, Room **v7**) va en otro PR que parte de este: mézclalo **después** (ver [`hu12.md`](hu12.md)). La siguiente versión de Room libre es la **8**.
 - Backend: 226 → 275 pruebas en verde. Brechas pendientes con el Equipo 2: ver [`contrato-equipo2.md`](contrato-equipo2.md).
 
 ## A-08 · 2026-10-26 · Integración con el Equipo 1 (backend): clave de servicio y aforamientos

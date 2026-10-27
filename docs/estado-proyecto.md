@@ -35,7 +35,8 @@
 | **Integración Equipo 1 (backend)** | **Implementada el 26/10**, rama `feat/integracion-equipo1` | Clave de servicio, `GET /service/parcels`, `POST /aforamientos` y migración `0010`. Ver [`contrato-equipo1.md`](contrato-equipo1.md) y A-08. Falta: configurar `SERVICE_API_KEY` en Render y aplicar `0010` en Neon (Simon). |
 | **HU_09 Consultar aforamiento** | **Implementada el 26/10**, rama `feat/hu09-aforamiento` (parte de `feat/integracion-equipo1`; mezclar después) | Ver [`hu09.md`](hu09.md). Room v6, `GET /parcels` con `aforamiento` y `GET /parcels/{id}/aforamiento`. Sin probar en emulador; depende de `0010` en Neon. |
 | **Integración Equipo 2 (backend)** | **Implementada el 26/10**, rama `feat/integracion-equipo2` (apilada sobre `feat/hu09-aforamiento`) | Cliente del Equipo 2, `POST/GET /parcels/{id}/recommendation` y migración `0011`. Ver [`contrato-equipo2.md`](contrato-equipo2.md) y A-09. Falta aplicar `0011` en Neon. |
-| HU_10–12, SALIDA | Compañero | — |
+| **HU_12 Recomendaciones** | **Implementada el 26/10**, rama `feat/hu12-recomendaciones` (parte de `feat/integracion-equipo2`; mezclar después) | Ver [`hu12.md`](hu12.md). Room v7. Sin «exceso» (el Equipo 2 no lo entrega). Sin probar en emulador ni con el servicio real; depende de `0010` y `0011` en Neon. |
+| HU_10, HU_11, SALIDA | Compañero | — |
 
 ## Producción (25/10/2026)
 
@@ -103,6 +104,13 @@ No se probó en emulador ni en celular (P-06).
 - 15/10/2026 (HU_05): el stock nunca queda negativo; SALIDA y AJUSTE quedaron para después (`hu05.md`).
 
 ## Bitácora
+
+- **2026-10-26 (Claude), HU_12:** el detalle de la parcela muestra la última recomendación del Equipo 2 (volumen, fecha límite de
+  corte, cumple/no cumple la ventana, insumos con requerido, disponible, déficit resaltado y fecha prevista) y permite
+  pedir una nueva (síncrono: calentamiento de nuestro servidor y espera de 270 s solo para ese endpoint, aviso «puede tardar
+  hasta un minuto»). Sin red muestra la última copia. Room v7 (`parcel_recommendations`, sin FK a `parcels`). App 241 → 294
+  pruebas, incluidas por primera vez las de **migración de Room** (5→6→7). Brechas con el Equipo 2: sin «exceso», una sola
+  observación (`motivo`) y datos operativos por defecto (ver `hu12.md`). Sin probar en emulador.
 
 - **2026-10-26 (Claude), integración Equipo 2 (backend):** cliente HTTP (calentamiento `GET /salud`, 90 s, un reintento; sin respuesta → 503, respuesta
   inválida o rechazo → 502), solicitud en formato del contrato más campos directos, `POST/GET /parcels/{id}/recommendation`,

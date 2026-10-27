@@ -29,6 +29,13 @@ interface ParcelDao {
     @Query("SELECT * FROM parcel_aforamientos WHERE parcelId = :parcelId")
     fun observeAforamiento(parcelId: String): Flow<AforamientoEntity?>
 
+    /** Última recomendación guardada de la parcela (HU_12); nula si no hay ninguna. */
+    @Query("SELECT * FROM parcel_recommendations WHERE parcelId = :parcelId")
+    fun observeRecommendation(parcelId: String): Flow<RecommendationEntity?>
+
+    @Upsert
+    suspend fun upsertRecommendation(recommendation: RecommendationEntity)
+
     @Upsert
     suspend fun upsertAforamientos(aforamientos: List<AforamientoEntity>)
 
