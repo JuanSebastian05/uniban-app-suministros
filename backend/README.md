@@ -89,4 +89,4 @@ La URL configurada para el servicio es https://uniban-app-suministros.onrender.c
 
 ## Límite del contrato del Equipo 2
 
-El backend actual envía inventario completo del productor junto con otros datos de operación y recibe/guarda la recomendación. La decisión de enviar solo cajas, carton y bolsas no está implementada todavía y debe acordarse con el Equipo 2. Ver [contrato del Equipo 2](../docs/contrato-equipo2.md).
+El backend envía solo cajas, carton y bolsas, incluso con saldo cero; los consumos y pérdidas se filtran a esos mismos productos. Usa `POST https://platano-logistica-api.onrender.com/api/v1/recomendar` con `Content-Type: application/json`, y valida/guarda la respuesta. Swagger no declara consumos ni pérdidas, así que su uso debe confirmarse con el Equipo 2. Ver [contrato del Equipo 2](../docs/contrato-equipo2.md).

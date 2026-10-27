@@ -220,7 +220,7 @@ def test_la_solicitud_al_equipo2_lleva_el_contrato_y_los_campos_directos(client,
     assert not {"ventana_despacho", "vehiculo_id", "capacidad_vehiculo_racimos", "tiempo_acarreo_min"} & set(body)
 
 
-def test_envia_inventario_consumos_y_perdidas_del_productor(client, session_factory, ready, equipo2):
+def test_solo_envia_empaques_y_sus_movimientos(client, session_factory, ready, equipo2):
     other = create_parcel(client, "El Mirador")
     assert client.post(MOVEMENTS, json=movement("CONSUMO", 12.5, TODAY - timedelta(days=5), ready)).status_code == 201
     assert client.post(MOVEMENTS, json=movement("CONSUMO", 3, TODAY - timedelta(days=4), other)).status_code == 201
@@ -231,17 +231,28 @@ def test_envia_inventario_consumos_y_perdidas_del_productor(client, session_fact
     assert client.post(
         MOVEMENTS, json=movement("PERDIDA", 1, TODAY - timedelta(days=300), lossReason="OTRO", observation="rotura")
     ).status_code == 201
+    packaging_inventory = {
+        "id": new_uuid(), "initialQuantity": 100,
+        "location": copy.deepcopy(LOCATION),
+        "supply": {"id": new_uuid(), "name": "cajas", "category": "Empaque", "unit": "unidad"},
+    }
+    assert client.post(
+        MOVEMENTS,
+        json=movement("CONSUMO", 1, TODAY - timedelta(days=2), ready, inventory=packaging_inventory),
+    ).status_code == 201
 
     post_recommendation(client, ready["id"])
     body = equipo2.bodies[0]
 
-    # 100 - 12,5 - 3 - 7 - 2 - 1 = 74,5
-    assert [(i["name"], i["quantity"]) for i in body["inventory"]] == [("Urea 46%", 74.5)]
-    assert body["inventory"][0]["unit"] == "kg"
-    # Solo los consumos de ESTA parcela dentro de los últimos 90 días.
-    assert [(c["quantity"], c["date"]) for c in body["consumptions"]] == [(12.5, (TODAY - timedelta(days=5)).isoformat())]
-    # Pérdidas del productor (no llevan parcela) dentro de la misma ventana.
-    assert [(x["quantity"], x["reason"]) for x in body["losses"]] == [(2.0, "CLIMA")]
+    assert [(i["name"], i["quantity"], i["unit"]) for i in body["inventory"]] == [
+        ("cajas", 99.0, "unidad"), ("carton", 0.0, "unidad"), ("bolsas", 0.0, "unidad"),
+    ]
+    # Solo se envían movimientos de empaque; los consumos y pérdidas agrícolas quedan fuera.
+    assert [(c["name"], c["quantity"], c["date"]) for c in body["consumptions"]] == [
+        ("cajas", 1.0, (TODAY - timedelta(days=2)).isoformat()),
+    ]
+    assert body["losses"] == []
+    assert "Urea 46%" not in str(body)
 
 
 def test_no_envia_datos_de_otro_productor(client, session_factory, identity, equipo2):
@@ -259,7 +270,10 @@ def test_no_envia_datos_de_otro_productor(client, session_factory, identity, equ
     post_recommendation(client, mine["id"])
     body = equipo2.bodies[0]
 
-    assert body["inventory"] == [] and body["consumptions"] == [] and body["losses"] == []
+    assert [(item["name"], item["quantity"]) for item in body["inventory"]] == [
+        ("cajas", 0.0), ("carton", 0.0), ("bolsas", 0.0),
+    ]
+    assert body["consumptions"] == [] and body["losses"] == []
     assert "Insumo de Luis" not in str(body)
 
 

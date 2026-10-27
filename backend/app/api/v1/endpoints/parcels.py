@@ -114,7 +114,7 @@ def request_parcel_recommendation(
     client: Equipo2Client = Depends(get_equipo2_client),
 ) -> RecommendationOut:
     try:
-        return request_recommendation(db, client, parcel_id, user.producer_id)
+        return request_recommendation(db, client, parcel_id, user.producer_id, user.firebase_uid)
     except ParcelNotFound as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
     except RecommendationError as error:

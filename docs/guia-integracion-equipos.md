@@ -1,6 +1,6 @@
 # Guía actual de integración con los Equipos 1 y 2
 
-> Actualizada el 26/10/2026 a partir del código del repositorio y los acuerdos compartidos en la conversación. Para el estado vigente del código, consultar [estado del proyecto](estado-proyecto.md). Las muestras no sustituyen la confirmación de los contratos con los otros equipos.
+> Actualizada el 27/10/2026 a partir del código del repositorio, el endpoint compartido y el OpenAPI del Equipo 2. Para el estado vigente del código, consultar [estado del proyecto](estado-proyecto.md). Las muestras no sustituyen la confirmación de los contratos con los otros equipos.
 
 ## Resumen de responsabilidades
 
@@ -26,19 +26,19 @@ Revisar antes de la prueba conjunta: el acuerdo de parcelas presenta areaHa como
 El backend tiene una ruta para pedir una recomendación para una parcela y otra para consultar la última respuesta guardada. Al pedirla:
 
 - exige que exista un aforamiento; sin este, devuelve un conflicto y no llama al Equipo 2;
-- forma un cuerpo con productor, parcela, ciclo activo, aforamiento, inventario, consumos y pérdidas;
+- forma un cuerpo con productor, parcela, ciclo activo, aforamiento e inventario de cajas, carton y bolsas;
 - calcula el periodo como semana ISO derivada de la fecha del aforamiento;
-- consulta el servicio del Equipo 2 y guarda la respuesta;
-- limita los consumos a esa parcela y las pérdidas al productor, en ambos casos dentro de los últimos 90 días;
-- hoy envía todo el inventario del productor, incluidos insumos agrícolas y registros con existencia cero.
+- envía `Content-Type: application/json` a `POST https://platano-logistica-api.onrender.com/api/v1/recomendar`;
+- completa con saldo cero los empaques aún no sincronizados desde el celular y suma existencias entre ubicaciones;
+- procesa y guarda la respuesta del servicio.
 
-El usuario decidió que al Equipo 2 se le envíen solo cajas, carton y bolsas; el filtro correspondiente no está implementado. La categoría de esos productos es Empaque, la unidad es unidad y los nombres son minúsculos y sin tildes. Ver [contrato del Equipo 2](contrato-equipo2.md), donde se separan el comportamiento actual y la propuesta pendiente.
+Los movimientos incluidos en el cuerpo se limitan a esos empaques y a los últimos 90 días. Swagger no declara los campos de consumos y pérdidas; confirmar si el Equipo 2 los procesa. La categoría de los productos es Empaque, la unidad es unidad y los nombres van en minúscula y sin tildes. Ver [contrato del Equipo 2](contrato-equipo2.md).
 
 ## Verificación y acuerdos que faltan
 
 - Equipo 1: prueba contra el servidor desplegado, incluida respuesta idempotente al reenviar el mismo aforamiento y aceptación del formato actual de areaHa.
-- Equipo 2: confirmar el cuerpo exacto que consume, autenticación requerida, significado de los campos y si acepta solo insumos de empaque.
-- Acordar si consumos/pérdidas de 90 días son útiles y suficientes, y si el endpoint de recomendaciones debe recibir campos operativos adicionales.
+- Equipo 2: confirmar si requiere autenticación adicional a `Content-Type`, si consume consumos/pérdidas (no declarados en Swagger) y si los valores por defecto de acarreo, vehículo, capacidad y ventana bastan.
+- Probar el cuerpo y respuesta con el servicio real usando una parcela de prueba autorizada; esta guía no registra una llamada productiva.
 - Confirmar versión de Render y revisión Alembic de Neon antes de una demostración productiva.
 
 No hay que entregar secretos dentro de este documento. La configuración de la clave se describe en el contrato del Equipo 1.

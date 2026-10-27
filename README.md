@@ -36,7 +36,7 @@ App Android → FastAPI → POST recomendación → servicio del Equipo 2
 
 ## Catálogo inicial
 
-Una cuenta nueva recibe seis insumos agrícolas de demostración y tres materiales de empaque: **cajas**, **carton** y **bolsas**. Los nombres de empaque están en minúsculas y sin tildes; su categoría es **Empaque**, la unidad es **unidad** y el saldo inicial es cero. El código también incorpora esos tres productos a cuentas ya existentes sin sobrescribir movimientos ni cantidades. El filtrado para enviar únicamente materiales de empaque al Equipo 2 está pendiente; hoy el backend arma el inventario con todos los insumos del productor.
+Una cuenta nueva recibe seis insumos agrícolas de demostración y tres materiales de empaque: **cajas**, **carton** y **bolsas**. Los nombres de empaque están en minúsculas y sin tildes; su categoría es **Empaque**, la unidad es **unidad** y el saldo inicial es cero. El código también incorpora esos tres productos a cuentas ya existentes sin sobrescribir movimientos ni cantidades. Al pedir una recomendación, el backend envía únicamente esos tres empaques; si alguno todavía no se ha sincronizado desde el celular, lo incluye con saldo cero.
 
 ## Ejecutar en local
 
@@ -93,5 +93,5 @@ Copy-Item .env.example .env
 
 - La app registra ENTRADA, CONSUMO, PERDIDA y AJUSTE; SALIDA no está habilitada en el formulario.
 - La sincronización actual es de subida de movimientos y actividades; el backend sí expone consultas de inventario y parcelas, pero la app no reconstruye todo el inventario desde el servidor al reinstalar.
-- La solicitud de recomendación envía el inventario completo, consumos de la parcela y pérdidas del productor de los últimos 90 días. El filtro para mandar solo cajas, carton y bolsas aún no está implementado.
+- La solicitud de recomendación envía cajas, carton y bolsas, incluso con saldo cero; los movimientos incluidos se limitan a esos empaques. Los campos de consumos y pérdidas no aparecen en el esquema Swagger del Equipo 2 y se deben confirmar con ellos.
 - El contrato exacto del Equipo 2 y algunos despliegues de producción requieren confirmación conjunta; consulte los contratos antes de tratar las muestras como acuerdos cerrados.

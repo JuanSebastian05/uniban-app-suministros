@@ -1,6 +1,6 @@
 # Estado del proyecto
 
-> Actualizado el **26/10/2026** contra el código de esta copia del repositorio. Este documento distingue lo que el código implementa de lo que se ha confirmado sobre GitHub, Render y Neon.
+> Actualizado el **27/10/2026** contra el código de esta copia del repositorio y el OpenAPI publicado por el Equipo 2. Este documento distingue lo que el código implementa de lo que se ha confirmado sobre GitHub, Render y Neon.
 
 ## Resumen ejecutivo
 
@@ -20,7 +20,7 @@ El código local contiene migraciones de backend hasta **0011** y Room versión 
 | Sincronización | Implementada | Movimientos y actividades se envían con UUID idempotente. No hay descarga completa del inventario para reconstruirlo tras reinstalar o cambiar de teléfono. |
 | Integración Equipo 1 | Implementada en el código | GET /api/v1/service/parcels y POST /api/v1/aforamientos, protegidos por X-API-Key; idempotencia por UUID. La app consulta el aforamiento más reciente. |
 | HU_09 | Implementada en el código | Muestra el aforamiento más reciente de la parcela y conserva una copia local para consulta offline. |
-| Integración Equipo 2 y HU_12 | Implementadas en el código | La app pide una recomendación a nuestro backend; este construye la solicitud, llama al servicio, guarda la respuesta y la app conserva la última para verla offline. |
+| Integración Equipo 2 y HU_12 | Implementadas en el código local | La app pide una recomendación a nuestro backend; este envía solo cajas, carton y bolsas, procesa y guarda la respuesta. La llamada real desde Render todavía no se verificó. |
 | HU_10 Estado de sincronización | Parcial | Cuenta los registros no sincronizados y presenta estados individuales; falta hora de última sincronización y una vista central de errores. Ver [hu10.md](hu10.md). |
 | HU_11 Buscar y filtrar insumos | Parcial | Busca por nombre localmente; falta filtro por categoría y combinación con la búsqueda. Ver [hu11.md](hu11.md). |
 
@@ -37,10 +37,11 @@ El código local contiene migraciones de backend hasta **0011** y Room versión 
 ### Equipo 2
 
 - El backend tiene el cliente y las rutas autenticadas por Firebase para crear y consultar una recomendación.
-- El formato acordado con el equipo aún no está cerrado. El contrato describe por separado lo que el código envía, lo que devuelve el servicio consultado y las decisiones pendientes.
-- El usuario decidió incorporar cajas, carton y bolsas, con unidad unidad, nombres sin tildes y en minúscula. Filtrar el envío para que incluya únicamente esos productos sigue pendiente: el código actual envía todos los insumos disponibles del productor, incluidos los agrícolas.
-- La solicitud actual incluye consumos de la parcela y pérdidas del productor de los últimos 90 días; confirmar esa ventana y el alcance de datos con el Equipo 2.
-- El inventario que arma el backend incluye los registros existentes, incluso si su saldo es cero.
+- El Equipo 2 compartió `POST https://platano-logistica-api.onrender.com/api/v1/recomendar` y Swagger. El cliente local ya usa esa ruta y envía `Content-Type: application/json`.
+- Swagger acepta `inventory` como lista de objetos genéricos y la respuesta coincide con lo que valida nuestro backend. El backend envía exactamente cajas, carton y bolsas, categoría Empaque, unidad unidad, y completa con saldo cero los productos que aún no se han sincronizado desde el celular.
+- Los consumos y pérdidas que se incluyen también se filtran por esos tres nombres y por la ventana actual de 90 días; el esquema publicado no declara esos campos, así que su uso sigue pendiente de confirmación.
+- Swagger no publica un requisito de API key. Confirmar con el equipo si basta `Content-Type` o si existe autenticación adicional fuera del OpenAPI.
+- La solicitud no envía ventana de despacho ni otros datos operativos; el servicio tiene valores por defecto. Confirmar que dichos valores son adecuados para las recomendaciones del proyecto.
 
 ## Versiones del esquema
 
@@ -54,7 +55,7 @@ El código local contiene migraciones de backend hasta **0011** y Room versión 
 
 1. Confirmar la revisión desplegada en Neon y que Render esté ejecutando el código correspondiente.
 2. Ejecutar una prueba conjunta del Equipo 1 contra las rutas desplegadas, incluyendo lectura de parcelas y reenvío idempotente de un aforamiento.
-3. Probar una recomendación contra el servicio real del Equipo 2 y acordar formalmente el cuerpo y el filtro de empaques.
+3. Probar una recomendación contra el servicio real del Equipo 2 y confirmar los campos de consumos/pérdidas, la autenticación y los valores operativos por defecto.
 4. Hacer una demostración manual de los flujos principales en emulador o celular, con Firebase real y modo avión, y guardar los resultados.
 5. Confirmar el MER actualizado con el equipo y revisar su presentación para el informe académico.
 

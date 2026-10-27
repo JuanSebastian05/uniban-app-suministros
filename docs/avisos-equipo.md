@@ -1,6 +1,6 @@
 # Avisos y acuerdos vigentes del equipo
 
-> Actualizado el 26/10/2026. Para el estado funcional, consultar [estado del proyecto](estado-proyecto.md); para los contratos externos, consultar los documentos de cada equipo. Las notas antiguas sobre ramas y PR ya no son instrucciones vigentes.
+> Actualizado el 27/10/2026. Para el estado funcional, consultar [estado del proyecto](estado-proyecto.md); para los contratos externos, consultar los documentos de cada equipo. Las notas antiguas sobre ramas y PR ya no son instrucciones vigentes.
 
 ## Integración con el Equipo 1
 
@@ -15,9 +15,9 @@ Ver [contrato de Equipo 1](contrato-equipo1.md) y [texto para compartir](integra
 ## Integración con el Equipo 2
 
 - El cliente, el almacenamiento de recomendaciones y las rutas de solicitud/consulta están implementados en el código.
-- El acuerdo definitivo de solicitud y respuesta todavía requiere confirmación del Equipo 2.
-- El backend actual envía todo el inventario del productor. El usuario decidió limitarlo a cajas, carton y bolsas; el filtro aún debe implementarse.
-- La consulta actual incluye consumos de la parcela y pérdidas del productor de los últimos 90 días. Confirmar con el equipo que esta selección y periodo son útiles.
+- El Equipo 2 compartió el endpoint `POST /api/v1/recomendar` y su Swagger. El cliente local usa la URL acordada y envía el encabezado obligatorio `Content-Type: application/json`.
+- El backend ya limita el cuerpo a cajas, carton y bolsas, incluso cuando alguna no tiene movimientos sincronizados (saldo enviado: cero). Los movimientos también se filtran por esos nombres.
+- Swagger no declara consumos ni pérdidas, aunque el contrato propuesto los incluye; confirmar con el Equipo 2 si los usa. También confirmar si requiere autenticación adicional y si sus valores operativos por defecto son suficientes.
 - Los nombres de empaque son minúsculos y sin tildes, categoría Empaque, unidad unidad y saldo inicial cero.
 
 Ver [contrato de Equipo 2](contrato-equipo2.md).

@@ -74,7 +74,7 @@ Este paso llama al servicio externo real y puede crear tráfico o guardar datos.
 - Volver a abrir sin conexión; debe mostrarse la última respuesta local.
 - Registrar los campos enviados y recibidos sin incluir claves ni datos personales.
 
-El backend actual envía el inventario completo. El filtro para mandar solo cajas, carton y bolsas está pendiente. Para verificarlo, revisar contrato-equipo2.md y acordar primero el cambio.
+El backend envía solo cajas, carton y bolsas, también cuando su saldo sea cero; los movimientos incluidos también se limitan a esos nombres. Antes de una prueba real, confirmar con el Equipo 2 si consume consumos y pérdidas (no declarados en Swagger), si requiere autenticación adicional y si acepta sus valores operativos por defecto. Ver [contrato-equipo2.md](contrato-equipo2.md).
 
 ## 7. Evidencia y resultado
 
