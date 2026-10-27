@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
+import co.edu.udea.uniban.suministros.data.remote.AforamientoDto
 import co.edu.udea.uniban.suministros.data.remote.CycleResponseDto
 import co.edu.udea.uniban.suministros.data.remote.ParcelApi
 import co.edu.udea.uniban.suministros.data.remote.ParcelDto
@@ -151,4 +152,7 @@ private class FakeParcelApi : ParcelApi {
         failWith?.let { throw it }
         return Response.success(listed)
     }
+
+    override suspend fun aforamiento(authorization: String, parcelId: String): Response<AforamientoDto> =
+        error("El aforamiento se prueba en ParcelAforamientoTest.")
 }

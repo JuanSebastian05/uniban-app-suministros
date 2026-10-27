@@ -7,6 +7,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 /**
+ * Versión 7 (HU_12): tabla `parcel_recommendations` (sin FK a `parcels`) con la última recomendación de cada parcela.
+ * Versión 6 (HU_09): tabla `parcel_aforamientos` (sin FK a `parcels`) con el aforamiento más reciente de cada parcela.
  * Versión 2 (HU_14): agrega las tablas `parcels` y `production_cycles`.
  * Versión 5 (HU_08): tabla `activities` (sin FK a `parcels`) y columna nula `movements.activityId`.
  * Versión 4 (ajustes): agrega a `movements` la columna nula `adjustDirection`.
@@ -19,12 +21,13 @@ import androidx.room.RoomDatabase
 @Database(
     entities = [ProducerEntity::class, LocationEntity::class, SupplyEntity::class,
         InventoryEntity::class, MovementEntity::class, ParcelEntity::class, ProductionCycleEntity::class,
-        ActivityEntity::class],
-    version = 5,
+        ActivityEntity::class, AforamientoEntity::class, RecommendationEntity::class],
+    version = 7,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4),
-        AutoMigration(from = 4, to = 5),
+        AutoMigration(from = 4, to = 5), AutoMigration(from = 5, to = 6),
+        AutoMigration(from = 6, to = 7),
     ],
 )
 abstract class InventoryDatabase : RoomDatabase() {

@@ -72,6 +72,11 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
     }
+    // Los esquemas exportados de Room (app/schemas) sirven de assets a las pruebas de migración (Robolectric lee los
+    // assets de la variante debug). Solo se agregan a debug: el APK de release no los lleva.
+    sourceSets {
+        getByName("debug").assets.srcDir("$projectDir/schemas")
+    }
     packaging {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
     }
@@ -120,6 +125,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.room.testing)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.junit)

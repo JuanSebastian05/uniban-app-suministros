@@ -32,7 +32,11 @@
 | HU_13 Registrarse | **Cerrada el 21/10** (documento único + robustez, P-02) | Ver [`hu13.md`](hu13.md). |
 | HU_14 Registrar parcela | Hecha | Actualizar el MER y avisar al Equipo 1 (equipo, Juan José). |
 | **HU_08 Actividad productiva** | **Implementada el 24/10 (Simon)**, en PR | Ver [`hu08.md`](hu08.md). Verificada en emulador (25/10); migración `0009` ya aplicada en Neon y desplegada en `main`. |
-| HU_09–12, SALIDA | Compañero | — |
+| **Integración Equipo 1 (backend)** | **Implementada el 26/10**, rama `feat/integracion-equipo1` | Clave de servicio, `GET /service/parcels`, `POST /aforamientos` y migración `0010`. Ver [`contrato-equipo1.md`](contrato-equipo1.md) y A-08. Falta: configurar `SERVICE_API_KEY` en Render y aplicar `0010` en Neon (Simon). |
+| **HU_09 Consultar aforamiento** | **Implementada el 26/10**, rama `feat/hu09-aforamiento` (parte de `feat/integracion-equipo1`; mezclar después) | Ver [`hu09.md`](hu09.md). Room v6, `GET /parcels` con `aforamiento` y `GET /parcels/{id}/aforamiento`. Sin probar en emulador; depende de `0010` en Neon. |
+| **Integración Equipo 2 (backend)** | **Implementada el 26/10**, rama `feat/integracion-equipo2` (apilada sobre `feat/hu09-aforamiento`) | Cliente del Equipo 2, `POST/GET /parcels/{id}/recommendation` y migración `0011`. Ver [`contrato-equipo2.md`](contrato-equipo2.md) y A-09. Falta aplicar `0011` en Neon. |
+| **HU_12 Recomendaciones** | **Implementada el 26/10**, rama `feat/hu12-recomendaciones` (parte de `feat/integracion-equipo2`; mezclar después) | Ver [`hu12.md`](hu12.md). Room v7. Sin «exceso» (el Equipo 2 no lo entrega). Sin probar en emulador ni con el servicio real; depende de `0010` y `0011` en Neon. |
+| HU_10, HU_11, SALIDA | Compañero | — |
 
 ## Producción (25/10/2026)
 
@@ -41,7 +45,7 @@
 - **`main` = `develop`** (merge del PR #22). Render redesplegó y sirve `/api/v1/activities` (comprobado en `/openapi.json`).
 - **Primer despliegue:** Render quedó «Live» pero con el código anterior hasta que quien administra el servicio lanzó
   un *Manual Deploy*. Tras un merge a `main`, comprobar siempre que `/openapi.json` liste las rutas nuevas.
-- **Siguiente migración: `0010`** (aforamientos, compañero), con el mismo procedimiento: rama de ensayo → compartida → `main`
+- **Siguiente migración: `0010`** (aforamientos; ya escrita en `feat/integracion-equipo1`, pendiente de aplicar), con el mismo procedimiento: rama de ensayo → compartida → `main`
   ([`lista-verificacion-despliegue.md`](lista-verificacion-despliegue.md)).
 
 ## Ramas y PR (de Simon, al 21/10/2026; los PR #15 a #19 ya están mezclados en `develop`)
@@ -100,6 +104,34 @@ No se probó en emulador ni en celular (P-06).
 - 15/10/2026 (HU_05): el stock nunca queda negativo; SALIDA y AJUSTE quedaron para después (`hu05.md`).
 
 ## Bitácora
+
+- **2026-10-26 (Claude), HU_12:** el detalle de la parcela muestra la última recomendación del Equipo 2 (volumen, fecha límite de
+  corte, cumple/no cumple la ventana, insumos con requerido, disponible, déficit resaltado y fecha prevista) y permite
+  pedir una nueva (síncrono: calentamiento de nuestro servidor y espera de 270 s solo para ese endpoint, aviso «puede tardar
+  hasta un minuto»). Sin red muestra la última copia. Room v7 (`parcel_recommendations`, sin FK a `parcels`). App 241 → 294
+  pruebas, incluidas por primera vez las de **migración de Room** (5→6→7). Brechas con el Equipo 2: sin «exceso», una sola
+  observación (`motivo`) y datos operativos por defecto (ver `hu12.md`). Sin probar en emulador.
+
+- **2026-10-26 (Claude), integración Equipo 2 (backend):** cliente HTTP (calentamiento `GET /salud`, 90 s, un reintento; sin respuesta → 503, respuesta
+  inválida o rechazo → 502), solicitud en formato del contrato más campos directos, `POST/GET /parcels/{id}/recommendation`,
+  tabla `recommendations` (migración `0011`, JSONB en PostgreSQL) y `httpx` como dependencia de ejecución. Sin aforamiento no se
+  llama al Equipo 2 (409). Backend 226 → 275 pruebas (ninguna llama a la red). `0011` y las consultas verificadas en un
+  PostgreSQL temporal; no se tocó Neon. El OpenAPI del Equipo 2 no pide autenticación ni campos obligatorios: ver brechas en
+  `contrato-equipo2.md`.
+
+- **2026-10-26 (Claude), HU_09:** el detalle de la parcela muestra el aforamiento más reciente del Equipo 1 (fecha, «Área
+  aforada», plantas, confianza) con estados consultando / datos / «Sin aforamiento recibido» / error, y funciona sin
+  conexión con la última copia. Backend: campo `aforamiento` en `GET /parcels` y `GET /parcels/{id}/aforamiento`
+  (404 sin aforamientos o de otro productor). App: Room v6 (`parcel_aforamientos`, sin FK a `parcels`). Backend 213 → 226,
+  app 210 → 241. Sin probar en emulador.
+
+- **2026-10-26 (Claude), integración Equipo 1 (backend):** `SERVICE_API_KEY` y `require_service_key` (401 sin clave o con
+  clave incorrecta, 503 sin configurar), `GET /api/v1/service/parcels` (solo id, nombre y área de todas las parcelas),
+  `POST /api/v1/aforamientos` (idempotente por `id`: 201 / 200 / 409; 404 si la parcela no existe; 422 al validar) y
+  migración `0010`. Backend 146 → 213 pruebas. `0010` verificada en un PostgreSQL temporal (upgrade, `alembic check`,
+  restricciones, downgrade y upgrade); no se tocó Neon. Supuestos documentados en `contrato-equipo1.md` (redondeo,
+  `confidence` opcional, 404 por parcela inexistente). Pendiente: configurar la clave en Render, aplicar `0010` en Neon y
+  HU_09 en la app.
 
 - **2026-10-24 (Simon + Claude), HU_08:** actividad productiva completa (formulario con «Insumos usados» en una sola
   transacción, ciclo activo obligatorio, sección en el detalle de la parcela, pestaña Actividades, «Actividad: …» en el

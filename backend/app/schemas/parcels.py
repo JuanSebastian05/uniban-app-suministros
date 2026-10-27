@@ -7,6 +7,7 @@ from typing import Literal
 
 from pydantic import Field, field_validator
 
+from app.schemas.aforamientos import AforamientoOut
 from app.schemas.movements import CamelModel
 
 CycleStatus = Literal["EN_PREPARACION", "PRODUCCION", "DESCANSO"]
@@ -41,8 +42,18 @@ class CycleOut(CamelModel):
     status: CycleStatus
 
 
+class ServiceParcelOut(CamelModel):
+    """Lo único que se entrega al Equipo 1: sin productor, documento, ciclo ni otros datos (privacidad)."""
+
+    id: uuid.UUID
+    name: str
+    area_ha: Decimal
+
+
 class ParcelOut(CamelModel):
     id: uuid.UUID
     name: str
     area_ha: Decimal
     active_cycle: CycleOut | None
+    # Aforamiento más reciente recibido del Equipo 1 (HU_09); nulo si la parcela no tiene ninguno.
+    aforamiento: AforamientoOut | None = None

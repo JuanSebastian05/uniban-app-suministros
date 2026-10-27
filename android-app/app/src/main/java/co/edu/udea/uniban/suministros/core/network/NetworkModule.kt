@@ -36,6 +36,12 @@ object NetworkModule {
      */
     const val READ_TIMEOUT_SECONDS = 90L
 
+    /**
+     * Pedir una recomendación es síncrono y nuestro backend espera a su vez al Equipo 2 (también en Render): calentamiento
+     * de hasta 60 s + 90 s + un reintento de 90 s ≈ 4 min en el peor caso. Solo para ese endpoint (`RecommendationApi`).
+     */
+    const val RECOMMENDATION_READ_TIMEOUT_SECONDS = 270L
+
     val apiBaseUrl: String
         get() = BuildConfig.API_BASE_URL + API_VERSION_PATH
 
@@ -63,6 +69,19 @@ object NetworkModule {
             override fun onFailure(call: Call, e: IOException) = Unit
             override fun onResponse(call: Call, response: Response) = response.close()
         })
+    }
+
+    /**
+     * Igual que [warmUp] pero espera la respuesta (o el fallo) para que el POST de la recomendación no consuma su espera
+     * despertando nuestro servidor. Bloqueante: llamarlo desde un hilo de E/S. Cualquier fallo se ignora.
+     */
+    fun warmUpAndWait(client: OkHttpClient, baseUrl: String = BuildConfig.API_BASE_URL) {
+        val url = (baseUrl + HEALTH_PATH).toHttpUrlOrNull() ?: return
+        try {
+            client.newCall(Request.Builder().url(url).build()).execute().close()
+        } catch (_: IOException) {
+            // Mejor esfuerzo.
+        }
     }
 
     private const val HEALTH_PATH = "health"
