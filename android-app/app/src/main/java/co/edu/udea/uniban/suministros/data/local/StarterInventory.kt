@@ -11,7 +11,7 @@ internal class StarterInventory(private val ownerUid: String) {
 
     val producer = ProducerEntity(id("producer"), "Mi inventario")
     val location = LocationEntity(id("location"), producer.id, "Inventario principal")
-    private val entries = listOf(
+    private val agriculturalEntries = listOf(
         SupplyEntity(id("fertilizante"), "Fertilizante 15-15-15", "Fertilizante", "kg") to 120f,
         SupplyEntity(id("fungicida"), "Fungicida Mancozeb", "Fungicida", "L") to 35f,
         SupplyEntity(id("urea"), "Urea 46%", "Fertilizante", "kg") to 80f,
@@ -19,10 +19,17 @@ internal class StarterInventory(private val ownerUid: String) {
         SupplyEntity(id("cal"), "Cal dolomítica", "Correctivo", "kg") to 200f,
         SupplyEntity(id("sulfato"), "Sulfato de potasio", "Fertilizante", "kg") to 60f,
     )
+    private val packagingEntries = listOf("cajas", "carton", "bolsas").map { name ->
+        SupplyEntity(id(name), name, "Empaque", "unidad") to 0f
+    }
+    private val entries = agriculturalEntries + packagingEntries
     val supplies = entries.map { it.first }
     val inventory = entries.map { (supply, quantity) ->
         InventoryEntity(id("inventory-${supply.id}"), location.id, supply.id, quantity, quantity)
     }
+    /** Materiales que también se incorporan a las cuentas creadas antes de ampliar el catálogo. */
+    val packagingSupplies = packagingEntries.map { it.first }
+    val packagingInventory = inventory.filter { item -> packagingSupplies.any { it.id == item.supplyId } }
 
     companion object {
         /** Dueño de la sesión de demostración (debug sin Firebase); sus datos nunca se sincronizan. */

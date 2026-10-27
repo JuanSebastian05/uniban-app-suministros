@@ -80,6 +80,12 @@ interface InventoryDao {
     @Query("SELECT EXISTS(SELECT 1 FROM producers WHERE id = :id)")
     suspend fun hasProducer(id: String): Boolean
 
+    @Query("SELECT id FROM supplies")
+    suspend fun supplyIds(): List<String>
+
+    @Query("SELECT id FROM inventory")
+    suspend fun inventoryIds(): List<String>
+
     @Insert
     suspend fun insertProducer(producer: ProducerEntity)
 

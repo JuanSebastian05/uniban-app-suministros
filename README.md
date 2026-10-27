@@ -1,169 +1,97 @@
 # Uniban App Suministros
 
-Repositorio para la realización del proyecto **Uniban – Proyecto Integrador 1 de la Universidad de Antioquia (UdeA)**.
+Aplicación Android offline-first para que productores de plátano gestionen inventario, movimientos, parcelas y actividades. Un backend FastAPI central sincroniza los datos, recibe aforamientos del Equipo 1 y consulta recomendaciones del Equipo 2.
 
-> **Estado actual: HU_01 a HU_08, HU_13 y HU_14 implementadas** (incluye los ajustes de inventario). Pendientes: HU_09 a HU_12 y el tipo SALIDA. El estado detallado, las ramas y los pendientes están en [`docs/estado-proyecto.md`](docs/estado-proyecto.md).
-> La primera entrega se limitó a HU_01, HU_03, HU_04 y HU_06.
+> **Estado de referencia: 26/10/2026.** HU_01–09, HU_12–14 y las integraciones de servicio con los Equipos 1 y 2 están implementadas en el código. HU_10 y HU_11 están parcialmente implementadas. El tipo de movimiento **SALIDA** todavía no se puede registrar desde la app. El estado del código y las verificaciones de despliegue se distinguen en [estado del proyecto](docs/estado-proyecto.md).
 
-## Objetivo
+## Qué resuelve
 
-Aplicación móvil Android **offline-first** para la gestión y trazabilidad de suministros agrícolas
-de pequeños productores de plátano vinculados a Unibán (Equipo 3). La app funciona sin conexión
-sobre una base local y sincroniza con un backend central cuando hay red.
+- Registra usuarios productores, parcelas y ciclos productivos.
+- Mantiene el inventario disponible sin conexión, registra entradas, consumos, pérdidas y ajustes, y conserva historial por insumo.
+- Registra actividades productivas y sus consumos relacionados.
+- Sincroniza actividades y movimientos con el backend cuando vuelve la conexión.
+- Recibe del Equipo 1 el aforamiento de una parcela y lo muestra al productor.
+- Envía información operativa al Equipo 2 para solicitar recomendaciones y las guarda para consulta sin conexión.
 
-## Stack
+La app Android se comunica únicamente con nuestro backend. El Equipo 1 escribe en las rutas de servicio del backend y el backend se comunica con el Equipo 2.
 
-| Capa | Tecnologías |
-|------|-------------|
-| App móvil | Kotlin, Jetpack Compose, Material 3, Navigation Compose, MVVM (ViewModel), Repository, Room (SQLite), Retrofit, WorkManager |
-| Identidad | Firebase Authentication (solo autenticación) |
-| Backend | Python, FastAPI, SQLAlchemy 2, OpenAPI automático, PyTest |
-| Base de datos central | PostgreSQL |
-| Repositorio | Git / GitHub |
+## Componentes
 
-## Arquitectura general prevista
+| Componente | Tecnología y responsabilidad |
+| --- | --- |
+| App Android | Kotlin, Jetpack Compose, Room, Retrofit, WorkManager; uso offline-first. |
+| Identidad | Firebase Authentication; el backend verifica el token y el rol de productor. |
+| Backend | FastAPI, SQLAlchemy, Alembic y PostgreSQL. |
+| Base local | Room, actualmente versión 7. |
+| Base central | PostgreSQL; configuración de producción documentada para Neon. |
+| Servicio web | Render, URL https://uniban-app-suministros.onrender.com. |
 
-```text
-Compose (UI) → ViewModel → InventoryRepository → Room (local) / Retrofit (remoto)
-                                                     ↓
-                                            FastAPI (/api/v1) → PostgreSQL
-WorkManager: coordinador de sincronización y reintentos de HU_06.
-Firebase Auth: solo identidad.
-```
+## Recorrido de datos
 
-La app **no** se comunica directamente con los Equipos 1 y 2: toda integración pasa por el backend FastAPI.
-Detalle en [`docs/arquitectura/README.md`](docs/arquitectura/README.md).
+~~~text
+Productor → App Android → Room → sincronización WorkManager → FastAPI → PostgreSQL
+Equipo 1 → GET parcelas / POST aforamientos → FastAPI → PostgreSQL → App Android
+App Android → FastAPI → POST recomendación → servicio del Equipo 2
+~~~
 
-## Estructura del repositorio
+## Catálogo inicial
 
-```text
-.
-├── android-app/                 # Proyecto Android (abrir esta carpeta en Android Studio)
-│   ├── app/src/main/java/co/edu/udea/uniban/suministros/
-│   │   ├── core/network/        # Cliente HTTP base
-│   │   ├── data/                # InventoryRepository, Quantity, auth (Firebase) y local (Room)
-│   │   ├── ui/                  # navigation | theme | auth | inventory
-│   │   ├── MainActivity.kt
-│   │   └── UnibanApplication.kt # Instancia compartida del repositorio
-│   ├── gradle/libs.versions.toml
-│   └── local.properties.example
-├── backend/                     # API FastAPI
-│   ├── app/                     # main.py, api/v1, core, db, models, schemas
-│   ├── tests/
-│   ├── requirements.txt
-│   └── .env.example
-├── docs/
-│   ├── arquitectura/README.md
-│   ├── avances/AnteproyectoInicial-PI1-Equipo3-Uniban.pdf
-│   ├── mockups/MockupsFigma.zip
-│   ├── modelo-datos/MERv2.drawio
-│   └── requisitos/HU_y_Requisitos_Tecnicos_Equipo3.pdf
-├── .gitignore
-└── README.md
-```
+Una cuenta nueva recibe seis insumos agrícolas de demostración y tres materiales de empaque: **cajas**, **carton** y **bolsas**. Los nombres de empaque están en minúsculas y sin tildes; su categoría es **Empaque**, la unidad es **unidad** y el saldo inicial es cero. El código también incorpora esos tres productos a cuentas ya existentes sin sobrescribir movimientos ni cantidades. Al pedir una recomendación, el backend envía únicamente esos tres empaques; si alguno todavía no se ha sincronizado desde el celular, lo incluye con saldo cero.
 
-## Cómo levantar la app Android
+## Ejecutar en local
 
-**Requisitos:** Android Studio, JDK 17 o 21 (seleccionar uno compatible en Gradle JDK),
-Android SDK 35, emulador o dispositivo con Android 8.0 (API 26) o superior.
+### App Android
 
-1. En Android Studio: **File → Open** → seleccionar la carpeta `android-app/`.
-2. (Opcional) Copiar `android-app/local.properties.example` a `android-app/local.properties` y ajustar `api.baseUrl`.
-   Por defecto se usa `http://10.0.2.2:8000/` (backend local visto desde el emulador).
-   Para usar el backend desplegado: `api.baseUrl=https://uniban-app-suministros.onrender.com/` (ver [`docs/despliegue-render.md`](docs/despliegue-render.md)).
-3. Para iniciar sesión, colocar `google-services.json` (consola de Firebase) en `android-app/app/`.
-   Las cuentas se crean desde la app con **Crear cuenta** (requiere el backend con `FIREBASE_PROJECT_ID`
-   y la migración `0002`); ver [`docs/hu01.md`](docs/hu01.md#registro-de-usuarios). El proyecto compila sin el archivo, que **no se sube** al repositorio.
-   Sin él, el build **debug** muestra el aviso de Firebase sin configurar y el botón
-   «Continuar en modo demo», que no existe en release.
-4. Sincronizar Gradle y ejecutar la configuración `app`. La primera pantalla es el **inicio de sesión**;
-   tras autenticarse (o entrar en modo demo) se abre **Inventario** con seis insumos demo.
-   Con una sesión previa, la app abre directo en Inventario aun sin conexión. La barra inferior
-   cambia entre **Parcelas** e **Inventario**.
+Requisitos: Android Studio, JDK 17 o 21 compatible con Gradle, Android SDK 35 y emulador o dispositivo con Android 8.0 (API 26) o superior.
 
-Por línea de comandos (desde `android-app/`): `./gradlew assembleDebug` y `./gradlew testDebugUnitTest`
-(en Windows: `gradlew.bat assembleDebug`).
+1. Abre la carpeta android-app en Android Studio.
+2. Configura android-app/local.properties a partir de local.properties.example; por defecto, el emulador usa http://10.0.2.2:8000/.
+3. Para autenticación real, coloca el archivo privado google-services.json en android-app/app/. No lo subas a Git. En builds debug se puede usar el modo demo.
+4. Sincroniza Gradle y ejecuta la configuración app.
 
-## Cómo levantar el backend
+La barra principal permite acceder a Parcelas e Inventario; la pestaña Actividades está disponible desde la navegación de la app.
 
-**Requisitos:** Python 3.11+, PostgreSQL 15+ (solo cuando existan endpoints que usen la base).
+### Backend
 
-```bash
+Requisitos: Python 3.11 o superior y PostgreSQL 15 o superior.
+
+~~~powershell
 cd backend
 python -m venv .venv
-.venv\Scripts\activate            # Windows  (Linux/Mac: source .venv/bin/activate)
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-copy .env.example .env            # Linux/Mac: cp .env.example .env  → editar valores
-uvicorn app.main:app --reload
-```
+Copy-Item .env.example .env
+# Editar DATABASE_URL y FIREBASE_PROJECT_ID en .env
+.venv\Scripts\python.exe -m alembic upgrade head
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+~~~
 
-- `GET http://localhost:8000/health` → `{"status": "ok"}` (endpoint técnico, no es una HU)
-- Documentación OpenAPI: `http://localhost:8000/docs`
-- Pruebas: `pytest`
-- Tablas: `alembic upgrade head` (hasta la migración `0009`: parcelas y ciclos, consumos y pérdidas, documento único, ajustes y actividades; la `0006` está reservada para aforamientos. Antes de desplegar, aplicarlas en Neon: ver [docs/avisos-equipo.md](docs/avisos-equipo.md)).
+- Salud: http://localhost:8000/health
+- API interactiva: http://localhost:8000/docs
+- La cabeza del historial de migraciones en este repositorio es 0011_recomendaciones; use alembic upgrade head en una base local vacía.
+- Configura SERVICE_API_KEY localmente para ensayar las rutas del Equipo 1. Mantén las claves y cadenas de conexión fuera del repositorio.
 
-Más detalles en [`backend/README.md`](backend/README.md).
+## Integraciones entre equipos
 
-## Backend desplegado (Render)
+- **Equipo 1 → Equipo 3:** GET /api/v1/service/parcels y POST /api/v1/aforamientos, con X-API-Key. La clave se configura como secreto. El contrato está en [contrato del Equipo 1](docs/contrato-equipo1.md).
+- **Equipo 3 → Equipo 2:** el backend usa POST /api/v1/recomendar; la app pide la recomendación a nuestro backend. El contrato y las diferencias pendientes están en [contrato del Equipo 2](docs/contrato-equipo2.md).
+- Según el usuario, SERVICE_API_KEY ya está configurada en Render y la migración 0010 llegó a main. No se ha confirmado en esta revisión que la versión desplegada de Render y la base Neon tengan la migración 0011, ni una prueba real conjunta con ambos equipos.
 
-El backend de pruebas está publicado en **https://uniban-app-suministros.onrender.com/** (rama `main`, plan gratuito).
-Los otros equipos y la app en el celular lo usan sin necesidad de correr nada en el PC.
+## Documentación del proyecto
 
-- Salud: <https://uniban-app-suministros.onrender.com/health> · Documentación: <https://uniban-app-suministros.onrender.com/docs>
-- En el plan gratuito el servicio se **duerme tras 15 minutos sin uso**; la primera petición tarda cerca de un minuto. Abrir `/health` antes de una prueba o demo.
-- Usa la misma base de datos de Neon que el equipo. Las migraciones se aplican a mano (`alembic upgrade head`) desde un equipo con acceso a esa base.
+- [Estado del código y tareas de integración](docs/estado-proyecto.md)
+- [Arquitectura Android y backend](docs/arquitectura/README.md)
+- [Historias de usuario](docs/hu01.md) a [HU_14](docs/hu14.md), incluyendo [HU_10](docs/hu10.md) y [HU_11](docs/hu11.md)
+- [Contrato y guía operativa del Equipo 1](docs/contrato-equipo1.md) y [TXT para compartir](docs/integracion-equipo1.txt)
+- [Contrato del Equipo 2](docs/contrato-equipo2.md)
+- [Despliegue Render y Neon](docs/despliegue-render.md) y [lista de migraciones](docs/lista-verificacion-despliegue.md)
+- [Guía de prueba manual](docs/guia-prueba-celular.md)
+- [Actualización técnica del 26/10/2026](docs/avances/Actualizacion-tecnica-y-avances-2026-10-26.pdf). El PDF de avances de semanas 5–6 se conserva como registro histórico.
+- [Requisitos originales](docs/requisitos/HU_y_Requisitos_Tecnicos_Equipo3.pdf) y [anteproyecto](docs/avances/AnteproyectoInicial-PI1-Equipo3-Uniban.pdf): documentos de referencia académica; pueden conservar decisiones anteriores al código actual.
 
-Pasos y configuración completos en [`docs/despliegue-render.md`](docs/despliegue-render.md).
+## Límites conocidos
 
-## Variables de entorno y configuración local
-
-| Dónde | Archivo (no versionado) | Plantilla | Claves |
-|-------|-------------------------|-----------|--------|
-| Backend | `backend/.env` | `backend/.env.example` | `DATABASE_URL`, `FIREBASE_PROJECT_ID`, `CORS_ORIGINS`, `ENVIRONMENT`, `API_V1_PREFIX`, `APP_NAME` |
-| Android | `android-app/local.properties` | `android-app/local.properties.example` | `sdk.dir`, `api.baseUrl` |
-| Firebase | `android-app/app/google-services.json` | — (se descarga de la consola de Firebase) | — |
-
-Ningún secreto (contraseñas, cadenas de conexión, claves) debe subirse al repositorio (RT_14).
-
-## Documentación disponible
-
-- **Anteproyecto:** [`AnteproyectoInicial-PI1-Equipo3-Uniban.pdf`](docs/avances/AnteproyectoInicial-PI1-Equipo3-Uniban.pdf) – propuesta inicial y planteamiento general.
-- **Requisitos e historias de usuario:** [`HU_y_Requisitos_Tecnicos_Equipo3.pdf`](docs/requisitos/HU_y_Requisitos_Tecnicos_Equipo3.pdf) – 14 HU y 18 requisitos técnicos (incluye HU_13, registro, y HU_14, registro de parcelas).
-- **Modelo de datos:** [`MERv2.drawio`](docs/modelo-datos/MERv2.drawio).
-- **Mockups:** [`MockupsFigma.zip`](docs/mockups/MockupsFigma.zip).
-- **Arquitectura:** [`docs/arquitectura/README.md`](docs/arquitectura/README.md).
-- **Estado del proyecto y avisos del equipo:** [`docs/estado-proyecto.md`](docs/estado-proyecto.md) y [`docs/avisos-equipo.md`](docs/avisos-equipo.md).
-- **Probar y desplegar:** [`docs/guia-prueba-celular.md`](docs/guia-prueba-celular.md), [`docs/lista-verificacion-despliegue.md`](docs/lista-verificacion-despliegue.md) y [`docs/despliegue-render.md`](docs/despliegue-render.md).
-- **Integración con los Equipos 1 y 2:** [`docs/guia-integracion-equipos.md`](docs/guia-integracion-equipos.md) y [`docs/contrato-equipo2.md`](docs/contrato-equipo2.md).
-
-## Estado actual
-
-- [x] Documentación inicial (anteproyecto, HU y RT, MER, mockups).
-- [x] HU_04 local: inventario demo, detalle, entrada y confirmación; cantidades `Float` con dos decimales.
-- [x] Lectura local de inventario y movimientos como soporte de HU_04.
-- [x] Esqueleto backend FastAPI con `/health`, `/api/v1` y configuración por entorno.
-- [x] HU_01: inicio y cierre de sesión con Firebase Authentication (ver [`docs/hu01.md`](docs/hu01.md)).
-- [x] Registro de usuarios: cuenta en Firebase y perfil de productor en PostgreSQL (`/api/v1/users/register`).
-- [x] HU_03: consulta de inventario y movimientos recientes sin conexión, con saldo consistente con su historial (RT_10). Ver [`docs/hu03.md`](docs/hu03.md). El inventario ya es propio de cada cuenta; el catálogo sigue siendo el inicial de demostración.
-- [x] HU_05: consumos (con parcela y ciclo activo) y pérdidas (con motivo) que restan existencia sin dejarla negativa, sin conexión y sincronizados. Ver [`docs/hu05.md`](docs/hu05.md).
-- [x] HU_06: sincronización de movimientos con PostgreSQL (Neon) vía FastAPI, WorkManager y `SYNCED/ERROR`. Ver [`docs/hu06.md`](docs/hu06.md).
-- [x] HU_02: lista de parcelas y detalle con su ciclo activo (fechas y etapa) o aviso sin ciclo; funciona sin conexión. Ver [`docs/hu02.md`](docs/hu02.md).
-- [x] HU_07: historial de movimientos por insumo (con resumen inicial + entradas − consumos − pérdidas = existencia) y general, con filtros por insumo, tipo, parcela y fechas; sin conexión. Ver [`docs/hu07.md`](docs/hu07.md).
-- [x] HU_14: registro de parcelas con ciclo productivo opcional (`/api/v1/parcels`), copia local en Room (versión 2) y barra inferior Parcelas / Inventario. Ver [`docs/hu14.md`](docs/hu14.md).
-
-- [x] HU_13: registro con documento único y recuperación de cuentas sin perfil. Ver [`docs/hu13.md`](docs/hu13.md).
-- [x] Ajustes de inventario: correcciones de existencia con sentido y motivo. Ver [`docs/hu05.md`](docs/hu05.md#ajustes-ajuste-24102026).
-- [x] HU_08: actividades productivas con sus insumos en una sola transacción, pestaña Actividades y sincronización. Ver [`docs/hu08.md`](docs/hu08.md).
-- [x] Autorización por rol (RT_13): el backend solo atiende el rol PRODUCTOR; cualquier otro recibe 403.
-
-La guía de cada historia (implementación y demostración) está en `docs/huNN.md`; la de la primera entrega, con el paso a paso de HU_04, en [`docs/hu04.md`](docs/hu04.md).
-
-## Próximos pasos
-
-- HU_09 a HU_12 y el tipo SALIDA (ver [`docs/estado-proyecto.md`](docs/estado-proyecto.md)); integración con los Equipos 1 y 2 (contrato del Equipo 2 en [`docs/contrato-equipo2.md`](docs/contrato-equipo2.md)).
-- Pendientes de HU_14 (ver [`docs/hu14.md`](docs/hu14.md#pendientes-del-equipo)): actualizar el MER y acordar `id_parcela` con el Equipo 1.
-- Cada cambio del esquema local exige subir la versión de Room y versionar el nuevo `app/schemas/.../N.json` (HU_14: 1 → 2, HU_05: 2 → 3, ajustes: 3 → 4, HU_08: 4 → 5; la siguiente libre es la 6).
-
-## Equipo
-
-**Equipo 3 – Proyecto Integrador 1, UdeA**
+- La app registra ENTRADA, CONSUMO, PERDIDA y AJUSTE; SALIDA no está habilitada en el formulario.
+- La sincronización actual es de subida de movimientos y actividades; el backend sí expone consultas de inventario y parcelas, pero la app no reconstruye todo el inventario desde el servidor al reinstalar.
+- La solicitud de recomendación envía cajas, carton y bolsas, incluso con saldo cero; los movimientos incluidos se limitan a esos empaques. Los campos de consumos y pérdidas no aparecen en el esquema Swagger del Equipo 2 y se deben confirmar con ellos.
+- El contrato exacto del Equipo 2 y algunos despliegues de producción requieren confirmación conjunta; consulte los contratos antes de tratar las muestras como acuerdos cerrados.

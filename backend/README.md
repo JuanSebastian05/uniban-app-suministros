@@ -1,89 +1,92 @@
-# Backend – FastAPI (Equipo 3)
+# Backend FastAPI
 
-API central del sistema. La app Android solo se comunica con este backend (RT_11);
-cualquier integración con los Equipos 1 y 2 pasará por aquí en el futuro.
+API central de la solución. Atiende a la app Android y sirve como puente con los Equipos 1 y 2. El backend está organizado en FastAPI, SQLAlchemy 2, Alembic y PostgreSQL.
 
-**Estado actual:** `GET /health`, `POST /api/v1/movements` (HU_06: recepción idempotente de
-movimientos), `GET /api/v1/inventory` (existencias del usuario) y `POST /api/v1/users/register` /
-`GET /api/v1/users/me` (registro de usuarios, HU_01 y HU_13; el documento de identidad es único: `409 DUPLICATE_DOCUMENT`, ver [`docs/hu13.md`](../docs/hu13.md)) y `POST` / `GET /api/v1/parcels` (registro y
-consulta de parcelas con su ciclo activo, HU_14; ver [`docs/hu14.md`](../docs/hu14.md)) y `POST /api/v1/activities` (actividades productivas, HU_08; ver [`docs/hu08.md`](../docs/hu08.md)). Todo `/api/v1` exige el token de Firebase y
-cada usuario solo lee y modifica el inventario y las parcelas de su propio productor. Las tablas se crean con Alembic: `alembic upgrade head` (requiere `DATABASE_URL`).
-Ver [`docs/hu06.md`](../docs/hu06.md).
+> El código de esta copia incluye migraciones hasta 0011_recomendaciones. La revisión efectiva de Neon y la versión que Render está ejecutando deben verificarse por separado; consultar [estado del proyecto](../docs/estado-proyecto.md).
+
+## Funciones disponibles
+
+| Grupo | Rutas principales | Acceso |
+| --- | --- | --- |
+| Salud | GET /health | Público. |
+| Usuarios | POST /api/v1/users/register, GET /api/v1/users/me | Token Firebase, con reglas de registro/perfil. |
+| Inventario y movimientos | GET /api/v1/inventory, POST /api/v1/movements | Token Firebase; datos del productor autenticado. |
+| Parcelas | POST/GET /api/v1/parcels | Token Firebase; solo parcelas del productor. |
+| Actividades | POST /api/v1/activities | Token Firebase; envío idempotente. |
+| Aforamiento | GET /api/v1/service/parcels, POST /api/v1/aforamientos | Clave de servicio X-API-Key, usada por Equipo 1. |
+| Recomendaciones | POST/GET /api/v1/parcels/{id}/recommendation | Token Firebase; el backend consulta al Equipo 2. |
+| Consulta de aforamiento | GET /api/v1/parcels/{id}/aforamiento y aforamiento incluido en la lista | Token Firebase; datos del productor. |
+
+La clave del Equipo 1 se configura mediante SERVICE_API_KEY. El servicio del Equipo 2 se configura con EQUIPO2_BASE_URL y, si ese equipo la exige, EQUIPO2_API_KEY.
 
 ## Estructura
 
-```text
+~~~text
 backend/
 ├── app/
-│   ├── main.py            # crea la app FastAPI, CORS, /health e incluye /api/v1
-│   ├── api/v1/            # router raíz y endpoints (movements: HU_06)
-│   ├── core/config.py     # configuración por variables de entorno (pydantic-settings)
-│   ├── db/
-│   │   ├── base.py        # Base declarativa de SQLAlchemy
-│   │   └── session.py     # engine perezoso + dependencia get_db()
-│   ├── models/            # modelos ORM (productor, ubicación, insumo, inventario, movimiento, parcela, ciclo)
-│   ├── schemas/           # esquemas Pydantic / contratos OpenAPI
-│   └── services/          # lógica de sincronización idempotente (HU_06)
-├── migrations/            # Alembic (0001 inventario y movimientos · 0002 usuarios · 0003 insumos por productor ·
-│                          #  0004 parcelas y ciclos · 0005 consumos y pérdidas · 0007 documento único · 0008 ajustes · 0009 actividades; la 0006
-│                          #  está reservada para aforamientos). Numeración y orden de despliegue: ../docs/avisos-equipo.md
-├── tests/                 # PyTest: /health, /openapi.json y movimientos
+│   ├── api/                 # dependencias de autenticación y rutas
+│   ├── core/                # configuración
+│   ├── db/                  # base declarativa y sesiones
+│   ├── models/              # productor, inventario, movimientos, parcelas, ciclos, actividad, aforo, recomendación
+│   ├── schemas/             # validación y contratos HTTP
+│   └── services/            # reglas de negocio y clientes externos
+├── migrations/versions/     # Alembic: 0001–0005 y 0007–0011
+├── tests/
 ├── requirements.txt
-├── pytest.ini
 └── .env.example
-```
+~~~
 
-Para esta entrega, el flujo previsto es `api (router) → lógica de inventario → db`.
-`schemas` define los contratos HTTP y `models` las tablas. Se extraerán capas
-adicionales solo si la lógica real las justifica.
+## Requisitos y ejecución local
 
-## Requisitos
+Requisitos: Python 3.11 o superior y PostgreSQL 15 o superior.
 
-- Python 3.11 o superior
-- PostgreSQL 15+ (solo necesario cuando existan endpoints que usen la base de datos)
-
-## Cómo ejecutar
-
-```bash
+~~~powershell
 cd backend
 python -m venv .venv
-# Windows:  .venv\Scripts\activate
-# Linux/Mac: source .venv/bin/activate
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+Copy-Item .env.example .env
+# Completar DATABASE_URL y FIREBASE_PROJECT_ID en .env
+.venv\Scripts\python.exe -m alembic upgrade head
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+~~~
 
-cp .env.example .env        # Windows: copy .env.example .env  → luego editar valores
-uvicorn app.main:app --reload
-```
+- Salud: http://localhost:8000/health
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+- Emulador Android: configura api.baseUrl=http://10.0.2.2:8000/.
 
-- Salud: <http://localhost:8000/health> → `{"status": "ok"}`
-- Swagger UI: <http://localhost:8000/docs>
-- ReDoc: <http://localhost:8000/redoc>
+Las rutas autenticadas requieren un proyecto Firebase válido. Para probar rutas del Equipo 1 localmente, configura un valor ficticio y privado en SERVICE_API_KEY; no reutilices una clave de producción.
 
-Para que el emulador Android lo alcance se usa `http://10.0.2.2:8000/`. Desde un dispositivo
-físico, ejecutar `uvicorn app.main:app --reload --host 0.0.0.0` y usar la IP local del PC.
+## Base de datos
+
+Aplica migraciones con Alembic, no crees tablas manualmente:
+
+~~~powershell
+.venv\Scripts\python.exe -m alembic heads
+.venv\Scripts\python.exe -m alembic upgrade head
+~~~
+
+La revisión de cabeza de este repositorio es 0011_recomendaciones. En Neon, revisa primero la revisión aplicada y sigue el procedimiento de [migraciones de despliegue](../docs/lista-verificacion-despliegue.md). Render no ejecuta migraciones por sí mismo.
+
+## Configuración
+
+Las variables están en .env.example. Las claves sensibles deben permanecer en un .env no versionado o en el panel de secretos de Render.
+
+| Variable | Uso |
+| --- | --- |
+| DATABASE_URL | Conexión PostgreSQL con SQLAlchemy/psycopg. |
+| FIREBASE_PROJECT_ID | Validación de tokens de Firebase. |
+| SERVICE_API_KEY | Clave compartida para rutas del Equipo 1. |
+| EQUIPO2_BASE_URL | URL del servicio de recomendaciones. |
+| EQUIPO2_API_KEY | Opcional según autenticación del Equipo 2. |
+| APP_NAME, ENVIRONMENT, API_V1_PREFIX | Configuración general de FastAPI. |
+| CORS_ORIGINS | Solo necesario para clientes web que requieran CORS. |
 
 ## Despliegue
 
-Publicado en Render: **https://uniban-app-suministros.onrender.com/**. Configuración (carpeta raíz `backend`,
-comandos y variables de entorno) en [`../docs/despliegue-render.md`](../docs/despliegue-render.md).
+La URL configurada para el servicio es https://uniban-app-suministros.onrender.com/. Los pasos, variables y comprobaciones están en [despliegue Render](../docs/despliegue-render.md).
 
-## Pruebas
+## Límite del contrato del Equipo 2
 
-```bash
-pytest
-```
-
-## Variables de entorno
-
-| Variable        | Descripción                                               | Ejemplo |
-|-----------------|-----------------------------------------------------------|---------|
-| `APP_NAME`      | Nombre mostrado en OpenAPI                                | `Uniban Suministros API` |
-| `ENVIRONMENT`   | `development` / `production`                              | `development` |
-| `API_V1_PREFIX` | Prefijo de la API versionada                              | `/api/v1` |
-| `DATABASE_URL`  | Conexión SQLAlchemy a PostgreSQL (**secreto**, solo en `.env`) | `postgresql+psycopg://USUARIO:CLAVE@localhost:5432/uniban_suministros` |
-| `FIREBASE_PROJECT_ID` | ID del proyecto de Firebase; verifica los tokens de `/api/v1` | `uniban-suministros` |
-| `CORS_ORIGINS`  | Orígenes permitidos separados por coma (vacío = sin CORS) | `http://localhost:3000` |
-
-## Decisiones pendientes
-
-- Validar el rol (RT_17): hoy todo usuario registrado es productor y solo ve lo suyo.
+El backend envía solo cajas, carton y bolsas, incluso con saldo cero; los consumos y pérdidas se filtran a esos mismos productos. Usa `POST https://platano-logistica-api.onrender.com/api/v1/recomendar` con `Content-Type: application/json`, y valida/guarda la respuesta. Swagger no declara consumos ni pérdidas, así que su uso debe confirmarse con el Equipo 2. Ver [contrato del Equipo 2](../docs/contrato-equipo2.md).

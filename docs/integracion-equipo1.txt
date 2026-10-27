@@ -1,0 +1,89 @@
+INTEGRACIÓN UNIBÁN: EQUIPO 1 → EQUIPO 3
+Consulta de parcelas y envío de aforamientos
+
+Servidor:
+https://uniban-app-suministros.onrender.com
+
+El Equipo 1 realiza ambas llamadas hacia el backend del Equipo 3. Se autentican con la misma clave compartida. No requieren usuario ni token de Firebase.
+
+1. AUTENTICACIÓN
+
+En ambas solicitudes incluyan:
+
+X-API-Key: SU_CLAVE
+
+Reemplacen SU_CLAVE por el valor que el Equipo 3 les comparta por un canal privado. No lleva el prefijo Bearer y no va en el JSON ni en la URL. Guárdenla como secreto en su servidor; no la incluyan en el código público, una app distribuida ni GitHub.
+
+El usuario del Equipo 3 informó que la clave ya está configurada en Render. Antes de la prueba conjunta, confirmen que el equipo ya recibió la clave por el canal privado acordado.
+
+2. CONSULTAR PARCELAS
+
+GET https://uniban-app-suministros.onrender.com/api/v1/service/parcels
+X-API-Key: SU_CLAVE
+
+Respuesta esperada: HTTP 200.
+
+[
+  {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "name": "La Esperanza",
+    "areaHa": "2.40"
+  }
+]
+
+Usen el id recibido como parcelId al enviar el aforamiento. El área se expresa en hectáreas.
+
+Nota sobre el formato: el acuerdo inicial muestra areaHa como número, pero actualmente la API lo devuelve como texto numérico, por ejemplo "2.40". Si su proceso necesita un valor numérico, conviértanlo. Confirmen este formato durante la prueba conjunta.
+
+Una respuesta [] significa que todavía no hay parcelas registradas.
+
+3. ENVIAR AFORAMIENTO
+
+POST https://uniban-app-suministros.onrender.com/api/v1/aforamientos
+X-API-Key: SU_CLAVE
+Content-Type: application/json
+
+{
+  "id": "22222222-2222-4222-8222-222222222222",
+  "parcelId": "11111111-1111-4111-8111-111111111111",
+  "date": "2026-10-29",
+  "areaHa": 2.40,
+  "estimatedPlants": 1850,
+  "confidence": 0.87
+}
+
+Campos:
+- id: UUID generado por ustedes; conserven el mismo para reintentar ese aforamiento.
+- parcelId: UUID de una parcela obtenida en la consulta anterior.
+- date: fecha del aforamiento, AAAA-MM-DD.
+- areaHa: área aforada en hectáreas, mayor que cero. Es informativa; no necesita coincidir con el área de la parcela.
+- estimatedPlants: entero mayor o igual a cero.
+- confidence: valor de 0 a 1; 0.87 equivale a 87 %. Puede omitirse si no se mide.
+
+Primera aceptación: HTTP 201.
+{
+  "id": "22222222-2222-4222-8222-222222222222",
+  "status": "CREATED"
+}
+
+Reenvío con mismo UUID y mismo contenido: HTTP 200.
+{
+  "id": "22222222-2222-4222-8222-222222222222",
+  "status": "DUPLICATE"
+}
+
+El servicio guarda aforamientos como registros nuevos; no edita uno ya recibido. Para un nuevo aforamiento, generen otro UUID.
+
+4. RESPUESTAS DE ERROR
+
+401: falta la clave o no coincide. Revisen X-API-Key.
+404: la parcela no existe. Consulten de nuevo la lista de parcelas.
+409: el UUID ya existe con datos diferentes. No generen otro UUID para ocultar el conflicto.
+422: algún campo falta o tiene un valor inválido.
+503: el servidor no tiene configurada la clave de servicio. Informen al Equipo 3.
+
+El servicio de Render puede tardar en responder después de estar inactivo. Configuren una espera de al menos 90 segundos.
+
+5. PRUEBA CONJUNTA
+
+Consulten las parcelas, elijan una y envíen un aforamiento. Reenvíen exactamente el mismo cuerpo y UUID para comprobar CREATED y luego DUPLICATE. El Equipo 3 confirmará que el aforamiento aparece en la parcela correspondiente.
