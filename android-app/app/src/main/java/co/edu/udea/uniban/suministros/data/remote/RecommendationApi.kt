@@ -29,7 +29,7 @@ interface RecommendationApi {
     ): Response<RecommendationDto>
 }
 
-/** Recomendación tal como la entrega el backend (camelCase). Los campos que la app no usa (métricas) se ignoran. */
+/** Recomendación tal como la entrega el backend (camelCase). */
 data class RecommendationDto(
     val id: String,
     val parcelId: String,
@@ -41,10 +41,25 @@ data class RecommendationDto(
     val meetsWindow: Boolean,
     val plan: RecommendationPlanDto?,
     val supplies: List<RecommendationSupplyDto>?,
+    val metrics: RecommendationMetricsDto? = null,
 )
 
-/** [reason] es la única observación en texto que entrega el Equipo 2 (por qué no cumple la ventana). */
-data class RecommendationPlanDto(val reason: String?)
+/** Plan completo enviado por el Equipo 2; valores nulos permiten leer recomendaciones locales antiguas. */
+data class RecommendationPlanDto(
+    /** Motivo informado por el servicio, por ejemplo, por qué no cumple la ventana. */
+    val reason: String?,
+    val parcelId: String? = null,
+    val cutDate: String? = null,
+    val vehicleId: String? = null,
+    val order: Int? = null,
+    val estimatedLoadBunches: Int? = null,
+    val meetsWindow: Boolean? = null,
+)
+
+data class RecommendationMetricsDto(
+    val windowCompliance: Double? = null,
+    val capacityUse: Double? = null,
+)
 
 data class RecommendationSupplyDto(
     val name: String,

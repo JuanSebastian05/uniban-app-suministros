@@ -300,7 +300,8 @@ def _to_out(recommendation_id: uuid.UUID, parcel_id: uuid.UUID, generated_at: da
         source_version=reply.version_metodo, volume_bunches=reply.volumen_racimos,
         cut_deadline=reply.fecha_limite_corte, meets_window=reply.cumple_ventana,
         plan=RecommendationPlanOut(
-            cut_date=plan.fecha_corte, order=plan.orden, estimated_load_bunches=plan.carga_estimada_racimos,
+            parcel_id=plan.parcela_id, cut_date=plan.fecha_corte, order=plan.orden,
+            estimated_load_bunches=plan.carga_estimada_racimos,
             meets_window=plan.cumple_ventana, vehicle_id=plan.vehiculo_id, reason=plan.motivo,
         ),
         supplies=[
@@ -337,6 +338,16 @@ def request_recommendation(
     except ValidationError:
         logger.warning("Respuesta del Equipo 2 con forma inesperada", exc_info=True)
         raise Equipo2BadResponse("El servicio de recomendaciones respondió con un formato inesperado.") from None
+
+    # La respuesta debe referirse a la parcela solicitada en ambos niveles del contrato.
+    # Se comparan UUID normalizados para tolerar diferencias de mayúsculas/minúsculas.
+    try:
+        top_level_parcel_id = uuid.UUID(reply.parcela_id)
+        plan_parcel_id = uuid.UUID(reply.item_plan.parcela_id)
+    except ValueError:
+        raise Equipo2BadResponse("El servicio de recomendaciones respondió con una parcela no válida.") from None
+    if top_level_parcel_id != parcel_id or plan_parcel_id != parcel_id:
+        raise Equipo2BadResponse("El servicio de recomendaciones respondió para una parcela diferente.")
 
     generated_at = datetime.now(timezone.utc)
     out = _to_out(uuid.uuid4(), parcel_id, generated_at, reply)

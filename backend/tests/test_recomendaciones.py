@@ -44,11 +44,12 @@ def new_uuid() -> str:
 
 def reply(**extra) -> dict:
     """Una `RespuestaRecomendacion` válida del Equipo 2."""
+    parcel_id = extra.pop("parcela_id", "P-018")
     body = {
-        "parcela_id": "P-018", "periodo": "2026-W44", "volumen_racimos": 1850.0,
+        "parcela_id": parcel_id, "periodo": "2026-W44", "volumen_racimos": 1850.0,
         "fecha_limite_corte": "2026-11-02T14:30:00", "cumple_ventana": True, "version_metodo": "v0.3.1",
         "item_plan": {
-            "parcela_id": "P-018", "fecha_corte": "2026-11-02T08:00:00", "vehiculo_id": "V-3", "orden": 1,
+            "parcela_id": parcel_id, "fecha_corte": "2026-11-02T08:00:00", "vehiculo_id": "V-3", "orden": 1,
             "carga_estimada_racimos": 420, "cumple_ventana": True, "motivo": None,
         },
         "insumos": [
@@ -59,6 +60,8 @@ def reply(**extra) -> dict:
         ],
         "metricas": {"cumplimiento_ventana": 1.0, "uso_capacidad": 0.88},
     }
+    plan_overrides = extra.pop("item_plan", {})
+    body["item_plan"].update(plan_overrides)
     body.update(extra)
     return body
 
@@ -68,7 +71,7 @@ class FakeEquipo2:
 
     def __init__(self):
         self.bodies: list[dict] = []
-        self.answer = lambda body: reply()
+        self.answer = lambda body: reply(parcela_id=body["parcela_id"])
 
     def recommend(self, body: dict) -> dict:
         self.bodies.append(copy.deepcopy(body))
@@ -179,8 +182,8 @@ def test_pide_la_recomendacion_la_guarda_y_la_devuelve(client, session_factory, 
     assert data["cutDeadline"].startswith("2026-11-02T14:30")
     assert data["meetsWindow"] is True
     assert data["plan"] == {
-        "cutDate": "2026-11-02T08:00:00", "order": 1, "estimatedLoadBunches": 420, "meetsWindow": True,
-        "vehicleId": "V-3", "reason": None,
+        "parcelId": ready["id"], "cutDate": "2026-11-02T08:00:00", "order": 1, "estimatedLoadBunches": 420,
+        "meetsWindow": True, "vehicleId": "V-3", "reason": None,
     }
     assert [s["name"] for s in data["supplies"]] == ["cajas", "bolsas"]
     assert data["supplies"][0] == {
@@ -372,7 +375,7 @@ def test_respuesta_con_forma_invalida_responde_502_y_no_guarda(client, session_f
 
 
 def test_campos_extra_del_equipo2_se_ignoran(client, ready, equipo2):
-    equipo2.answer = lambda body: reply(campo_nuevo={"x": 1})
+    equipo2.answer = lambda body: reply(parcela_id=body["parcela_id"], campo_nuevo={"x": 1})
     assert post_recommendation(client, ready["id"]).status_code == 201
 
 
@@ -400,7 +403,9 @@ def test_sin_recomendaciones_responde_404(client, ready):
 
 def test_devuelve_la_ultima_guardada(client, ready, equipo2):
     first = post_recommendation(client, ready["id"]).json()
-    equipo2.answer = lambda body: reply(periodo="2026-W45", volumen_racimos=2100.0, version_metodo="v0.4.0")
+    equipo2.answer = lambda body: reply(
+        parcela_id=body["parcela_id"], periodo="2026-W45", volumen_racimos=2100.0, version_metodo="v0.4.0",
+    )
     second = post_recommendation(client, ready["id"]).json()
     assert first["id"] != second["id"]
 

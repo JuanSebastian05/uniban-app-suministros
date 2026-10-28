@@ -7,8 +7,9 @@
 
 import uuid
 from datetime import date, datetime
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.movements import CamelModel
 
@@ -22,29 +23,29 @@ class Equipo2ItemPlan(_Equipo2Model):
     parcela_id: str
     fecha_corte: datetime
     vehiculo_id: str | None = None
-    orden: int
-    carga_estimada_racimos: int
+    orden: int = Field(ge=1)
+    carga_estimada_racimos: int = Field(ge=0)
     cumple_ventana: bool
     motivo: str | None = None
 
 
 class Equipo2Insumo(_Equipo2Model):
-    insumo: str
+    insumo: Literal["cajas", "carton", "bolsas"]
     fecha: date
-    cantidad_requerida: float
-    inventario_disponible: float
-    deficit: float
+    cantidad_requerida: float = Field(ge=0)
+    inventario_disponible: float = Field(ge=0)
+    deficit: float = Field(ge=0)
 
 
 class Equipo2Metricas(_Equipo2Model):
-    cumplimiento_ventana: float
-    uso_capacidad: float
+    cumplimiento_ventana: float = Field(ge=0, le=1)
+    uso_capacidad: float = Field(ge=0)
 
 
 class Equipo2Respuesta(_Equipo2Model):
     parcela_id: str
-    periodo: str
-    volumen_racimos: float
+    periodo: str = Field(pattern=r"^\d{4}-W(?:0[1-9]|[1-4]\d|5[0-3])$")
+    volumen_racimos: float = Field(ge=0)
     fecha_limite_corte: datetime
     cumple_ventana: bool
     version_metodo: str
@@ -54,8 +55,9 @@ class Equipo2Respuesta(_Equipo2Model):
 
 
 class RecommendationPlanOut(CamelModel):
-    """Plan de corte de la parcela. ``reason`` es la única observación en texto que entrega el Equipo 2."""
+    """Plan de corte completo que entrega el Equipo 2."""
 
+    parcel_id: str
     cut_date: datetime
     order: int
     estimated_load_bunches: int

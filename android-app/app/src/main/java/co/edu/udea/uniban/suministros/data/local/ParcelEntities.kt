@@ -48,8 +48,8 @@ data class AforamientoEntity(
 
 /**
  * Copia local de la última recomendación del Equipo 2 para una parcela (HU_12), servida por nuestro backend. Una fila por
- * parcela y **sin clave foránea hacia `parcels`** (A-04). [suppliesJson] guarda la lista de insumos como JSON (solo se
- * muestra, nunca se consulta por insumo). Las fechas se guardan como texto ISO tal como llegan.
+ * parcela y **sin clave foránea hacia `parcels`** (A-04). [suppliesJson] guarda la lista de insumos; [planJson] y
+ * [metricsJson] conservan el resto de la respuesta para consulta sin conexión. Las fechas se guardan como texto ISO.
  */
 @Entity(tableName = "parcel_recommendations")
 data class RecommendationEntity(
@@ -63,6 +63,10 @@ data class RecommendationEntity(
     val meetsWindow: Boolean,
     val reason: String?,
     val suppliesJson: String,
+    /** Plan completo del Equipo 2 para conservar campos opcionales y funcionar sin conexión. */
+    val planJson: String? = null,
+    /** Indicadores completos del Equipo 2; nulos en recomendaciones guardadas antes de HU_12 ampliada. */
+    val metricsJson: String? = null,
 )
 
 /** Parcela con su ciclo activo (si lo tiene), para la lista de parcelas. */

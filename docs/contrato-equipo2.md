@@ -113,7 +113,7 @@ El backend local ya coincide con el endpoint y el esquema de respuesta publicado
 
 ## Respuesta que consume el código actual
 
-Con base en el esquema OpenAPI documentado, el backend valida y guarda campos como volumen estimado, fecha límite de corte, cumplimiento de ventana, plan de corte, lista de insumos y métricas. La app los muestra en el detalle de parcela. La forma que el código espera es equivalente a:
+Con base en el contrato confirmado, el backend valida y guarda el volumen, fechas, cumplimiento, versión del método, plan completo, insumos y métricas. También comprueba que el `parcela_id` principal y el del plan coincidan con la parcela solicitada. La app presenta esa información en el detalle de parcela; nuestra API entrega los nombres en camelCase y agrega `id` y `generatedAt`. La forma recibida del Equipo 2 es equivalente a:
 
 ~~~json
 {
@@ -124,6 +124,7 @@ Con base en el esquema OpenAPI documentado, el backend valida y guarda campos co
   "cumple_ventana": true,
   "version_metodo": "v0.3.1",
   "item_plan": {
+    "parcela_id": "11111111-1111-4111-8111-111111111111",
     "fecha_corte": "2026-11-02T08:00:00",
     "orden": 1,
     "carga_estimada_racimos": 420,
@@ -147,7 +148,7 @@ Con base en el esquema OpenAPI documentado, el backend valida y guarda campos co
 }
 ~~~
 
-La respuesta documentada no incluye un campo de exceso. La app no calcula exceso ni genera predicciones; muestra lo que recibe. Si la HU requiere exceso u observaciones por cada insumo, debe ampliarse el contrato de respuesta.
+La respuesta documentada no incluye un campo de exceso. La app no calcula exceso ni genera predicciones; muestra lo que recibe. El backend valida cantidades no negativas, orden desde 1, el rango del cumplimiento y el formato de semana ISO. Si la HU requiere exceso u observaciones por cada insumo, debe ampliarse el contrato de respuesta.
 
 ## Errores y operación técnica
 
@@ -156,7 +157,7 @@ La respuesta documentada no incluye un campo de exceso. La app no calcula exceso
 - El backend consulta el servicio externo con reintento ante fallos temporales; la app permite una espera más larga para esta operación.
 - Si el servicio no responde, nuestro backend informa indisponibilidad. Si la respuesta externa no corresponde al esquema esperado, devuelve error de respuesta.
 - `EQUIPO2_BASE_URL` permite cambiar la URL. `EQUIPO2_API_KEY` se admite como configuración opcional, pero el OpenAPI no declara esa autenticación y el usuario no ha reportado que el equipo la exija.
-- La migración 0011 crea la tabla central de recomendaciones. El código Android usa Room 8 para guardar la última por parcela y el estado local de sincronización.
+- La migración 0011 crea la tabla central de recomendaciones. El código Android usa Room 9; `8 → 9` conserva el plan y las métricas completas en la copia sin conexión.
 
 ## Estado de despliegue
 

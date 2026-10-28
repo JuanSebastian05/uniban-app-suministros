@@ -6,7 +6,7 @@
 
 La solución permite administrar inventario de forma local y sin conexión, registrar parcelas, ciclos y actividades, y sincronizar los datos con el backend. También están implementadas en el código ambas integraciones: se reciben aforamientos del Equipo 1 y se solicitan recomendaciones al Equipo 2.
 
-El código local contiene migraciones de backend hasta **0011** y Room versión **8**. Room 8 agrega estado de sincronización local; no modifica el backend. El usuario informó que la migración **0010 llegó a main** y que **SERVICE_API_KEY está configurada en Render**. Esta revisión no consultó GitHub, Render ni Neon; por eso no confirma qué versión está desplegada ni la revisión actual de la base de producción.
+El código local contiene migraciones de backend hasta **0011** y Room versión **9**. Room 9 conserva el plan completo y las métricas de recomendaciones para consulta sin conexión; no requiere una nueva migración del backend. El usuario informó que la migración **0010 llegó a main** y que **SERVICE_API_KEY está configurada en Render**. Esta revisión no consultó GitHub, Render ni Neon; por eso no confirma qué versión está desplegada ni la revisión actual de la base de producción.
 
 ## Funcionalidad implementada en el código
 
@@ -20,7 +20,7 @@ El código local contiene migraciones de backend hasta **0011** y Room versión 
 | Sincronización | Implementada | Movimientos y actividades se envían con UUID idempotente. No hay descarga completa del inventario para reconstruirlo tras reinstalar o cambiar de teléfono. |
 | Integración Equipo 1 | Implementada en el código | GET /api/v1/service/parcels y POST /api/v1/aforamientos, protegidos por X-API-Key; idempotencia por UUID. La app consulta el aforamiento más reciente. |
 | HU_09 | Implementada en el código | Muestra el aforamiento más reciente de la parcela y conserva una copia local para consulta offline. |
-| Integración Equipo 2 y HU_12 | Implementadas en el código local | La app pide una recomendación a nuestro backend; este envía solo cajas, carton y bolsas, procesa y guarda la respuesta. La llamada real desde Render todavía no se verificó. |
+| Integración Equipo 2 y HU_12 | Implementadas en el código local | La app pide una recomendación a nuestro backend; este envía solo cajas, carton y bolsas, valida y guarda la respuesta. La app muestra resumen, plan de corte, insumos, métricas y versión del método, también sin conexión. La llamada real desde Render todavía no se verificó. |
 | HU_10 Estado de sincronización | Implementada en código local | Resumen de pendientes, actividad en curso, última sincronización exitosa, errores por movimiento/actividad y reintento manual. Falta ejecutar la demostración manual en dispositivo. Ver [hu10.md](hu10.md). |
 | HU_11 Buscar y filtrar insumos | Parcial | Busca por nombre localmente; falta filtro por categoría y combinación con la búsqueda. Ver [hu11.md](hu11.md). |
 
@@ -48,7 +48,7 @@ El código local contiene migraciones de backend hasta **0011** y Room versión 
 
 | Componente | Versión en el código | Observación |
 | --- | --- | --- |
-| Room | 8 | Incluye parcelas/ciclos, actividades, aforamientos, recomendaciones y metadatos/errores de sincronización. Migraciones automáticas hasta 8. |
+| Room | 9 | Incluye parcelas/ciclos, actividades, aforamientos, recomendaciones completas y metadatos/errores de sincronización. Migraciones automáticas hasta 9. |
 | Alembic | Cabeza 0011_recomendaciones | Cadena 0001–0005 y 0007–0011. No existe una revisión 0006 en esta copia. |
 | Producción Neon | No verificada en esta revisión | No inferirla de que una migración esté en main. Consultar alembic_version antes de nuevas migraciones. |
 
