@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -34,9 +35,14 @@ fun InventoryScreen(
     onSyncStatus: (() -> Unit)? = null,
 ) {
     var search by rememberSaveable { mutableStateOf("") }
+    var category by rememberSaveable { mutableStateOf<String?>(null) }
+    var categoryMenuOpen by remember { mutableStateOf(false) }
     var confirmLogout by rememberSaveable { mutableStateOf(false) }
     if (confirmLogout) LogoutDialog(onConfirm = { confirmLogout = false; onLogout() }, onDismiss = { confirmLogout = false })
-    val filtered = state.items.filter { it.name.contains(search.trim(), ignoreCase = true) }
+    val categories = state.items.map { it.category }.distinct().sortedBy { it.lowercase() }
+    val filtered = state.items.filter {
+        it.name.contains(search.trim(), ignoreCase = true) && (category == null || it.category == category)
+    }
     InventoryScaffold(
         title = "Inventario",
         pendingCount = state.pendingCount,
@@ -77,6 +83,36 @@ fun InventoryScreen(
                         singleLine = true, shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth(),
                     )
+                }
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Categoría", style = MaterialTheme.typography.labelMedium)
+                        Box {
+                            OutlinedButton(
+                                onClick = { categoryMenuOpen = true },
+                                modifier = Modifier.fillMaxWidth().testTag("inventory-category-filter"),
+                                shape = RoundedCornerShape(12.dp),
+                            ) {
+                                Text(category ?: "Todas las categorías", Modifier.weight(1f))
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = "Elegir categoría")
+                            }
+                            DropdownMenu(
+                                expanded = categoryMenuOpen,
+                                onDismissRequest = { categoryMenuOpen = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Todas las categorías") },
+                                    onClick = { category = null; categoryMenuOpen = false },
+                                )
+                                categories.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(option) },
+                                        onClick = { category = option; categoryMenuOpen = false },
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
                 if (onSyncStatus != null) item {
                     OutlinedCard(
