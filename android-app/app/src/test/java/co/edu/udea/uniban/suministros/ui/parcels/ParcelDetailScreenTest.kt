@@ -63,6 +63,9 @@ class ParcelDetailScreenTest {
         compose.onNodeWithText("2,4 ha").assertIsDisplayed()
         compose.onNodeWithText("Día 10 del ciclo").assertIsDisplayed()
         compose.onNodeWithText("En curso").assertIsDisplayed()
+        compose.onNodeWithText("Estado del ciclo").assertIsDisplayed()
+        compose.onNodeWithText("Fecha de fin").assertIsDisplayed()
+        compose.onNodeWithText("Sin finalizar").assertIsDisplayed()
     }
 
     @Test fun indicaQueNoHayCicloActivo() {

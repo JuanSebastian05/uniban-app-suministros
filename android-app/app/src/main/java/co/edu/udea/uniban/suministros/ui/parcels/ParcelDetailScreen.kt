@@ -308,8 +308,9 @@ private fun ActiveCycle(parcel: ParcelSummary, today: LocalDate) {
                 StatusChip(CycleStatus.fromCode(parcel.currentStatus ?: parcel.cycleStatus))
             }
             HorizontalDivider()
+            DetailRow("Estado del ciclo", "En curso")
             DetailRow("Fecha de inicio", ParcelValidation.formatDate(start))
-            DetailRow("Fecha de fin", "En curso")
+            DetailRow("Fecha de fin", "Sin finalizar")
             DetailRow(
                 "Duración",
                 when (day) {

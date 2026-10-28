@@ -4,6 +4,8 @@
 
 ## Resumen ejecutivo
 
+El detalle del ciclo productivo distingue «Estado del ciclo: En curso» de «Fecha de fin: Sin finalizar» para los ciclos activos (ajuste de interfaz del 28/10/2026).
+
 La solución permite administrar inventario de forma local y sin conexión, registrar parcelas, ciclos y actividades, y sincronizar los datos con el backend. También están implementadas en el código ambas integraciones: se reciben aforamientos del Equipo 1 y se solicitan recomendaciones al Equipo 2.
 
 El código local contiene migraciones de backend hasta **0012** y Room versión **10**. Las nuevas operaciones permiten cambiar de etapa, finalizar ciclos y comenzar el siguiente; durante el descanso, la parcela conserva el último ciclo para asociarle actividades. El usuario informó que la migración **0010 llegó a main** y que **SERVICE_API_KEY está configurada en Render**. Esta revisión no consultó GitHub, Render ni Neon; por eso no confirma qué versión está desplegada ni la revisión actual de la base de producción.
@@ -22,7 +24,7 @@ El código local contiene migraciones de backend hasta **0012** y Room versión 
 | HU_09 | Implementada en el código | Muestra el aforamiento más reciente de la parcela y conserva una copia local para consulta offline. |
 | Integración Equipo 2 y HU_12 | Implementadas en el código local | La app pide una recomendación a nuestro backend; este envía solo cajas, carton y bolsas, valida y guarda la respuesta. La app muestra resumen, plan de corte, insumos, métricas y versión del método, también sin conexión. La llamada real desde Render todavía no se verificó. |
 | HU_10 Estado de sincronización | Implementada en código local | Resumen de pendientes, actividad en curso, última sincronización exitosa, errores por movimiento/actividad y reintento manual. Falta ejecutar la demostración manual en dispositivo. Ver [hu10.md](hu10.md). |
-| HU_11 Buscar y filtrar insumos | Parcial | Busca por nombre localmente; falta filtro por categoría y combinación con la búsqueda. Ver [hu11.md](hu11.md). |
+| HU_11 Buscar y filtrar insumos | Implementada en código local | Búsqueda por nombre y selector de categoría combinables, sin conexión. Pendiente demostración manual en dispositivo. Ver [hu11.md](hu11.md). |
 
 ## Integraciones: situación y pendientes
 

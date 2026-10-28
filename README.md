@@ -2,7 +2,7 @@
 
 Aplicación Android offline-first para que productores de plátano gestionen inventario, movimientos, parcelas y actividades. Un backend FastAPI central sincroniza los datos, recibe aforamientos del Equipo 1 y consulta recomendaciones del Equipo 2.
 
-> **Estado de referencia: 28/10/2026.** HU_01–10, HU_12–14 y las integraciones de servicio con los Equipos 1 y 2 están implementadas en el código local. HU_11 está parcialmente implementada. El tipo de movimiento **SALIDA** todavía no se puede registrar desde la app. El estado del código y las verificaciones de despliegue se distinguen en [estado del proyecto](docs/estado-proyecto.md).
+> **Estado de referencia: 28/10/2026.** HU_01–14 y las integraciones de servicio con los Equipos 1 y 2 están implementadas en el código local. HU_11 incluye búsqueda por nombre y filtro por categoría combinables sin conexión. El tipo de movimiento **SALIDA** todavía no se puede registrar desde la app. El estado del código y las verificaciones de despliegue se distinguen en [estado del proyecto](docs/estado-proyecto.md).
 
 ## Qué resuelve
 
