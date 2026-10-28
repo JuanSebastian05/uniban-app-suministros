@@ -29,7 +29,7 @@ La UI no accede directamente al DAO ni conoce detalles HTTP. El Equipo 1 se aute
 | ui/navigation | Navegación, protección de sesión y pestañas principales. |
 | data/auth | Estado de sesión y perfil; integración con Firebase. |
 | data | Repositorios de inventario, parcelas, sincronización e integración con recomendaciones. |
-| data/local | Entidades, DAO y base Room, versión 8. Esquemas exportados en android-app/app/schemas. |
+| data/local | Entidades, DAO y base Room, versión 9. Esquemas exportados en android-app/app/schemas. |
 | data/remote | Interfaces Retrofit para usuarios, movimientos, actividades, parcelas y recomendaciones. |
 | sync | Programación y ejecución de sincronización con WorkManager. |
 | core/network | Cliente HTTP, URL base y tiempos de espera. |

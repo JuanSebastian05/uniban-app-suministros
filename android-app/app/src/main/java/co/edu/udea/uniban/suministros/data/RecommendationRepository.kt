@@ -6,6 +6,8 @@ import co.edu.udea.uniban.suministros.data.local.StarterInventory
 import co.edu.udea.uniban.suministros.data.remote.ApiErrorDto
 import co.edu.udea.uniban.suministros.data.remote.RecommendationApi
 import co.edu.udea.uniban.suministros.data.remote.RecommendationDto
+import co.edu.udea.uniban.suministros.data.remote.RecommendationMetricsDto
+import co.edu.udea.uniban.suministros.data.remote.RecommendationPlanDto
 import com.google.gson.Gson
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
@@ -23,6 +25,23 @@ data class RecommendationSupply(
     val deficit: Double,
 )
 
+/** Plan de corte tal como lo calculó el Equipo 2. */
+data class RecommendationPlan(
+    val parcelId: String?,
+    val cutDate: String?,
+    val vehicleId: String?,
+    val order: Int?,
+    val estimatedLoadBunches: Int?,
+    val meetsWindow: Boolean?,
+    val reason: String?,
+)
+
+/** Indicadores del método del Equipo 2. Las proporciones se presentan como porcentajes. */
+data class RecommendationMetrics(
+    val windowCompliance: Double?,
+    val capacityUse: Double?,
+)
+
 /** Última recomendación guardada de una parcela (HU_12). Las fechas llegan como texto ISO y se muestran tal cual. */
 data class ParcelRecommendation(
     val parcelId: String,
@@ -37,6 +56,8 @@ data class ParcelRecommendation(
     /** Observación del Equipo 2 (por qué no cumple la ventana), si la hay. */
     val reason: String?,
     val supplies: List<RecommendationSupply>,
+    val plan: RecommendationPlan? = null,
+    val metrics: RecommendationMetrics? = null,
 )
 
 /** Resultado de pedir una recomendación nueva. */
@@ -155,19 +176,42 @@ class RecommendationRepository(
         gson.fromJson(response.errorBody()?.charStream(), ApiErrorDto::class.java)?.detail?.code
     }.getOrNull()
 
-    private fun RecommendationDto.toEntity() = RecommendationEntity(
+    private fun RecommendationDto.toEntity(): RecommendationEntity {
+        val recommendationPlan = plan?.toDomain()
+        val recommendationMetrics = metrics?.toDomain()
+        return RecommendationEntity(
+            parcelId = parcelId,
+            recommendationId = id,
+            period = period,
+            generatedAt = generatedAt,
+            sourceVersion = sourceVersion,
+            volumeBunches = volumeBunches,
+            cutDeadline = cutDeadline,
+            meetsWindow = meetsWindow,
+            reason = recommendationPlan?.reason?.takeIf { it.isNotBlank() },
+            suppliesJson = gson.toJson(
+                supplies.orEmpty().map {
+                    RecommendationSupply(it.name, it.date, it.requiredQuantity, it.availableQuantity, it.deficit)
+                },
+            ),
+            planJson = recommendationPlan?.let { gson.toJson(it) },
+            metricsJson = recommendationMetrics?.let { gson.toJson(it) },
+        )
+    }
+
+    private fun RecommendationPlanDto.toDomain() = RecommendationPlan(
         parcelId = parcelId,
-        recommendationId = id,
-        period = period,
-        generatedAt = generatedAt,
-        sourceVersion = sourceVersion,
-        volumeBunches = volumeBunches,
-        cutDeadline = cutDeadline,
+        cutDate = cutDate,
+        vehicleId = vehicleId,
+        order = order,
+        estimatedLoadBunches = estimatedLoadBunches,
         meetsWindow = meetsWindow,
-        reason = plan?.reason?.takeIf { it.isNotBlank() },
-        suppliesJson = gson.toJson(
-            supplies.orEmpty().map { RecommendationSupply(it.name, it.date, it.requiredQuantity, it.availableQuantity, it.deficit) },
-        ),
+        reason = reason,
+    )
+
+    private fun RecommendationMetricsDto.toDomain() = RecommendationMetrics(
+        windowCompliance = windowCompliance,
+        capacityUse = capacityUse,
     )
 
     private fun RecommendationEntity.toDomain() = ParcelRecommendation(
@@ -181,6 +225,8 @@ class RecommendationRepository(
         reason = reason,
         supplies = runCatching { gson.fromJson(suppliesJson, Array<RecommendationSupply>::class.java).toList() }
             .getOrDefault(emptyList()),
+        plan = planJson?.let { runCatching { gson.fromJson(it, RecommendationPlan::class.java) }.getOrNull() },
+        metrics = metricsJson?.let { runCatching { gson.fromJson(it, RecommendationMetrics::class.java) }.getOrNull() },
     )
 
     private companion object {
