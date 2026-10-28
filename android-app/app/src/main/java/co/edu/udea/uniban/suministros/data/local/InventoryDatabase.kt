@@ -7,6 +7,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 /**
+ * Versión 9 (HU_12): conserva el plan completo y las métricas de la recomendación para consulta sin conexión.
  * Versión 8 (HU_10): conserva la última sincronización exitosa y la causa del error más reciente por registro.
  * Versión 7 (HU_12): tabla `parcel_recommendations` (sin FK a `parcels`) con la última recomendación de cada parcela.
  * Versión 6 (HU_09): tabla `parcel_aforamientos` (sin FK a `parcels`) con el aforamiento más reciente de cada parcela.
@@ -17,18 +18,18 @@ import androidx.room.RoomDatabase
  *
  * Room genera cada migración a partir de los esquemas exportados en `app/schemas/...` (desde `1.json`
  * hasta la versión anterior); no se borran ni modifican datos. Al compilar, Room escribe el esquema
- * de la versión nueva (`8.json`) en la misma carpeta: debe versionarse junto con el cambio.
+ * de la versión nueva (`9.json`) en la misma carpeta: debe versionarse junto con el cambio.
  */
 @Database(
     entities = [ProducerEntity::class, LocationEntity::class, SupplyEntity::class,
         InventoryEntity::class, MovementEntity::class, ParcelEntity::class, ProductionCycleEntity::class,
         ActivityEntity::class, AforamientoEntity::class, RecommendationEntity::class, SyncMetadataEntity::class],
-    version = 8,
+    version = 9,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5), AutoMigration(from = 5, to = 6),
-        AutoMigration(from = 6, to = 7), AutoMigration(from = 7, to = 8),
+        AutoMigration(from = 6, to = 7), AutoMigration(from = 7, to = 8), AutoMigration(from = 8, to = 9),
     ],
 )
 abstract class InventoryDatabase : RoomDatabase() {

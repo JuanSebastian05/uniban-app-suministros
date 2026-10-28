@@ -33,7 +33,7 @@ import java.util.Locale
 
 /**
  * Sección «Recomendaciones» del detalle de la parcela (HU_12): volumen estimado, fecha límite de corte, si cumple la
- * ventana y los insumos con su déficit. Solo muestra lo que calculó el Equipo 2; la app no calcula nada.
+ * ventana, el plan de corte, los empaques y las métricas del Equipo 2; la app no calcula nada.
  * Estados: consultando, con datos (también sin conexión), sin recomendación aún, pidiendo y problema.
  */
 @Composable
@@ -124,6 +124,18 @@ private fun RecommendationCard(recommendation: ParcelRecommendation) {
             RecommendationRow("Volumen estimado", "${formatBunches(recommendation.volumeBunches)} racimos")
             RecommendationRow("Fecha límite de corte", formatDateTime(recommendation.cutDeadline))
             WindowIndicator(recommendation.meetsWindow)
+            recommendation.plan?.let { plan ->
+                HorizontalDivider()
+                Text("Plan de corte", style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                plan.cutDate?.let { RecommendationRow("Fecha programada", formatDateTime(it)) }
+                plan.order?.let { RecommendationRow("Orden de corte", it.toString()) }
+                plan.estimatedLoadBunches?.let {
+                    RecommendationRow("Carga estimada", "${formatBunches(it.toDouble())} racimos")
+                }
+                RecommendationRow("Vehículo", plan.vehicleId?.takeIf { it.isNotBlank() } ?: "Sin asignar")
+                plan.meetsWindow?.let { WindowIndicator(it, isPlan = true) }
+            }
             recommendation.reason?.let {
                 Text(
                     "Observación: $it",
@@ -134,6 +146,8 @@ private fun RecommendationCard(recommendation: ParcelRecommendation) {
             }
             HorizontalDivider()
             Text("Insumos", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Cantidades en unidades", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (recommendation.supplies.isEmpty()) {
                 Text(
                     "El servicio no indicó insumos para este periodo.",
@@ -143,6 +157,19 @@ private fun RecommendationCard(recommendation: ParcelRecommendation) {
                 )
             }
             recommendation.supplies.forEach { SupplyRow(it) }
+            recommendation.metrics?.let { metrics ->
+                if (metrics.windowCompliance != null || metrics.capacityUse != null) {
+                    HorizontalDivider()
+                    Text("Indicadores", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    metrics.windowCompliance?.let {
+                        RecommendationRow("Cumplimiento de ventana", formatPercent(it))
+                    }
+                    metrics.capacityUse?.let {
+                        RecommendationRow("Uso de capacidad", formatPercent(it))
+                    }
+                }
+            }
             HorizontalDivider()
             Text(
                 "Generada el ${formatGenerated(recommendation.generatedAt)} · periodo ${recommendation.period}",
@@ -150,20 +177,33 @@ private fun RecommendationCard(recommendation: ParcelRecommendation) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.testTag("recommendation-generated"),
             )
+            RecommendationRow("Método", recommendation.sourceVersion)
         }
     }
 }
 
 @Composable
-private fun WindowIndicator(meets: Boolean) {
+private fun WindowIndicator(meets: Boolean, isPlan: Boolean = false) {
+    val tag = when {
+        isPlan && meets -> "plan-window-meets"
+        isPlan -> "plan-window-fails"
+        meets -> "window-meets"
+        else -> "window-fails"
+    }
+    val text = when {
+        isPlan && meets -> "El plan cumple la ventana"
+        isPlan -> "El plan no cumple la ventana"
+        meets -> "Cumple la ventana de despacho"
+        else -> "No cumple la ventana de despacho"
+    }
     Surface(
         color = if (meets) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer,
         contentColor = if (meets) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.error,
         shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.testTag(if (meets) "window-meets" else "window-fails"),
+        modifier = Modifier.testTag(tag),
     ) {
         Text(
-            if (meets) "Cumple la ventana de despacho" else "No cumple la ventana de despacho",
+            text,
             Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
@@ -220,6 +260,9 @@ internal fun formatBunches(value: Double): String = formatAmount(value)
 /** Cantidades con separador de miles y hasta dos decimales: «1.850», «12,5». */
 internal fun formatAmount(value: Double): String =
     java.text.NumberFormat.getNumberInstance(SPANISH).apply { maximumFractionDigits = 2 }.format(value)
+
+/** Las métricas del Equipo 2 son proporciones: 0.35 se presenta como 35 %. */
+internal fun formatPercent(value: Double): String = "${formatAmount(value * 100)}%"
 
 /** «02/11/2026 14:30» a partir de un texto ISO sin zona; si no se puede leer, se muestra tal cual. */
 internal fun formatDateTime(iso: String): String =

@@ -22,7 +22,7 @@ La app Android se comunica únicamente con nuestro backend. El Equipo 1 escribe 
 | App Android | Kotlin, Jetpack Compose, Room, Retrofit, WorkManager; uso offline-first. |
 | Identidad | Firebase Authentication; el backend verifica el token y el rol de productor. |
 | Backend | FastAPI, SQLAlchemy, Alembic y PostgreSQL. |
-| Base local | Room, actualmente versión 8. |
+| Base local | Room, actualmente versión 9. |
 | Base central | PostgreSQL; configuración de producción documentada para Neon. |
 | Servicio web | Render, URL https://uniban-app-suministros.onrender.com. |
 
