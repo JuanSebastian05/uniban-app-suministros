@@ -24,7 +24,9 @@ interface UserApi {
      * existe en Firebase pero nunca se registró en el backend (cuenta huérfana, P-02).
      */
     @GET("users/me")
-    suspend fun me(@Header("Authorization") authorization: String): Response<Unit>
+    suspend fun me(@Header("Authorization") authorization: String): Response<UserProfileDto>
 }
 
 data class RegisterProfileDto(val name: String, val document: String, val phone: String?)
+
+data class UserProfileDto(val name: String?)

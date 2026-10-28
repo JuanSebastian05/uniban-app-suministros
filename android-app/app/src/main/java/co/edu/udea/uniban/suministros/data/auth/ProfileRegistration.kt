@@ -37,11 +37,14 @@ internal suspend fun sendProfile(api: UserApi, idToken: String, registration: Re
  * Cualquier otra cosa (sin red, 401, 5xx, servidor dormido) es [ProfileState.Unknown]: no se debe
  * bloquear al productor por un fallo que no prueba que le falte el perfil.
  */
-internal suspend fun fetchProfileState(api: UserApi, idToken: String): ProfileState =
+internal suspend fun fetchProfileState(api: UserApi, idToken: String, onName: (String) -> Unit = {}): ProfileState =
     try {
         val response = api.me("Bearer $idToken")
         when {
-            response.isSuccessful -> ProfileState.Complete
+            response.isSuccessful -> {
+                response.body()?.name?.takeIf { it.isNotBlank() }?.let(onName)
+                ProfileState.Complete
+            }
             response.code() == 404 -> ProfileState.Missing
             else -> ProfileState.Unknown
         }

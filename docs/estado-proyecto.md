@@ -14,6 +14,7 @@ El código local contiene migraciones de backend hasta **0012** y Room versión 
 
 | Área | Estado actual | Alcance y límites |
 | --- | --- | --- |
+| Inicio | Implementado en código local | Bienvenida, resumen de parcelas con acceso por estado, acciones rápidas, errores, registros recientes y sincronización. Cambio inmediato entre las cuatro pestañas, incluida la lista general de Actividades. Ver [inicio.md](inicio.md). |
 | Identidad y perfiles | Implementada | Firebase Authentication; el backend mantiene el perfil del productor, exige autenticación en rutas de usuario y valida el rol PRODUCTOR. |
 | Inventario | Implementado | Catálogo por productor, consulta offline, entradas, consumos, pérdidas, ajustes, saldo no negativo e historial. La app no permite registrar SALIDA. |
 | Catálogo de empaque | Implementado en el código local de esta rama | cajas, carton, bolsas, categoría Empaque, unidad unidad, saldo inicial cero. El alta también se aplica a cuentas ya inicializadas sin borrar sus datos. |

@@ -175,7 +175,7 @@ fun InventoryScreen(
 
 
 @Composable
-private fun LogoutDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+internal fun LogoutDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.logout_dialog_title)) },

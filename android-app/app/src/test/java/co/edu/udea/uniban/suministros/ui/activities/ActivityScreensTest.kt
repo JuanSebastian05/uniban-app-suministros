@@ -147,7 +147,7 @@ class ActivityScreensTest {
     @Test fun laParcelaElegidaSinCicloMuestraElAviso() {
         viewModel.selectParcel("p2")
         showForm()
-        compose.onNodeWithText("Esta parcela no tiene un ciclo activo: inicia uno para registrar actividades.")
+        compose.onNodeWithText("Esta parcela aún no tiene ciclos para asociar actividades. Inicia uno primero.")
             .performScrollTo().assertIsDisplayed()
     }
 }
