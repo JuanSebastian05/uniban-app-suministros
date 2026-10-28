@@ -26,6 +26,7 @@ import kotlinx.coroutines.withContext
  * tanto la sesión no se publica, para que la app no entre al inventario con un perfil a medias.
  */
 class FirebaseAuthRepository(context: Context, private val userApi: UserApi) : AuthRepository {
+    private val names = context.applicationContext.getSharedPreferences("profile_names", Context.MODE_PRIVATE)
     private val auth: FirebaseAuth? =
         if (FirebaseApp.getApps(context).isEmpty()) null else FirebaseAuth.getInstance()
 
@@ -85,7 +86,10 @@ class FirebaseAuthRepository(context: Context, private val userApi: UserApi) : A
             } catch (error: Exception) {
                 Result.failure(AuthException(mapFirebaseError(error)))
             }
-            if (result.isFailure) discard(firebase, user) else saved = true
+            if (result.isFailure) discard(firebase, user) else {
+                names.edit().putString(user.uid, registration.name).apply()
+                saved = true
+            }
             return result
         } finally {
             registering = false
@@ -99,15 +103,20 @@ class FirebaseAuthRepository(context: Context, private val userApi: UserApi) : A
         val firebase = auth ?: return
         val user = firebase.currentUser ?: return
         if (profile.value == ProfileState.Complete) return
+        var fetchedName: String? = null
         val result = try {
-            fetchProfileState(userApi, user.getIdToken(false).await().token.orEmpty())
+            fetchProfileState(userApi, user.getIdToken(false).await().token.orEmpty()) { fetchedName = it }
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {
             ProfileState.Unknown
         }
         // La cuenta pudo cambiar mientras llegaba la respuesta (el servidor tarda al despertar).
-        if (firebase.currentUser?.uid == user.uid) profile.value = result
+        if (firebase.currentUser?.uid == user.uid) {
+            fetchedName?.let { names.edit().putString(user.uid, it).apply() }
+            publish(user.toSession())
+            profile.value = result
+        }
     }
 
     override suspend fun completeProfile(name: String, document: String, phone: String?): Result<Unit> {
@@ -121,7 +130,11 @@ class FirebaseAuthRepository(context: Context, private val userApi: UserApi) : A
         } catch (error: Exception) {
             Result.failure(AuthException(mapFirebaseError(error)))
         }
-        if (result.isSuccess && firebase.currentUser?.uid == user.uid) profile.value = ProfileState.Complete
+        if (result.isSuccess && firebase.currentUser?.uid == user.uid) {
+            names.edit().putString(user.uid, name).apply()
+            publish(user.toSession())
+            profile.value = ProfileState.Complete
+        }
         return result
     }
 
@@ -141,11 +154,12 @@ class FirebaseAuthRepository(context: Context, private val userApi: UserApi) : A
     }
 
     override fun startDemo() {
-        if (demoAvailable) publish(SessionState.Authenticated(DEMO_UID, null))
+        if (demoAvailable) publish(SessionState.Authenticated(DEMO_UID, null, "Productor"))
     }
 
     private fun FirebaseUser?.toSession(): SessionState =
-        if (this == null) SessionState.Unauthenticated else SessionState.Authenticated(uid, email)
+        if (this == null) SessionState.Unauthenticated
+        else SessionState.Authenticated(uid, email, names.getString(uid, null) ?: displayName)
 
     private fun SessionState.uid(): String? = (this as? SessionState.Authenticated)?.uid
 

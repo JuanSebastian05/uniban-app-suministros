@@ -7,6 +7,23 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface InventoryDao {
+    /** Una sola consulta acotada y reactiva para la portada; no carga el historial completo. */
+    @Query("""
+        SELECT a.id AS id, 'ACTIVITY' AS kind, a.type AS type, p.name AS name,
+            NULL AS quantity, NULL AS unit, a.date, a.createdAt,
+            a.parcelId, NULL AS inventoryId
+        FROM activities a LEFT JOIN parcels p ON a.parcelId = p.id
+        UNION ALL
+        SELECT m.id, 'MOVEMENT' AS kind, m.type, s.name AS name,
+            m.quantity, s.unit, m.date, m.createdAt, m.parcelId, m.inventoryId
+        FROM movements m JOIN inventory i ON m.inventoryId = i.id
+        JOIN supplies s ON i.supplyId = s.id
+        WHERE m.activityId IS NULL
+        ORDER BY date DESC, createdAt DESC, kind, id
+        LIMIT 3
+    """)
+    fun observeHomeRecords(): Flow<List<HomeRecord>>
+
     @Query("""
         SELECT i.id, s.name, s.category, s.unit, l.name AS location, i.quantity
         FROM inventory i JOIN supplies s ON i.supplyId = s.id

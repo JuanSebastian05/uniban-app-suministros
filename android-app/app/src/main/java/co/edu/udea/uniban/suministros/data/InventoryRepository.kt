@@ -68,6 +68,7 @@ class InventoryRepository(
     private val dao = database.inventoryDao()
     private val starter = StarterInventory(ownerUid)
     val inventory = dao.observeInventory()
+    val homeRecords = dao.observeHomeRecords()
     val movements = dao.observeMovements()
     val pendingCount = dao.observePendingCount()
     val syncingCount = dao.observeSyncingCount()
