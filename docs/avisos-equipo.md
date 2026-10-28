@@ -26,7 +26,9 @@ Ver [contrato de Equipo 2](contrato-equipo2.md) y [TXT para compartir](integraci
 
 ## Versiones de esquema y despliegue
 
-- En este repositorio, Alembic tiene cabeza 0012_ciclos_etapas_y_descanso y Room está en versión 10 (gestión de ciclos y estado de descanso).
+- En este repositorio, Alembic tiene cabeza **0013_cosechas_despachos** y Room está en versión **11** (cosecha real y despacho). La migración anterior 0012 y los esquemas históricos no se modificaron.
+- Antes de instalar el APK de HU_15–16 en un entorno compartido, ensayar 0013 en PostgreSQL temporal y desplegar backend con esa migración. No se aplicó a Neon desde esta tarea.
+- Las cosechas y despachos son datos del Equipo 3. Se preservan rutas y JSON de los otros equipos y las modificaciones locales del usuario en ambos contratos. Las recomendaciones antiguas sin trazabilidad de ciclo/aforamiento se conservan; para operaciones nuevas se necesita solicitar una recomendación con esa procedencia.
 - La revisión real de Neon no se puede deducir de la rama main ni del código que Render expone. Consultar la revisión antes de modificar la base.
 - Render no ejecuta Alembic automáticamente. Ensayar en una base temporal, aplicar el esquema compatible y luego desplegar el código.
 - Antes de una nueva migración, comprobar que Alembic tenga una sola cabeza y que la revisión pueda subirse desde la versión real de la base.

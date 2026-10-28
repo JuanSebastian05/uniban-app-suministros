@@ -42,6 +42,8 @@ data class RecommendationDto(
     val plan: RecommendationPlanDto?,
     val supplies: List<RecommendationSupplyDto>?,
     val metrics: RecommendationMetricsDto? = null,
+    val aforamientoId: String? = null,
+    val cycleId: String? = null,
 )
 
 /** Plan completo enviado por el Equipo 2; valores nulos permiten leer recomendaciones locales antiguas. */

@@ -95,3 +95,4 @@ class Movement(Base):
     adjust_direction: Mapped[str | None] = mapped_column(String(12))
     # HU_08: actividad a la que pertenece el consumo (nula si se registró suelto desde el inventario).
     activity_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("activities.id"), index=True)
+    dispatch_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("dispatches.id"), index=True)

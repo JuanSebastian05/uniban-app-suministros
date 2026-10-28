@@ -16,16 +16,16 @@ enum class ActivityType(val label: String) {
         fun fromCode(code: String?): ActivityType? = entries.firstOrNull { it.name == code }
     }
 
-    /** Aviso orientativo; nunca impide guardar la actividad. */
+    /** Explica las reglas de las actividades con etapa obligatoria. El repositorio también las valida. */
     fun stageWarning(currentStatus: String?): String? = when {
         this == COSECHA && currentStatus == CycleStatus.EN_PREPARACION.name ->
-            "La etapa actual es En preparación. La cosecha suele registrarse durante Producción; puedes guardarla."
+            "La cosecha requiere Producción y se registra con cantidad, aforamiento y recomendación."
         this == SIEMBRA && currentStatus == CycleStatus.PRODUCCION.name ->
-            "La etapa actual es Producción. La siembra suele registrarse durante En preparación; puedes guardarla."
+            "La siembra solo se permite durante En preparación."
         this == SIEMBRA && currentStatus == CycleStatus.DESCANSO.name ->
-            "La parcela está en descanso. Si esta siembra inicia otro cultivo, considera abrir un nuevo ciclo; puedes guardar el registro."
+            "La siembra requiere iniciar un ciclo en En preparación. No se permite durante Descanso."
         this == COSECHA && currentStatus == CycleStatus.DESCANSO.name ->
-            "La parcela está en descanso. Revisa que la fecha de cosecha sea correcta; puedes guardar el registro."
+            "La cosecha solo se permite durante Producción. Durante Descanso puedes despachar racimos ya cosechados."
         else -> null
     }
 }

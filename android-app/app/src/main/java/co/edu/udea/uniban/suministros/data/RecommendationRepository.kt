@@ -1,5 +1,6 @@
 package co.edu.udea.uniban.suministros.data
 
+import androidx.room.withTransaction
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
 import co.edu.udea.uniban.suministros.data.local.RecommendationEntity
 import co.edu.udea.uniban.suministros.data.local.StarterInventory
@@ -102,7 +103,7 @@ interface RecommendationSource {
  * a los 15 min); es de mejor esfuerzo. En la sesión de demostración no hay servidor.
  */
 class RecommendationRepository(
-    database: InventoryDatabase,
+    private val database: InventoryDatabase,
     private val api: RecommendationApi,
     private val ownerUid: String,
     private val warmUp: suspend () -> Unit = {},
@@ -124,7 +125,7 @@ class RecommendationRepository(
             val body = response.body()
             when {
                 response.isSuccessful && body != null -> {
-                    dao.upsertRecommendation(body.toEntity())
+                    saveRecommendation(body)
                     RecommendationRefresh.UPDATED
                 }
                 response.code() == 404 -> RecommendationRefresh.NONE
@@ -153,7 +154,7 @@ class RecommendationRepository(
             val code = response.code()
             when {
                 response.isSuccessful && body != null -> {
-                    dao.upsertRecommendation(body.toEntity())
+                    saveRecommendation(body)
                     RecommendationResult.Saved
                 }
                 code == 409 && errorCode(response) == NO_AFORAMIENTO -> RecommendationResult.NoAforamiento
@@ -175,6 +176,13 @@ class RecommendationRepository(
     private fun errorCode(response: Response<*>): String? = runCatching {
         gson.fromJson(response.errorBody()?.charStream(), ApiErrorDto::class.java)?.detail?.code
     }.getOrNull()
+
+    private suspend fun saveRecommendation(body: RecommendationDto) {
+        database.withTransaction {
+            dao.upsertRecommendation(body.toEntity())
+            body.productionPlan(gson)?.let { database.productionDao().savePlan(it) }
+        }
+    }
 
     private fun RecommendationDto.toEntity(): RecommendationEntity {
         val recommendationPlan = plan?.toDomain()

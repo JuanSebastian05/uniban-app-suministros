@@ -6,8 +6,10 @@ Cada HU agrega su router con ``api_router.include_router(...)``.
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import activities, aforamientos, inventory, movements, parcels, service, users
+from app.api.v1.endpoints import production
 
 api_router = APIRouter()
+api_router.include_router(production.router, tags=["cosechas y despachos"])
 api_router.include_router(activities.router, prefix="/activities", tags=["actividades"])
 api_router.include_router(aforamientos.router, prefix="/aforamientos", tags=["servicio (otros equipos)"])
 api_router.include_router(inventory.router, prefix="/inventory", tags=["inventario"])

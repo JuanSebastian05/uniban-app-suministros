@@ -8,7 +8,7 @@ El detalle del ciclo productivo distingue «Estado del ciclo: En curso» de «Fe
 
 La solución permite administrar inventario de forma local y sin conexión, registrar parcelas, ciclos y actividades, y sincronizar los datos con el backend. También están implementadas en el código ambas integraciones: se reciben aforamientos del Equipo 1 y se solicitan recomendaciones al Equipo 2.
 
-El código local contiene migraciones de backend hasta **0012** y Room versión **10**. Las nuevas operaciones permiten cambiar de etapa, finalizar ciclos y comenzar el siguiente; durante el descanso, la parcela conserva el último ciclo para asociarle actividades. El usuario informó que la migración **0010 llegó a main** y que **SERVICE_API_KEY está configurada en Render**. Esta revisión no consultó GitHub, Render ni Neon; por eso no confirma qué versión está desplegada ni la revisión actual de la base de producción.
+El código local contiene migraciones de backend hasta **0013** y Room versión **11**. Incluye cosecha real y despacho por periodo, además de la gestión de etapas y ciclos. Durante el descanso se permiten las demás actividades y despachos con producto disponible; siembra exige preparación y cosecha exige producción. El usuario informó que la migración **0010 llegó a main** y que **SERVICE_API_KEY está configurada en Render**. Esta revisión no consultó GitHub, Render ni Neon; por eso no confirma qué versión está desplegada ni la revisión actual de la base de producción.
 
 ## Funcionalidad implementada en el código
 
@@ -19,7 +19,9 @@ El código local contiene migraciones de backend hasta **0012** y Room versión 
 | Inventario | Implementado | Catálogo por productor, consulta offline, entradas, consumos, pérdidas, ajustes, saldo no negativo e historial. La app no permite registrar SALIDA. |
 | Catálogo de empaque | Implementado en el código local de esta rama | cajas, carton, bolsas, categoría Empaque, unidad unidad, saldo inicial cero. El alta también se aplica a cuentas ya inicializadas sin borrar sus datos. |
 | Parcelas y ciclos | Implementados | Registro, cambio de etapa, cierre con estado derivado de descanso e inicio de ciclos siguientes; requiere conexión para modificar ciclos. |
-| Actividades productivas | Implementadas | Avisos orientativos según etapa sin bloqueos; durante el descanso se asocian al último ciclo cerrado. |
+| Actividades productivas | Implementadas | Siembra solo en preparación; cosecha estructurada solo en producción. Las demás actividades conservan su comportamiento, incluido el último ciclo durante el descanso. |
+| HU_15 Cosecha real | Implementada en código local | Parciales contra una recomendación de origen por parcela/periodo; exceso requiere confirmación. Una actividad COSECHA por operación. Ver [hu15.md](hu15.md). |
+| HU_16 Despacho | Implementada en código local | Saldo real, consumo acumulado de empaques sin duplicar, guardado atómico y sincronización. Producción o descanso. Ver [hu16.md](hu16.md). |
 | Sincronización | Implementada | Movimientos y actividades se envían con UUID idempotente. No hay descarga completa del inventario para reconstruirlo tras reinstalar o cambiar de teléfono. |
 | Integración Equipo 1 | Implementada en el código | GET /api/v1/service/parcels y POST /api/v1/aforamientos, protegidos por X-API-Key; idempotencia por UUID. La app consulta el aforamiento más reciente. |
 | HU_09 | Implementada en el código | Muestra el aforamiento más reciente de la parcela y conserva una copia local para consulta offline. |
@@ -51,11 +53,15 @@ El código local contiene migraciones de backend hasta **0012** y Room versión 
 
 | Componente | Versión en el código | Observación |
 | --- | --- | --- |
-| Room | 10 | Incluye parcelas/ciclos, su historial de etapas, actividades, aforamientos, recomendaciones, estado actual y ciclo asociado en descanso. Migraciones automáticas hasta 10. |
-| Alembic | Cabeza 0012_ciclos_etapas_y_descanso | Cadena 0001–0005 y 0007–0012. No existe una revisión 0006 en esta copia. |
+| Room | 11 | Añade archivo de planes, cosechas, despachos y enlace de sus empaques. Migración 10→11 probada sin pérdida de inventario, movimientos ni recomendaciones. |
+| Alembic | Cabeza 0013_cosechas_despachos | Sobre 0012. Tablas harvests y dispatches, procedencia de recomendaciones y movements.dispatch_id. No modifica migraciones históricas. |
 | Producción Neon | No verificada en esta revisión | No inferirla de que una migración esté en main. Consultar alembic_version antes de nuevas migraciones. |
 
 ## Verificaciones que siguen pendientes de evidencia
+
+La ampliación HU_15–16 pasó 330 pruebas Android y 293 pruebas del backend en bases locales de prueba, incluido sincronizar una cosecha después de un cierre posterior en el mismo día. Se generó APK y lint no reportó errores. El SQL de subida/bajada de 0013 se compiló con dialecto PostgreSQL sin abrir una conexión; **no equivale a ejecutar la migración en PostgreSQL**. No se encontraron binarios locales de PostgreSQL ni Docker para ese ensayo. Quedan pendientes el ensayo de Alembic en PostgreSQL temporal y la demostración en dispositivo. Ver [diseño](cosecha-despacho-diseno.md), [arquitectura](arquitectura/README.md) y [OpenAPI propio](api/production.openapi.json).
+
+Confirmación pendiente con el Equipo 2: la semana enviada es la del aforamiento, mientras que el periodo guardado es el recibido en su respuesta. Cuando difieren, el código conserva la respuesta y no la reinterpreta. El avance se agrupa por ese periodo recibido.
 
 1. Confirmar la revisión desplegada en Neon y que Render esté ejecutando el código correspondiente.
 2. Ejecutar una prueba conjunta del Equipo 1 contra las rutas desplegadas, incluyendo lectura de parcelas y reenvío idempotente de un aforamiento.

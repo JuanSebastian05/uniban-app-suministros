@@ -1,22 +1,48 @@
-# Integración con el Equipo 2: recomendaciones
+# Contrato de integración con el Equipo 2
 
-> Actualizado el 27/10/2026 con la aceptación del JSON por el Equipo 2. Se conserva `consumptions` para posible calibración futura, se excluye `losses` y se incorpora una ventana de despacho sintética de 10 horas. La autenticación adicional sigue pendiente de confirmar porque no aparece en OpenAPI.
+**Propósito:** enviar al servicio del Equipo 2 los datos operativos de una parcela y recibir una recomendación de corte, despacho e insumos. Este documento separa la llamada que hace nuestra app a nuestro backend de la llamada que nuestro backend hace al Equipo 2.
 
-## Flujo
+## Recorrido de la información
 
-El productor solicita una recomendación en la app. La app llama al backend del Equipo 3, que toma los datos de la parcela, verifica que tenga aforamiento, forma la petición al Equipo 2, guarda la respuesta y la entrega a la app. La app conserva la última respuesta para mostrarla sin conexión.
+1. El productor solicita una recomendación desde la aplicación.
+2. La app llama a nuestro backend con su token de Firebase.
+3. Nuestro backend reúne los datos de la parcela, el aforamiento más reciente, los empaques y sus consumos recientes; después llama al servicio del Equipo 2.
+4. Nuestro backend guarda la respuesta, la transforma al formato de la app y la devuelve al productor.
 
-- Ruta de nuestro backend: POST y GET /api/v1/parcels/{id}/recommendation.
-- Ruta externa usada por el código: POST https://platano-logistica-api.onrender.com/api/v1/recomendar.
-- Encabezado requerido informado por el Equipo 2: `Content-Type: application/json`; nuestro cliente lo envía.
-- Swagger: https://platano-logistica-api.onrender.com/docs. Su esquema acepta `inventory` como lista de objetos genéricos y la respuesta coincide con `RespuestaRecomendacion`.
-- El OpenAPI no declara autenticación ni API key. Esto no prueba que no exista una regla externa; confirmarlo con el Equipo 2.
-- La app Android no llama directamente al Equipo 2.
-- Las rutas de nuestro backend se autentican con token Firebase del productor.
+La app no llama directamente al Equipo 2.
 
-## Solicitud acordada y enviada por el código
+## A. Llamada de la aplicación a nuestro backend
 
-El Equipo 2 confirmó que acepta el JSON que envía nuestro backend. Para la ventana pidió un margen superior a tres horas; el acuerdo de demostración usa 06:00–16:00 del día siguiente al aforamiento. `consumptions` se conserva aunque actualmente el Equipo 2 no lo procesa. `losses` ya no se envía.
+Para pedir una recomendación nueva:
+
+~~~http
+POST /api/v1/parcels/11111111-1111-4111-8111-111111111111/recommendation
+Authorization: Bearer <FIREBASE_ID_TOKEN>
+~~~
+
+No requiere cuerpo JSON. El productor debe ser dueño de la parcela y esta debe tener al menos un aforamiento enviado por el Equipo 1.
+
+Para consultar la recomendación más reciente ya guardada:
+
+~~~http
+GET /api/v1/parcels/11111111-1111-4111-8111-111111111111/recommendation
+Authorization: Bearer <FIREBASE_ID_TOKEN>
+~~~
+
+El POST solicita y guarda una nueva respuesta. El GET no vuelve a llamar al Equipo 2; entrega la recomendación más reciente disponible.
+
+## B. Llamada de nuestro backend al Equipo 2
+
+~~~http
+POST https://platano-logistica-api.onrender.com/api/v1/recomendar
+Content-Type: application/json
+~~~
+
+Documentación publicada por el Equipo 2: [Swagger](https://platano-logistica-api.onrender.com/docs).
+
+El formato aceptado para esta integración incluye los datos anidados acordados y los campos directos publicados por el Equipo 2. Nuestro backend envía ambos para que el receptor pueda leer el formato que utiliza. Los campos que describen la misma parcela o el mismo período deben coincidir.
+
+### Solicitud que genera actualmente el backend
 
 ~~~json
 {
@@ -46,27 +72,27 @@ El Equipo 2 confirmó que acepta el JSON que envía nuestro backend. Para la ven
       "quantity": 80
     },
     {
-      "supplyId": "88888888-8888-4888-8888-888888888888",
+      "supplyId": "66666666-6666-4666-8666-666666666666",
       "name": "carton",
       "category": "Empaque",
       "unit": "unidad",
-      "quantity": 0
+      "quantity": 120
     },
     {
-      "supplyId": "99999999-9999-4999-8999-999999999999",
+      "supplyId": "77777777-7777-4777-8777-777777777777",
       "name": "bolsas",
       "category": "Empaque",
       "unit": "unidad",
-      "quantity": 0
+      "quantity": 200
     }
   ],
   "consumptions": [
     {
-      "supplyId": "66666666-6666-4666-8666-666666666666",
+      "supplyId": "55555555-5555-4555-8555-555555555555",
       "name": "cajas",
       "unit": "unidad",
       "quantity": 12,
-      "date": "2026-10-05"
+      "date": "2026-10-25"
     }
   ],
   "ventana_despacho": {
@@ -76,89 +102,101 @@ El Equipo 2 confirmó que acepta el JSON que envía nuestro backend. Para la ven
   "parcela_id": "11111111-1111-4111-8111-111111111111",
   "periodo": "2026-W44",
   "num_plantas_estimado": 1850,
-  "area_ha": 2.41,
+  "area_ha": 2.4,
   "calidad_confianza": 0.87
 }
 ~~~
 
-## Lo que el código actual envía
+Los UUID del ejemplo son ilustrativos. En una llamada real:
 
-El backend ya arma una solicitud para el servicio. Además del formato anidado anterior, agrega campos directos que aparecen en el OpenAPI del Equipo 2: parcela, periodo, plantas estimadas, área y, cuando existe, confianza.
+- `producerId` es el identificador UUID interno del productor; no es el UID de Firebase.
+- `parcel.id` y `parcela_id` identifican la misma parcela.
+- `areaHa` corresponde al área registrada de la parcela. `area_ha` corresponde al área incluida en el aforamiento.
+- `period` y `periodo` representan la semana ISO del aforamiento.
+- `activeCycle` puede ser `null` si la parcela no tiene un ciclo activo. `confidence` contiene la confianza recibida o `null` si no existe; `calidad_confianza` se omite en ese caso.
 
-El cuerpo contiene estos datos:
+### Reglas de los datos enviados
 
-| Dato | Regla actual |
+| Dato | Qué se envía |
 | --- | --- |
-| productor y parcela | Identificadores UUID de la cuenta y parcela seleccionada. |
-| ciclo activo | Ciclo vigente o null si la parcela no tiene uno. |
-| aforamiento | El más reciente por fecha; el periodo se deriva como semana ISO. Sin aforamiento no se llama al Equipo 2 y nuestra API responde 409 NO_AFORAMIENTO. |
-| inventario | Solo cajas, carton y bolsas. Suma las existencias por ubicación; si un empaque aún no tiene un movimiento sincronizado, se envía con cantidad cero. Los nombres y la unidad se normalizan a lo acordado. |
-| consumos | Registros CONSUMO de la parcela dentro de los últimos 90 días, solo si corresponden a uno de los tres empaques. |
-| pérdidas | No se envían al Equipo 2. La app las conserva internamente para inventario e historial. |
-| ventana de despacho | Sintética para la demostración: día siguiente a la fecha del aforamiento, de 06:00 a 16:00 (10 horas). Se envía como `YYYY-MM-DDTHH:MM:SS`, sin zona horaria, igual al ejemplo del Equipo 2. |
-| ajustes | No se envían como eventos; su efecto ya está en el saldo actual del inventario. |
+| Inventario | Solo `cajas`, `carton` y `bolsas`, siempre con unidad `unidad` y categoría `Empaque`. Si un material aún no tiene inventario sincronizado, se incluye con cantidad cero. Las existencias se suman entre las ubicaciones del productor. |
+| Consumos | Movimientos de tipo CONSUMO de esos tres materiales, asociados a la parcela y registrados en los últimos 90 días. El Equipo 2 confirmó que por ahora no los utiliza; se mantienen para una posible calibración futura. |
+| Pérdidas | No se envían. |
+| Ventana de despacho | Dato sintético para la demostración: del día siguiente al aforamiento, desde las 06:00 hasta las 16:00 (10 horas). Se entrega como fecha y hora local sin zona horaria explícita. No representa una cita real de despacho. |
 
-Aunque los productos de saldo cero todavía no existen como filas sincronizadas en el backend, la solicitud los incluye con identificadores estables generados con el mismo criterio del catálogo Android. Esto no sincroniza esas filas a la tabla de inventario central; solo completa el cuerpo enviado al Equipo 2.
+## C. Respuesta del Equipo 2
 
-Los nombres son cajas, carton y bolsas, en minúscula y sin tildes; categoría Empaque, unidad unidad y saldo inicial cero.
-
-## Qué está confirmado y qué falta acordar
-
-El Equipo 2 confirmó que acepta el JSON actual y pidió una ventana de despacho con más de tres horas de amplitud. El ejemplo acordado usa diez horas. El OpenAPI publicado confirma la ruta, la cabecera `Content-Type`, los campos directos (`parcela_id`, `periodo`, `num_plantas_estimado`, `area_ha`, `calidad_confianza`), los objetos anidados y el esquema de respuesta. `consumptions` se conserva para uso futuro, aunque actualmente el Equipo 2 no lo utiliza; `losses` se excluyó.
-
-- si requiere autenticación adicional a la cabecera `Content-Type` documentada;
-- qué representa cada fecha, cantidad, déficit y observación devuelta.
-
-El backend local ya coincide con el endpoint y el esquema de respuesta publicados. No se ha hecho una llamada real de recomendación con datos de productor, por lo que la integración productiva todavía debe validarse conjuntamente.
-
-## Respuesta que consume el código actual
-
-Con base en el contrato confirmado, el backend valida y guarda el volumen, fechas, cumplimiento, versión del método, plan completo, insumos y métricas. También comprueba que el `parcela_id` principal y el del plan coincidan con la parcela solicitada. La app presenta esa información en el detalle de parcela; nuestra API entrega los nombres en camelCase y agrega `id` y `generatedAt`. La forma recibida del Equipo 2 es equivalente a:
+El Equipo 2 confirmó este formato de respuesta:
 
 ~~~json
 {
   "parcela_id": "11111111-1111-4111-8111-111111111111",
   "periodo": "2026-W44",
-  "volumen_racimos": 1850,
-  "fecha_limite_corte": "2026-11-02T14:30:00",
+  "volumen_racimos": 145.6,
+  "fecha_limite_corte": "2026-10-29T13:55:00",
   "cumple_ventana": true,
-  "version_metodo": "v0.3.1",
+  "version_metodo": "determinista-v1",
   "item_plan": {
     "parcela_id": "11111111-1111-4111-8111-111111111111",
-    "fecha_corte": "2026-11-02T08:00:00",
-    "orden": 1,
-    "carga_estimada_racimos": 420,
-    "cumple_ventana": true,
+    "fecha_corte": "2026-10-29T13:55:00",
     "vehiculo_id": "V-3",
+    "orden": 1,
+    "carga_estimada_racimos": 146,
+    "cumple_ventana": true,
     "motivo": null
   },
   "insumos": [
     {
       "insumo": "cajas",
-      "fecha": "2026-11-01",
-      "cantidad_requerida": 120,
+      "fecha": "2026-10-29",
+      "cantidad_requerida": 123.76,
       "inventario_disponible": 80,
-      "deficit": 40
+      "deficit": 43.76
     }
   ],
   "metricas": {
     "cumplimiento_ventana": 1.0,
-    "uso_capacidad": 0.88
+    "uso_capacidad": 0.35
   }
 }
 ~~~
 
-La respuesta documentada no incluye un campo de exceso. La app no calcula exceso ni genera predicciones; muestra lo que recibe. El backend valida cantidades no negativas, orden desde 1, el rango del cumplimiento y el formato de semana ISO. Si la HU requiere exceso u observaciones por cada insumo, debe ampliarse el contrato de respuesta.
+Este ejemplo fue compartido por el Equipo 2 con datos de prueba. Los campos de fecha y hora siguen el formato ISO 8601. En el acuerdo compartido no se especifica una zona horaria; ese detalle aún debe aclararse entre los equipos.
 
-## Errores y operación técnica
+Nuestro backend comprueba que la respuesta incluya la parcela solicitada tanto en el nivel principal como en el plan, además de validar fechas, tipos, rangos y nombres de insumo. Si la respuesta no cumple el formato esperado, la recomendación no se guarda y la app recibe un error.
 
-- Antes de pedir la recomendación, el backend exige un aforamiento de la parcela.
-- El cliente envía `Content-Type: application/json` y prueba primero `GET /salud` para despertar el servicio; esa ruta aparece en el OpenAPI.
-- El backend consulta el servicio externo con reintento ante fallos temporales; la app permite una espera más larga para esta operación.
-- Si el servicio no responde, nuestro backend informa indisponibilidad. Si la respuesta externa no corresponde al esquema esperado, devuelve error de respuesta.
-- `EQUIPO2_BASE_URL` permite cambiar la URL. `EQUIPO2_API_KEY` se admite como configuración opcional, pero el OpenAPI no declara esa autenticación y el usuario no ha reportado que el equipo la exija.
-- La migración 0011 crea la tabla central de recomendaciones. El código Android usa Room 10; `8 → 9` conserva el plan y las métricas completas y `9 → 10` agrega estado de ciclo a la copia local.
+La respuesta debe incluir periodo ISO, volumen no negativo, fecha límite, cumplimiento, versión, plan, lista de insumos y métricas. El orden del plan debe ser al menos 1; su carga y las cantidades de insumos deben ser no negativas. El cumplimiento de ventana debe estar entre 0 y 1 y el uso de capacidad no puede ser negativo. El vehículo y el motivo del plan pueden ser `null`. Los nombres aceptados en `insumo` son `cajas`, `carton` y `bolsas`.
 
-## Estado de despliegue
+### Lo que recibe la aplicación
 
-El código local incluye la migración 0012. El usuario indicó que 0010 llegó a main; no hay confirmación en esta revisión de que 0011/0012 estén en main, aplicadas en Neon o desplegadas en Render. Verificar Neon y Render antes de una prueba con datos reales.
+La respuesta del Equipo 2 usa nombres en español y snake_case. Nuestro backend la entrega a la app con nombres camelCase y agrega el identificador y la fecha de generación del registro:
+
+| Respuesta del Equipo 2 | Campo que recibe la app |
+| --- | --- |
+| `parcela_id`, `periodo`, `version_metodo` | `parcelId`, `period`, `sourceVersion` |
+| `volumen_racimos`, `fecha_limite_corte`, `cumple_ventana` | `volumeBunches`, `cutDeadline`, `meetsWindow` |
+| `item_plan` | `plan`, con fecha, vehículo, orden, carga, cumplimiento y motivo |
+| `insumos` | `supplies`, con nombre, fecha, cantidad requerida, disponible y déficit |
+| `metricas` | `metrics`, con cumplimiento de ventana y uso de capacidad |
+| — | `id` y `generatedAt`, creados por nuestro backend |
+
+La app muestra los datos recibidos; no recalcula el plan, el déficit ni las métricas.
+
+## Errores y comportamiento de la llamada
+
+| HTTP de nuestro backend | Significado |
+| --- | --- |
+| `201 Created` | Se obtuvo y guardó una nueva recomendación. |
+| `401 Unauthorized` / `403 Forbidden` | El token de Firebase falta, no es válido o la cuenta no tiene acceso. |
+| `404 Not Found` | La parcela no pertenece al productor, o el GET no encuentra una recomendación guardada. |
+| `409 Conflict` | La parcela todavía no tiene un aforamiento del Equipo 1. |
+| `502 Bad Gateway` | El servicio rechazó la solicitud o devolvió una respuesta inválida. |
+| `503 Service Unavailable` | El servicio del Equipo 2 no respondió tras los intentos configurados. |
+
+Antes del POST, el cliente hace una consulta de calentamiento a `GET /salud` para ayudar a despertar el servicio. Luego espera hasta 90 segundos por intento y reintenta una vez ante fallos temporales.
+
+## Configuración y estado
+
+- La URL base se configura con `EQUIPO2_BASE_URL`; por defecto usa `https://platano-logistica-api.onrender.com`.
+- La información compartida por el Equipo 2 identifica `Content-Type: application/json` como cabecera obligatoria. Su documentación publicada no declara una autenticación adicional. Nuestro cliente solo agrega `X-API-Key` si se configura `EQUIPO2_API_KEY`; su uso debe acordarse entre los equipos si llegara a ser requerido.
+- El código de este repositorio implementa la preparación, envío, validación, almacenamiento y entrega de la recomendación. Esta guía no certifica por sí sola el despliegue ni una prueba de extremo a extremo en producción; eso se confirma con una llamada conjunta usando datos de prueba.

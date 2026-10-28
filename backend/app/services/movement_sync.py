@@ -19,6 +19,7 @@ import logging
 from decimal import Decimal
 
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Inventory, Location, Movement, Parcel, ProductionCycle, Supply
@@ -100,7 +101,7 @@ def _ensure_inventory(db: Session, data: InventoryIn, producer_id: uuid.UUID) ->
         raise MovementConflict("El insumo pertenece a otro usuario.")
 
     # La ubicación ya es del productor, así que un inventario con la misma ubicación también.
-    inventory = db.get(Inventory, data.id)
+    inventory = db.scalar(select(Inventory).where(Inventory.id == data.id).with_for_update().execution_options(populate_existing=True))
     if inventory is None:
         inventory = Inventory(
             id=data.id,

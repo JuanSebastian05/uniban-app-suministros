@@ -40,7 +40,8 @@ Revisar restricciones, índices y relaciones que agrega el cambio. Conservar un 
 
 - Equipo 1: comprobar SERVICE_API_KEY en el panel de secretos sin copiar el valor a logs o documentación; probar consulta de parcelas y envío duplicado del mismo aforamiento.
 - Equipo 2: comprobar las variables de destino y validar la solicitud y respuesta con el contrato acordado antes de usar el servicio real.
-- El repositorio contiene 0010_aforamientos, 0011_recomendaciones y 0012_ciclos_etapas_y_descanso. No significa que estén aplicadas en Neon ni que estén desplegadas.
+- El repositorio contiene 0010_aforamientos, 0011_recomendaciones, 0012_ciclos_etapas_y_descanso y 0013_cosechas_despachos. No significa que estén aplicadas en Neon ni que estén desplegadas.
+- HU_15–16: ensayar 0012→0013 en PostgreSQL temporal, verificar `alembic check`, probar subida/bajada y concurrencia del cupo/saldo, aplicar el esquema compatible y desplegar el backend antes de instalar el APK Room 11. La prueba de bajada debe hacerse solo en la base temporal y elimina las tablas de las operaciones nuevas.
 
 ## 5. Recuperación
 
