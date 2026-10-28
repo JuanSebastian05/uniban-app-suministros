@@ -136,7 +136,7 @@ fun ParcelFormScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Estado del ciclo", style = MaterialTheme.typography.labelMedium)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        CycleStatus.entries.forEach { status ->
+                        CycleStatus.entries.filter { it != CycleStatus.DESCANSO }.forEach { status ->
                             FilterChip(
                                 selected = state.status == status,
                                 onClick = { viewModel.changeStatus(status) },

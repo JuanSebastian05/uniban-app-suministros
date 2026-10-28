@@ -16,7 +16,7 @@ ActivityType = Literal[
 class ActivityIn(CamelModel):
     id: uuid.UUID
     parcel_id: uuid.UUID
-    # La actividad exige un ciclo: la app solo la registra con un ciclo activo en la parcela.
+    # La actividad exige un ciclo: puede ser el activo o, durante el descanso, el último finalizado.
     cycle_id: uuid.UUID
     type: ActivityType
     date: date

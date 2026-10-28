@@ -40,7 +40,7 @@ data class ActivityFormUiState(
 )
 
 /**
- * Formulario «Registrar actividad» (HU_08): parcela con ciclo activo, tipo, fecha, observación opcional y,
+ * Formulario «Registrar actividad» (HU_08): parcela con ciclo asociado, tipo, fecha, observación opcional y,
  * en el mismo flujo, los insumos usados. Se guarda todo junto en el dispositivo (funciona sin conexión).
  */
 class ActivityFormViewModel(

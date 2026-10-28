@@ -2,7 +2,7 @@
 
 API central de la solución. Atiende a la app Android y sirve como puente con los Equipos 1 y 2. El backend está organizado en FastAPI, SQLAlchemy 2, Alembic y PostgreSQL.
 
-> El código de esta copia incluye migraciones hasta 0011_recomendaciones. La revisión efectiva de Neon y la versión que Render está ejecutando deben verificarse por separado; consultar [estado del proyecto](../docs/estado-proyecto.md).
+> El código de esta copia incluye migraciones hasta 0012_ciclos_etapas_y_descanso. La revisión efectiva de Neon y la versión que Render está ejecutando deben verificarse por separado; consultar [estado del proyecto](../docs/estado-proyecto.md).
 
 ## Funciones disponibles
 
@@ -30,7 +30,7 @@ backend/
 │   ├── models/              # productor, inventario, movimientos, parcelas, ciclos, actividad, aforo, recomendación
 │   ├── schemas/             # validación y contratos HTTP
 │   └── services/            # reglas de negocio y clientes externos
-├── migrations/versions/     # Alembic: 0001–0005 y 0007–0011
+├── migrations/versions/     # Alembic: 0001–0005 y 0007–0012
 ├── tests/
 ├── requirements.txt
 └── .env.example
@@ -67,7 +67,7 @@ Aplica migraciones con Alembic, no crees tablas manualmente:
 .venv\Scripts\python.exe -m alembic upgrade head
 ~~~
 
-La revisión de cabeza de este repositorio es 0011_recomendaciones. En Neon, revisa primero la revisión aplicada y sigue el procedimiento de [migraciones de despliegue](../docs/lista-verificacion-despliegue.md). Render no ejecuta migraciones por sí mismo.
+La revisión de cabeza de este repositorio es 0012_ciclos_etapas_y_descanso. En Neon, revisa primero la revisión aplicada y sigue el procedimiento de [migraciones de despliegue](../docs/lista-verificacion-despliegue.md). Render no ejecuta migraciones por sí mismo.
 
 ## Configuración
 

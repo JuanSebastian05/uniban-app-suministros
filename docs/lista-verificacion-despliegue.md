@@ -1,6 +1,6 @@
 # Lista de verificación para migraciones y despliegues
 
-> Procedimiento vigente para cambios futuros. La copia local de este repositorio tiene como cabeza Alembic 0011_recomendaciones. El usuario indicó que 0010 llegó a main; la revisión real de Neon, la presencia de 0011 en main y el despliegue actual de Render deben confirmarse cada vez.
+> Procedimiento vigente para cambios futuros. La copia local de este repositorio tiene como cabeza Alembic 0012_ciclos_etapas_y_descanso. El usuario indicó que 0010 llegó a main; la revisión real de Neon, la presencia de 0011 y 0012 en main y el despliegue actual de Render deben confirmarse cada vez.
 
 ## 1. Identificar qué se va a desplegar
 
@@ -40,7 +40,7 @@ Revisar restricciones, índices y relaciones que agrega el cambio. Conservar un 
 
 - Equipo 1: comprobar SERVICE_API_KEY en el panel de secretos sin copiar el valor a logs o documentación; probar consulta de parcelas y envío duplicado del mismo aforamiento.
 - Equipo 2: comprobar las variables de destino y validar la solicitud y respuesta con el contrato acordado antes de usar el servicio real.
-- El repositorio contiene 0010_aforamientos y 0011_recomendaciones. No significa que ambas estén aplicadas en Neon ni que estén desplegadas.
+- El repositorio contiene 0010_aforamientos, 0011_recomendaciones y 0012_ciclos_etapas_y_descanso. No significa que estén aplicadas en Neon ni que estén desplegadas.
 
 ## 5. Recuperación
 

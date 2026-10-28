@@ -7,6 +7,7 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.PATCH
 
 /**
  * Parcelas del usuario autenticado (`/api/v1/parcels`, HU_14).
@@ -30,6 +31,27 @@ interface ParcelApi {
         @Header("Authorization") authorization: String,
         @Path("id") parcelId: String,
     ): Response<AforamientoDto>
+
+    @PATCH("parcels/{id}/cycle/stage")
+    suspend fun changeCycleStage(
+        @Header("Authorization") authorization: String,
+        @Path("id") parcelId: String,
+        @Body request: CycleStageUpdateDto,
+    ): Response<ParcelResponseDto>
+
+    @POST("parcels/{id}/cycle/finish")
+    suspend fun finishCycle(
+        @Header("Authorization") authorization: String,
+        @Path("id") parcelId: String,
+        @Body request: CycleFinishDto,
+    ): Response<ParcelResponseDto>
+
+    @POST("parcels/{id}/cycle/start")
+    suspend fun startCycle(
+        @Header("Authorization") authorization: String,
+        @Path("id") parcelId: String,
+        @Body request: CycleStartDto,
+    ): Response<ParcelResponseDto>
 }
 
 data class CycleDto(val id: String, val startDate: String, val status: String)
@@ -44,9 +66,16 @@ data class ParcelResponseDto(
     val name: String,
     val areaHa: BigDecimal,
     val activeCycle: CycleResponseDto?,
+    val currentStatus: String? = null,
+    val activityCycleId: String? = activeCycle?.id,
     /** Aforamiento más reciente del Equipo 1 (HU_09); nulo si la parcela no tiene o el servidor es anterior. */
     val aforamiento: AforamientoDto? = null,
+    val lastCycle: CycleResponseDto? = null,
 )
+
+data class CycleStageUpdateDto(val status: String, val effectiveDate: String)
+data class CycleFinishDto(val endDate: String)
+data class CycleStartDto(val id: String, val startDate: String)
 
 /** Aforamiento del Equipo 1 tal como lo entrega el backend; [confidence] es una fracción entre 0 y 1 (opcional). */
 data class AforamientoDto(

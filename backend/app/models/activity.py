@@ -1,7 +1,7 @@
 """Actividades productivas (HU_08): siembra, fertilización, cosecha, etc.
 
-Una actividad se registra sobre una parcela y su ciclo (el ciclo es obligatorio: la app solo permite
-registrarla con un ciclo activo). Los consumos de insumos que la acompañan son movimientos CONSUMO que
+Una actividad se registra sobre una parcela y su ciclo (el ciclo es obligatorio: puede ser el activo o,
+durante el descanso, el último ciclo finalizado). Los consumos de insumos que la acompañan son movimientos CONSUMO que
 apuntan a ella con ``movements.activity_id``. Los identificadores son UUID generados en el dispositivo (RT_06).
 """
 

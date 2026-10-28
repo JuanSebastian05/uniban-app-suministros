@@ -328,6 +328,11 @@ fun AppNavHost(
                         onRetryAforamiento = aforamientoViewModel::reload,
                         recommendation = recommendation,
                         onRequestRecommendation = { recommendationViewModel?.request() },
+                        cycleSaving = state.cycleSaving,
+                        cycleError = state.cycleError,
+                        onChangeCycleStage = { parcelsViewModel.changeCycleStage(id, it) },
+                        onFinishCycle = { parcelsViewModel.finishCycle(id, it) },
+                        onStartCycle = { parcelsViewModel.startCycle(id, it) },
                         onNewActivity = {
                             navController.navigate(AppDestinations.activityNew(id)) { launchSingleTop = true }
                         },

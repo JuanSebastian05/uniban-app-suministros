@@ -14,6 +14,8 @@ data class ParcelEntity(
     @PrimaryKey val id: String,
     val name: String,
     val areaHa: String,
+    val currentStatus: String? = null,
+    val activityCycleId: String? = null,
 )
 
 /** Ciclo productivo de una parcela; está activo mientras [endDate] sea nulo. */
@@ -28,6 +30,17 @@ data class ProductionCycleEntity(
     val startDate: String,
     val endDate: String?,
     val status: String,
+)
+
+/** Historial local de cambios del ciclo, conservado aunque se refresque la lista de parcelas. */
+@Entity(tableName = "production_cycle_status_changes", indices = [Index("cycleId")])
+data class ProductionCycleStatusChangeEntity(
+    @PrimaryKey val id: String,
+    val cycleId: String,
+    val fromStatus: String?,
+    val toStatus: String,
+    val effectiveDate: String,
+    val changedAt: String,
 )
 
 /**
@@ -77,4 +90,6 @@ data class ParcelSummary(
     val cycleId: String?,
     val cycleStartDate: String?,
     val cycleStatus: String?,
+    val currentStatus: String? = cycleStatus,
+    val activityCycleId: String? = cycleId,
 )

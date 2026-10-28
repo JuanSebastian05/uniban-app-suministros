@@ -9,7 +9,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models import User
 from app.schemas.aforamientos import AforamientoOut
-from app.schemas.parcels import ParcelIn, ParcelOut
+from app.schemas.parcels import CycleFinishIn, CycleStageUpdateIn, CycleStartIn, ParcelIn, ParcelOut
 from app.schemas.recommendations import RecommendationOut
 from app.services.aforamientos import ParcelNotFound, latest_for_producer
 from app.services.recommendations import (
@@ -20,7 +20,9 @@ from app.services.recommendations import (
     latest_recommendation,
     request_recommendation,
 )
-from app.services.parcels import ParcelConflict, create_parcel, list_parcels
+from app.services.parcels import (
+    ParcelConflict, change_cycle_stage, create_parcel, finish_cycle, list_parcels, start_cycle,
+)
 
 router = APIRouter()
 
@@ -67,6 +69,87 @@ def register_parcel(
 )
 def my_parcels(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[ParcelOut]:
     return list_parcels(db, user.producer_id)
+
+
+@router.patch(
+    "/{parcel_id}/cycle/stage",
+    response_model=ParcelOut,
+    summary="Cambiar la etapa del ciclo activo y guardar el cambio en el historial",
+    responses={
+        **_AUTH_RESPONSES,
+        404: {"description": "La parcela no existe o pertenece a otro usuario."},
+        409: {"description": "No hay ciclo activo o la fecha no corresponde al ciclo."},
+    },
+)
+def update_parcel_cycle_stage(
+    parcel_id: uuid.UUID,
+    payload: CycleStageUpdateIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ParcelOut:
+    try:
+        return change_cycle_stage(db, parcel_id, user.producer_id, payload.status, payload.effective_date)
+    except ParcelConflict as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND if error.code == "PARCEL_NOT_FOUND" else status.HTTP_409_CONFLICT,
+            detail={"code": error.code, "message": error.message},
+        ) from error
+
+
+@router.post(
+    "/{parcel_id}/cycle/finish",
+    response_model=ParcelOut,
+    summary="Finalizar el ciclo activo y dejar la parcela en descanso",
+    responses={
+        **_AUTH_RESPONSES,
+        404: {"description": "La parcela no existe o pertenece a otro usuario."},
+        409: {"description": "No hay ciclo activo o la fecha no es válida."},
+    },
+)
+def finish_parcel_cycle(
+    parcel_id: uuid.UUID,
+    payload: CycleFinishIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ParcelOut:
+    try:
+        return finish_cycle(db, parcel_id, user.producer_id, payload.end_date)
+    except ParcelConflict as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND if error.code == "PARCEL_NOT_FOUND" else status.HTTP_409_CONFLICT,
+            detail={"code": error.code, "message": error.message},
+        ) from error
+
+
+@router.post(
+    "/{parcel_id}/cycle/start",
+    response_model=ParcelOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Iniciar un nuevo ciclo productivo en una parcela",
+    responses={
+        200: {"description": "El mismo ciclo ya había sido registrado (idempotente)."},
+        **_AUTH_RESPONSES,
+        404: {"description": "La parcela no existe o pertenece a otro usuario."},
+        409: {"description": "La parcela ya tiene un ciclo activo o la fecha/UUID no es válida."},
+    },
+)
+def start_parcel_cycle(
+    parcel_id: uuid.UUID,
+    payload: CycleStartIn,
+    response: Response,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ParcelOut:
+    try:
+        parcel, created = start_cycle(db, parcel_id, user.producer_id, payload.id, payload.start_date)
+    except ParcelConflict as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND if error.code == "PARCEL_NOT_FOUND" else status.HTTP_409_CONFLICT,
+            detail={"code": error.code, "message": error.message},
+        ) from error
+    if not created:
+        response.status_code = status.HTTP_200_OK
+    return parcel
 
 
 @router.get(

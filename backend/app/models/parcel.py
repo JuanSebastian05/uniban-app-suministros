@@ -14,7 +14,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 
-# Estados del ciclo (mockups): En preparación, Producción, Descanso.
+# En preparación y Producción son etapas de un ciclo; Descanso se conserva para compatibilidad histórica.
 CYCLE_STATUSES = ("EN_PREPARACION", "PRODUCCION", "DESCANSO")
 
 # Hectáreas con dos decimales, hasta 99.999,99 (mismo límite que las cantidades).
@@ -67,3 +67,25 @@ class ProductionCycle(Base):
     status: Mapped[str] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ProductionCycleStatusChange(Base):
+    """Historial de etapas y cierres del ciclo, para conservar la evolución de la parcela."""
+    __tablename__ = "production_cycle_status_changes"
+    __table_args__ = (
+        CheckConstraint(
+            "to_status IN ('EN_PREPARACION', 'PRODUCCION', 'DESCANSO')",
+            name="ck_cycle_status_changes_to_status",
+        ),
+        CheckConstraint(
+            "from_status IS NULL OR from_status IN ('EN_PREPARACION', 'PRODUCCION', 'DESCANSO')",
+            name="ck_cycle_status_changes_from_status",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
+    cycle_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("production_cycles.id", ondelete="CASCADE"), index=True)
+    from_status: Mapped[str | None] = mapped_column(String(20))
+    to_status: Mapped[str] = mapped_column(String(20))
+    effective_date: Mapped[date] = mapped_column(Date)
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
