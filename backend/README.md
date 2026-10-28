@@ -2,7 +2,7 @@
 
 API central de la solución. Atiende a la app Android y sirve como puente con los Equipos 1 y 2. El backend está organizado en FastAPI, SQLAlchemy 2, Alembic y PostgreSQL.
 
-> El código de esta copia incluye migraciones hasta 0012_ciclos_etapas_y_descanso. La revisión efectiva de Neon y la versión que Render está ejecutando deben verificarse por separado; consultar [estado del proyecto](../docs/estado-proyecto.md).
+> El código de esta copia incluye migraciones hasta 0013_cosechas_despachos. La revisión efectiva de Neon y la versión que Render está ejecutando deben verificarse por separado; consultar [estado del proyecto](../docs/estado-proyecto.md).
 
 ## Funciones disponibles
 
@@ -13,6 +13,7 @@ API central de la solución. Atiende a la app Android y sirve como puente con lo
 | Inventario y movimientos | GET /api/v1/inventory, POST /api/v1/movements | Token Firebase; datos del productor autenticado. |
 | Parcelas | POST/GET /api/v1/parcels | Token Firebase; solo parcelas del productor. |
 | Actividades | POST /api/v1/activities | Token Firebase; envío idempotente. |
+| Cosechas y despachos | POST /api/v1/harvests, POST /api/v1/dispatches, GET /api/v1/production/{parcelId} | Token Firebase; datos del productor, cupo por periodo, saldo y empaques en transacción. Ver [contrato propio](../docs/api/production.openapi.json). |
 | Aforamiento | GET /api/v1/service/parcels, POST /api/v1/aforamientos | Clave de servicio X-API-Key, usada por Equipo 1. |
 | Recomendaciones | POST/GET /api/v1/parcels/{id}/recommendation | Token Firebase; el backend consulta al Equipo 2. |
 | Consulta de aforamiento | GET /api/v1/parcels/{id}/aforamiento y aforamiento incluido en la lista | Token Firebase; datos del productor. |

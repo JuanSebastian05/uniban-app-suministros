@@ -215,7 +215,7 @@ fun HomeScreen(
                             Icon(if (activity) LogoIcon else Icons.AutoMirrored.Filled.List, null,
                                 Modifier.size(28.dp), tint = MaterialTheme.colorScheme.primary)
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(if (activity) ActivityType.fromCode(record.type)?.label ?: record.type else MovementType.label(record.type),
+                                Text(if (activity) ActivityType.fromCode(record.type)?.label ?: record.type else if (record.kind == "DISPATCH") "Despacho" else MovementType.label(record.type),
                                     style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                                 Text(if (activity) record.name ?: "Parcela no disponible"
                                     else "${record.name.orEmpty()} · ${record.quantity?.let(Quantity::format).orEmpty()} ${record.unit.orEmpty()}",

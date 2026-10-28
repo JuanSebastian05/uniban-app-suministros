@@ -118,8 +118,9 @@ def test_crea_la_actividad(client, session_factory, parcel):
 @pytest.mark.parametrize(
     "type_", ["FERTILIZACION", "SIEMBRA", "COSECHA", "APLICACION_INSUMO", "CONTROL_FITOSANITARIO", "OTRA"],
 )
-def test_acepta_los_seis_tipos(client, parcel, type_):
-    assert client.post(URL, json=activity(parcel, type=type_)).status_code == 201
+def test_valida_los_tipos_y_sus_etapas(client, parcel, type_):
+    expected = 409 if type_ in ("SIEMBRA", "COSECHA") else 201
+    assert client.post(URL, json=activity(parcel, type=type_)).status_code == expected
 
 
 def test_observacion_es_opcional(client, parcel):

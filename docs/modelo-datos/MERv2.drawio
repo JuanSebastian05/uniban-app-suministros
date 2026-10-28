@@ -1,38 +1,138 @@
-<mxfile host="app.diagrams.net" modified="2026-10-26T00:00:00.000Z" agent="Codex" version="24.7.17">
+<mxfile host="app.diagrams.net" modified="2026-10-28T00:00:00.000Z" agent="Codex" version="24.7.17">
   <diagram name="Modelo actual" id="uniban-modelo-actual">
-    <mxGraphModel dx="1600" dy="950" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="950" math="0" shadow="0">
+    <mxGraphModel dx="1600" dy="950" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1370" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="title" value="MODELO DE DATOS ACTUAL DEL BACKEND (28/10/2026)&#xa;Relaciones basadas en los modelos SQLAlchemy del repositorio; claves foráneas opcionales indicadas como nullable." style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="30" y="10" width="1380" height="50" as="geometry" /></mxCell>
-        <mxCell id="users" value="USUARIOS (users)&#xa;PK id&#xa;firebase_uid UNIQUE&#xa;email, name, document&#xa;document_key UNIQUE&#xa;phone?, role&#xa;FK producer_id UNIQUE" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1"><mxGeometry x="30" y="90" width="230" height="180" as="geometry" /></mxCell>
-        <mxCell id="producers" value="PRODUCTORES (producers)&#xa;PK id&#xa;name" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1"><mxGeometry x="320" y="100" width="220" height="120" as="geometry" /></mxCell>
-        <mxCell id="parcels" value="PARCELAS (parcels)&#xa;PK id&#xa;FK producer_id&#xa;name, name_key UNIQUE por productor&#xa;area_ha, created_at, updated_at" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1"><mxGeometry x="650" y="80" width="250" height="170" as="geometry" /></mxCell>
-        <mxCell id="aforamientos" value="AFORAMIENTOS (aforamientos)&#xa;PK id (lo genera Equipo 1)&#xa;FK parcel_id&#xa;date, area_ha&#xa;estimated_plants, confidence?&#xa;received_at" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1"><mxGeometry x="1020" y="80" width="250" height="170" as="geometry" /></mxCell>
-        <mxCell id="locations" value="UBICACIONES (locations)&#xa;PK id&#xa;FK producer_id&#xa;name" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1"><mxGeometry x="30" y="370" width="230" height="130" as="geometry" /></mxCell>
-        <mxCell id="supplies" value="INSUMOS (supplies)&#xa;PK id&#xa;FK producer_id?&#xa;name, category, unit" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1"><mxGeometry x="320" y="370" width="220" height="140" as="geometry" /></mxCell>
-        <mxCell id="inventory" value="INVENTARIO (inventory)&#xa;PK id&#xa;FK location_id&#xa;FK supply_id&#xa;initial_quantity, quantity&#xa;UNIQUE (location_id, supply_id)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1"><mxGeometry x="620" y="350" width="260" height="170" as="geometry" /></mxCell>
-        <mxCell id="cycles" value="CICLOS PRODUCTIVOS (production_cycles)&#xa;PK id&#xa;FK parcel_id&#xa;start_date, end_date?, status&#xa;máximo un ciclo activo por parcela" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1"><mxGeometry x="950" y="350" width="290" height="160" as="geometry" /></mxCell>
-        <mxCell id="recommendations" value="RECOMENDACIONES (recommendations)&#xa;PK id (lo genera backend)&#xa;FK parcel_id&#xa;period, source_version&#xa;generated_at, payload JSONB" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1"><mxGeometry x="1290" y="350" width="260" height="160" as="geometry" /></mxCell>
-        <mxCell id="cycle-status-changes" value="HISTORIAL DE ETAPAS (production_cycle_status_changes)&#xa;PK id&#xa;FK cycle_id&#xa;from_status?, to_status&#xa;effective_date, changed_at" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1"><mxGeometry x="1290" y="560" width="260" height="130" as="geometry" /></mxCell>
-        <mxCell id="movements" value="MOVIMIENTOS (movements)&#xa;PK id&#xa;FK inventory_id&#xa;FK parcel_id? / cycle_id? / activity_id?&#xa;type, quantity, date, observation&#xa;loss_reason?, adjust_direction?&#xa;received_at" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1"><mxGeometry x="600" y="690" width="300" height="190" as="geometry" /></mxCell>
-        <mxCell id="activities" value="ACTIVIDADES (activities)&#xa;PK id&#xa;FK parcel_id, cycle_id&#xa;type, date, observation&#xa;created_at, updated_at, received_at" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1"><mxGeometry x="980" y="690" width="290" height="160" as="geometry" /></mxCell>
-        <mxCell id="rel-u-p" value="1:1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="users" target="producers"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="rel-p-parcel" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="producers" target="parcels"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="rel-p-location" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="producers" target="locations"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="rel-p-supply" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="producers" target="supplies"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="rel-location-inventory" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="locations" target="inventory"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="rel-supply-inventory" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="supplies" target="inventory"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="rel-inventory-movement" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="inventory" target="movements"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="rel-parcel-cycle" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="parcels" target="cycles"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="rel-parcel-activity" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="parcels" target="activities"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="rel-cycle-activity" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="cycles" target="activities"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="rel-cycle-status-changes" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="cycles" target="cycle-status-changes"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="rel-parcel-movement" value="1:N opcional" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="parcels" target="movements"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="rel-cycle-movement" value="1:N opcional" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="cycles" target="movements"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="rel-activity-movement" value="1:N opcional" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="activities" target="movements"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="rel-parcel-aforo" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="parcels" target="aforamientos"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="rel-parcel-recommendation" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="parcels" target="recommendations"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="title" value="MODELO DE DATOS ACTUAL DEL BACKEND (28/10/2026)&#10;Relaciones basadas en los modelos SQLAlchemy del repositorio; claves foráneas opcionales indicadas como nullable." style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="10" width="1380" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="users" value="USUARIOS (users)&#10;PK id&#10;firebase_uid UNIQUE&#10;email, name, document&#10;document_key UNIQUE&#10;phone?, role&#10;FK producer_id UNIQUE" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="30" y="90" width="230" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="producers" value="PRODUCTORES (producers)&#10;PK id&#10;name" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="320" y="100" width="220" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="parcels" value="PARCELAS (parcels)&#10;PK id&#10;FK producer_id&#10;name, name_key UNIQUE por productor&#10;area_ha, created_at, updated_at" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="650" y="80" width="250" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="aforamientos" value="AFORAMIENTOS (aforamientos)&#10;PK id (lo genera Equipo 1)&#10;FK parcel_id&#10;date, area_ha&#10;estimated_plants, confidence?&#10;received_at" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="80" width="250" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="locations" value="UBICACIONES (locations)&#10;PK id&#10;FK producer_id&#10;name" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="30" y="370" width="230" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="supplies" value="INSUMOS (supplies)&#10;PK id&#10;FK producer_id?&#10;name, category, unit" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="320" y="370" width="220" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="inventory" value="INVENTARIO (inventory)&#10;PK id&#10;FK location_id&#10;FK supply_id&#10;initial_quantity, quantity&#10;UNIQUE (location_id, supply_id)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="620" y="350" width="260" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="cycles" value="CICLOS PRODUCTIVOS (production_cycles)&#10;PK id&#10;FK parcel_id&#10;start_date, end_date?, status&#10;máximo un ciclo activo por parcela" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="950" y="350" width="290" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="recommendations" value="RECOMENDACIONES (recommendations)&#10;PK id (lo genera backend)&#10;FK parcel_id&#10;period, source_version&#10;generated_at, payload JSONB&#10;FK aforamiento_id?, cycle_id?&#10;NULL solo para recomendaciones históricas" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="350" width="260" height="205" as="geometry" />
+        </mxCell>
+        <mxCell id="cycle-status-changes" value="HISTORIAL DE ETAPAS (production_cycle_status_changes)&#10;PK id&#10;FK cycle_id&#10;from_status?, to_status&#10;effective_date, changed_at" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="560" width="260" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="movements" value="MOVIMIENTOS (movements)&#10;PK id&#10;FK inventory_id&#10;FK parcel_id? / cycle_id? / activity_id?&#10;type, quantity, date, observation&#10;loss_reason?, adjust_direction?&#10;received_at&#10;FK dispatch_id? (solo CONSUMO de empaque)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="600" y="690" width="300" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="activities" value="ACTIVIDADES (activities)&#10;PK id&#10;FK parcel_id, cycle_id&#10;type, date, observation&#10;created_at, updated_at, received_at" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="980" y="690" width="290" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="rel-u-p" value="1:1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="users" target="producers">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel-p-parcel" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="producers" target="parcels">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel-p-location" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="producers" target="locations">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel-p-supply" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="producers" target="supplies">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel-location-inventory" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="locations" target="inventory">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel-supply-inventory" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="supplies" target="inventory">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel-inventory-movement" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="inventory" target="movements">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel-parcel-cycle" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="parcels" target="cycles">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel-parcel-activity" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="parcels" target="activities">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel-cycle-activity" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="cycles" target="activities">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel-cycle-status-changes" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="cycles" target="cycle-status-changes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel-parcel-movement" value="1:N opcional" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="parcels" target="movements">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel-cycle-movement" value="1:N opcional" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="cycles" target="movements">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel-activity-movement" value="1:N opcional" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="activities" target="movements">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel-parcel-aforo" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="parcels" target="aforamientos">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel-parcel-recommendation" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;startArrow=none;" edge="1" parent="1" source="parcels" target="recommendations">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="harvests" value="COSECHAS REALES (harvests)&#10;PK/FK id → activities.id (misma operación)&#10;FK parcel_id, cycle_id&#10;FK recommendation_id, aforamiento_id&#10;period, quantity INT &gt; 0, date&#10;exception_confirmed&#10;request_payload JSONB, received_at" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#1B5E20;align=left;spacing=12;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="950" y="1000" width="290" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="dispatches" value="DESPACHOS (dispatches)&#10;PK id UUID del dispositivo&#10;FK parcel_id, cycle_id&#10;FK recommendation_id&#10;period, quantity INT &gt; 0&#10;dispatched_at (con zona)&#10;request_payload JSONB&#10;(vehículo, orden, observación, consumos)&#10;received_at" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#1B5E20;align=left;spacing=12;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="1000" width="270" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="production-rules" value="BALANCE Y CUPO (reglas transaccionales)&#10;Cupo: parcela + period ISO devuelto por Equipo 2.&#10;La primera cosecha fija la recomendación de origen.&#10;Cosechado − despachado = disponible.&#10;El aforamiento no es inventario ni se descuenta.&#10;COSECHA: actividad y detalle comparten UUID.&#10;Despacho + empaques: una sola transacción.&#10;Room 11 conserva production_plans como archivo local,&#10;sin FK hacia parcelas que se refrescan." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#1B5E20;align=left;spacing=12;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1000" width="800" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="activity-harvest" value="1 : 0..1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;html=1;strokeColor=#346C3A;" edge="1" parent="1" source="activities" target="harvests">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rec-harvest" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;html=1;strokeColor=#346C3A;" edge="1" parent="1" source="recommendations" target="harvests">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="af-harvest" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;html=1;strokeColor=#346C3A;" edge="1" parent="1" source="aforamientos" target="harvests">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cycle-harvest" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;html=1;strokeColor=#346C3A;" edge="1" parent="1" source="cycles" target="harvests">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="parcel-harvest" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;html=1;strokeColor=#346C3A;" edge="1" parent="1" source="parcels" target="harvests">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rec-dispatch" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;html=1;strokeColor=#346C3A;" edge="1" parent="1" source="recommendations" target="dispatches">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cycle-dispatch" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;html=1;strokeColor=#346C3A;" edge="1" parent="1" source="cycles" target="dispatches">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="parcel-dispatch" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;html=1;strokeColor=#346C3A;" edge="1" parent="1" source="parcels" target="dispatches">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dispatch-movement" value="1 : N empaques" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;html=1;strokeColor=#346C3A;" edge="1" parent="1" source="dispatches" target="movements">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="af-rec" value="1 : N; FK opcional histórica" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;html=1;strokeColor=#346C3A;" edge="1" parent="1" source="aforamientos" target="recommendations">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cycle-rec" value="1 : N; FK opcional histórica" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;html=1;strokeColor=#346C3A;" edge="1" parent="1" source="cycles" target="recommendations">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>

@@ -41,10 +41,11 @@ data class SyncSummary(val synced: Int, val failed: Int, val retryLater: Boolean
  * propio token, y el backend los guarda en el inventario de ese usuario.
  */
 class MovementSyncRepository(
-    database: InventoryDatabase,
+    private val database: InventoryDatabase,
     private val api: MovementApi,
     /** Envío de actividades (HU_08). Sin él solo se sincronizan movimientos. */
     private val activityApi: ActivityApi? = null,
+    private val productionApi: co.edu.udea.uniban.suministros.data.remote.ProductionApi? = null,
     private val idToken: suspend () -> String?,
 ) {
     private val dao = database.inventoryDao()
@@ -95,6 +96,10 @@ class MovementSyncRepository(
             totals = totals,
         )
         saveLastSuccessfulIfNeeded(totals.synced)
+        if (!totals.retryLater && productionApi != null) {
+            val production = ProductionSyncRepository(database, productionApi).sync(authorization)
+            return SyncSummary(totals.synced + production.synced, totals.failed + production.failed, production.retryLater)
+        }
         return SyncSummary(totals.synced, totals.failed, totals.retryLater)
     }
 

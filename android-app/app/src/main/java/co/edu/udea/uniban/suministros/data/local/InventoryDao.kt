@@ -18,7 +18,12 @@ interface InventoryDao {
             m.quantity, s.unit, m.date, m.createdAt, m.parcelId, m.inventoryId
         FROM movements m JOIN inventory i ON m.inventoryId = i.id
         JOIN supplies s ON i.supplyId = s.id
-        WHERE m.activityId IS NULL
+        WHERE m.activityId IS NULL AND m.dispatchId IS NULL
+        UNION ALL
+        SELECT d.id, 'DISPATCH' AS kind, 'DESPACHO' AS type, p.name AS name,
+            d.quantity AS quantity, 'racimos' AS unit, substr(d.dispatchedAt,1,10) AS date, d.createdAt,
+            d.parcelId, NULL AS inventoryId
+        FROM dispatches d LEFT JOIN parcels p ON p.id = d.parcelId
         ORDER BY date DESC, createdAt DESC, kind, id
         LIMIT 3
     """)
@@ -89,15 +94,17 @@ interface InventoryDao {
 
     /** Registros por sincronizar: movimientos y actividades (HU_08). */
     @Query("""
-        SELECT (SELECT COUNT(*) FROM movements WHERE syncStatus <> 'SYNCED') +
-            (SELECT COUNT(*) FROM activities WHERE syncStatus <> 'SYNCED')
+        SELECT (SELECT COUNT(*) FROM movements WHERE syncStatus <> 'SYNCED' AND dispatchId IS NULL) +
+            (SELECT COUNT(*) FROM activities WHERE syncStatus <> 'SYNCED') +
+            (SELECT COUNT(*) FROM dispatches WHERE syncStatus <> 'SYNCED')
     """)
     fun observePendingCount(): Flow<Int>
 
     /** Registros que WorkManager está enviando en este momento (HU_10). */
     @Query("""
-        SELECT (SELECT COUNT(*) FROM movements WHERE syncStatus = 'SYNCING') +
-            (SELECT COUNT(*) FROM activities WHERE syncStatus = 'SYNCING')
+        SELECT (SELECT COUNT(*) FROM movements WHERE syncStatus = 'SYNCING' AND dispatchId IS NULL) +
+            (SELECT COUNT(*) FROM activities WHERE syncStatus = 'SYNCING') +
+            (SELECT COUNT(*) FROM dispatches WHERE syncStatus = 'SYNCING')
     """)
     fun observeSyncingCount(): Flow<Int>
 
@@ -109,7 +116,7 @@ interface InventoryDao {
         JOIN inventory i ON m.inventoryId = i.id
         JOIN supplies s ON i.supplyId = s.id
         LEFT JOIN parcels p ON m.parcelId = p.id
-        WHERE m.syncStatus = 'ERROR'
+        WHERE m.syncStatus = 'ERROR' AND m.dispatchId IS NULL
         ORDER BY m.date DESC, m.createdAt DESC
     """)
     fun observeMovementSyncErrors(): Flow<List<MovementSyncError>>
@@ -148,7 +155,7 @@ interface InventoryDao {
      * el backend rechaza un consumo cuya actividad no conoce.
      */
     @Query("""
-        SELECT * FROM movements m WHERE m.syncStatus IN ('PENDING', 'ERROR')
+        SELECT * FROM movements m WHERE m.syncStatus IN ('PENDING', 'ERROR') AND m.dispatchId IS NULL
         AND (m.activityId IS NULL OR EXISTS (
             SELECT 1 FROM activities a WHERE a.id = m.activityId AND a.syncStatus = 'SYNCED'))
         ORDER BY m.createdAt, m.id

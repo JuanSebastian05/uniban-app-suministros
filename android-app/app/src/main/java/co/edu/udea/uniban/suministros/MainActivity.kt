@@ -16,7 +16,7 @@ class MainActivity : ComponentActivity() {
             UnibanTheme {
                 val app = application as UnibanApplication
                 AppNavHost(app::inventoryRepository, app.authRepository, parcelRepositoryFor = app::parcelRepository,
-                    recommendationRepositoryFor = app::recommendationRepository)
+                    recommendationRepositoryFor = app::recommendationRepository, productionRepositoryFor = app::productionRepository)
             }
         }
     }

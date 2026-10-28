@@ -45,7 +45,7 @@ interface ActivityDao {
 
     // --- Sincronización: las actividades viajan antes que sus consumos ---
 
-    @Query("SELECT * FROM activities WHERE syncStatus IN ('PENDING', 'ERROR') ORDER BY createdAt, id")
+    @Query("SELECT * FROM activities WHERE syncStatus IN ('PENDING', 'ERROR') AND NOT EXISTS (SELECT 1 FROM harvests h WHERE h.id = activities.id) ORDER BY createdAt, id")
     suspend fun findSyncable(): List<ActivityEntity>
 
     @Query("UPDATE activities SET syncStatus = 'SYNCING', syncError = NULL WHERE id = :id AND syncStatus IN ('PENDING', 'ERROR')")
