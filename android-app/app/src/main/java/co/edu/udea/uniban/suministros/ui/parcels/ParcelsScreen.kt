@@ -20,6 +20,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,7 +55,16 @@ fun ParcelsScreen(
     onNewParcel: () -> Unit,
     onSelect: (String) -> Unit,
     navigationBar: @Composable () -> Unit,
+    initialStatusFilter: String? = null,
 ) {
+    var statusFilter by rememberSaveable(initialStatusFilter) { mutableStateOf(initialStatusFilter) }
+    val visibleParcels = state.parcels.filter {
+        when (statusFilter) {
+            null -> true
+            "SIN_CICLO" -> it.cycleId == null && it.activityCycleId == null && it.currentStatus == null
+            else -> (it.currentStatus ?: it.cycleStatus) == statusFilter
+        }
+    }
     InventoryScaffold(
         title = "Mis parcelas",
         pendingCount = pendingCount,
@@ -76,24 +89,34 @@ fun ParcelsScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 if (state.offline) item { OfflineNotice(onRetry) }
+                if (statusFilter != null) item {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            CycleStatus.fromCode(statusFilter)?.label ?: "Sin ciclo iniciado",
+                            modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall,
+                        )
+                        TextButton(onClick = { statusFilter = null }) { Text("Ver todas") }
+                    }
+                }
                 item {
                     Text(
-                        "${state.parcels.size} ${if (state.parcels.size == 1) "parcela registrada" else "parcelas registradas"}",
+                        "${visibleParcels.size} ${if (visibleParcels.size == 1) "parcela registrada" else "parcelas registradas"}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                if (state.parcels.isEmpty()) {
+                if (visibleParcels.isEmpty()) {
                     item {
                         Text(
-                            "Aún no tienes parcelas. Registra la primera con el botón de abajo.",
+                            if (statusFilter == null) "Aún no tienes parcelas. Registra la primera con el botón de abajo."
+                            else "No hay parcelas en este estado.",
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.fillMaxWidth().padding(top = 32.dp),
                         )
                     }
                 }
-                items(state.parcels, key = { it.id }) { parcel -> ParcelCard(parcel, onClick = { onSelect(parcel.id) }) }
+                items(visibleParcels, key = { it.id }) { parcel -> ParcelCard(parcel, onClick = { onSelect(parcel.id) }) }
             }
         }
     }

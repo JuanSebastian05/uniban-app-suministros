@@ -6,6 +6,7 @@ Aplicación Android offline-first para que productores de plátano gestionen inv
 
 ## Qué resuelve
 
+- Ofrece una pantalla de [Inicio](docs/inicio.md) con resumen de parcelas, acciones rápidas, registros recientes y estado de sincronización.
 - Registra usuarios productores, parcelas y ciclos productivos.
 - Mantiene el inventario disponible sin conexión, registra entradas, consumos, pérdidas y ajustes, y conserva historial por insumo.
 - Registra actividades productivas y sus consumos relacionados.

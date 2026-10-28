@@ -56,7 +56,7 @@ class ActivityTest {
             ureaId = items.first { it.name == "Urea 46%" }.id
             otherId = items.first { it.id != ureaId }.id
             database.parcelDao().upsertParcels(listOf(
-                ParcelEntity("p1", "La Esperanza", "2.40"), ParcelEntity("p2", "El Mirador", "1.50"),
+                ParcelEntity("p1", "La Esperanza", "2.40", "PRODUCCION", "c1"), ParcelEntity("p2", "El Mirador", "1.50"),
             ))
             database.parcelDao().upsertCycles(listOf(ProductionCycleEntity("c1", "p1", "2026-01-15", null, "PRODUCCION")))
         }
@@ -93,12 +93,12 @@ class ActivityTest {
         assertEquals("", database.activityDao().findActivity(activityId)!!.observation)
     }
 
-    @Test fun exigeUnCicloActivo() = runTest {
+    @Test fun exigeUnCicloIniciado() = runTest {
         val activityId = id()
         val error = assertThrows(IllegalArgumentException::class.java) {
             runBlocking { register(activityId, parcelId = "p2") }
         }
-        assertTrue(error.message!!.contains("ciclo activo"))
+        assertTrue(error.message!!.contains("ciclo productivo"))
         assertNull(database.activityDao().findActivity(activityId))
     }
 
@@ -199,6 +199,7 @@ class ActivityTest {
             ProductionCycleEntity("c1", "p1", "2026-01-15", "2026-10-20", "CERRADO"),
             ProductionCycleEntity("c2", "p1", "2026-10-21", null, "EN_PREPARACION"),
         ))
+        database.parcelDao().updateLifecycleState("p1", "EN_PREPARACION", "c2")
         val movementId = id()
         repository.registerMovement(
             movementId, MovementType.CONSUMO, ureaId, "1", today, "", parcelId = "p1", activityId = activityId,

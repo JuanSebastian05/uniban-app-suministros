@@ -9,6 +9,7 @@ object AppDestinations {
 
     /** Grafo anidado con las pantallas internas; solo accesible con sesión. */
     const val MAIN = "main"
+    const val HOME = "home"
     const val INVENTORY = "inventory"
     const val SYNC_STATUS = "sync-status"
     const val DETAIL = "inventory/{inventoryId}"
@@ -16,6 +17,8 @@ object AppDestinations {
 
     /** Parcelas (HU_14). */
     const val PARCELS = "parcels"
+    const val PARCELS_FILTERED = "parcels?status={status}"
+    fun parcels(status: String? = null) = if (status == null) PARCELS else "parcels?status=$status"
     const val PARCEL_NEW = "parcels/new"
 
     /** Actividades productivas (HU_08); `parcelId` vacío = el formulario deja elegir la parcela. */

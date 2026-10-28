@@ -8,6 +8,7 @@ import co.edu.udea.uniban.suministros.data.auth.fetchProfileState
 import co.edu.udea.uniban.suministros.data.auth.sendProfile
 import co.edu.udea.uniban.suministros.data.remote.RegisterProfileDto
 import co.edu.udea.uniban.suministros.data.remote.UserApi
+import co.edu.udea.uniban.suministros.data.remote.UserProfileDto
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
@@ -29,9 +30,11 @@ class ProfileRegistrationTest {
             return reply()
         }
 
-        override suspend fun me(authorization: String): Response<Unit> {
+        override suspend fun me(authorization: String): Response<UserProfileDto> {
             meCalls += authorization
-            return reply()
+            val response = reply()
+            return if (response.isSuccessful) Response.success(UserProfileDto("Ana Pérez"))
+            else Response.error(response.code(), checkNotNull(response.errorBody()))
         }
     }
 
@@ -83,7 +86,9 @@ class ProfileRegistrationTest {
     @Test
     fun existingProfileIsComplete() = runTest {
         val api = RecordingApi { Response.success(200, Unit) }
-        assertEquals(ProfileState.Complete, fetchProfileState(api, "token-1"))
+        var name: String? = null
+        assertEquals(ProfileState.Complete, fetchProfileState(api, "token-1") { name = it })
+        assertEquals("Ana Pérez", name)
         assertEquals(listOf("Bearer token-1"), api.meCalls)
     }
 

@@ -1,5 +1,11 @@
 package co.edu.udea.uniban.suministros.ui.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +19,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -28,6 +35,7 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import co.edu.udea.uniban.suministros.data.InventoryRepository
+import co.edu.udea.uniban.suministros.data.NetworkMonitor
 import co.edu.udea.uniban.suministros.data.ParcelRepository
 import co.edu.udea.uniban.suministros.data.RecommendationSource
 import co.edu.udea.uniban.suministros.data.auth.AuthRepository
@@ -44,6 +52,8 @@ import co.edu.udea.uniban.suministros.ui.auth.LoginViewModel
 import co.edu.udea.uniban.suministros.ui.auth.RegisterScreen
 import co.edu.udea.uniban.suministros.ui.auth.RegisterViewModel
 import co.edu.udea.uniban.suministros.ui.inventory.*
+import co.edu.udea.uniban.suministros.ui.home.HomeScreen
+import co.edu.udea.uniban.suministros.ui.home.HomeViewModel
 import co.edu.udea.uniban.suministros.ui.parcels.AforamientoViewModel
 import co.edu.udea.uniban.suministros.ui.parcels.ParcelDetailScreen
 import co.edu.udea.uniban.suministros.ui.parcels.ParcelFormScreen
@@ -134,15 +144,30 @@ fun AppNavHost(
         viewModelFactory { initializer { ActivityFormViewModel(checkNotNull(currentRepository), createSavedStateHandle()) } }
     }
     val tabsEnabled = parcelRepositoryFor != null
+    val mainStart = if (tabsEnabled) AppDestinations.HOME else AppDestinations.INVENTORY
+    val context = LocalContext.current.applicationContext
+    val networkMonitor = remember(context) { NetworkMonitor(context) }
+    val homeFactory = remember {
+        viewModelFactory { initializer { HomeViewModel(checkNotNull(currentRepository), networkMonitor.online) } }
+    }
     val openTab: (MainTab) -> Unit = { tab ->
         navController.navigate(tab.route) {
-            popUpTo(AppDestinations.INVENTORY) { saveState = true }
+            popUpTo(mainStart) { saveState = true }
             launchSingleTop = true
-            restoreState = true
+            restoreState = tab != MainTab.HOME
         }
     }
 
-    NavHost(navController, startDestination = startDestination, modifier = modifier) {
+    NavHost(
+        navController,
+        startDestination = startDestination,
+        modifier = modifier,
+        // Las pestañas cambian directamente para evitar superponer sus barras y contenido.
+        enterTransition = { if (isTabChange()) EnterTransition.None else fadeIn(tween(180)) },
+        exitTransition = { if (isTabChange()) ExitTransition.None else fadeOut(tween(180)) },
+        popEnterTransition = { if (isTabChange()) EnterTransition.None else fadeIn(tween(180)) },
+        popExitTransition = { if (isTabChange()) ExitTransition.None else fadeOut(tween(180)) },
+    ) {
         composable(AppDestinations.LOGIN) {
             val loginViewModel: LoginViewModel = viewModel(factory = loginFactory)
             LoginScreen(
@@ -184,7 +209,43 @@ fun AppNavHost(
         }
         // El inventario se carga solo dentro de este grafo: sin sesión no se abre ningún dato,
         // y al cerrar sesión el grafo sale de la pila y su ViewModel se destruye.
-        navigation(route = AppDestinations.MAIN, startDestination = AppDestinations.INVENTORY) {
+        navigation(route = AppDestinations.MAIN, startDestination = mainStart) {
+            if (tabsEnabled) composable(AppDestinations.HOME) { entry ->
+                val inventoryViewModel = mainViewModel(navController, entry, inventoryFactory)
+                val inventory by inventoryViewModel.state.collectAsStateWithLifecycle()
+                val parcelsViewModel = mainScopedViewModel<ParcelsViewModel>(navController, entry, parcelsFactory)
+                val parcels by parcelsViewModel.state.collectAsStateWithLifecycle()
+                val syncViewModel = mainScopedViewModel<SyncStatusViewModel>(navController, entry, syncStatusFactory)
+                val sync by syncViewModel.state.collectAsStateWithLifecycle()
+                val homeViewModel = mainScopedViewModel<HomeViewModel>(navController, entry, homeFactory)
+                val recent by homeViewModel.records.collectAsStateWithLifecycle()
+                val online by homeViewModel.online.collectAsStateWithLifecycle()
+                val identity = session as? SessionState.Authenticated
+                HomeScreen(
+                    name = identity?.displayName, email = identity?.email,
+                    parcels = parcels, inventory = inventory, sync = sync, recent = recent, online = online,
+                    onParcels = { status ->
+                        navController.navigate(AppDestinations.parcels(status)) { launchSingleTop = true }
+                    },
+                    onNewParcel = { navController.navigate(AppDestinations.PARCEL_NEW) { launchSingleTop = true } },
+                    onParcel = { navController.navigate(AppDestinations.parcelDetail(it)) { launchSingleTop = true } },
+                    onNewActivity = { navController.navigate(AppDestinations.activityNew()) { launchSingleTop = true } },
+                    onNewMovement = { navController.navigate(AppDestinations.entry()) { launchSingleTop = true } },
+                    onActivities = { openTab(MainTab.ACTIVITIES) },
+                    onHistory = { navController.navigate(AppDestinations.history()) { launchSingleTop = true } },
+                    onRecord = { record ->
+                        val route = if (record.kind == "ACTIVITY") {
+                            record.parcelId?.takeIf { id -> parcels.parcels.any { it.id == id } }
+                                ?.let(AppDestinations::parcelDetail) ?: AppDestinations.ACTIVITIES
+                        } else record.inventoryId?.let(AppDestinations::detail) ?: AppDestinations.history()
+                        navController.navigate(route) { launchSingleTop = true }
+                    },
+                    onSync = { navController.navigate(AppDestinations.SYNC_STATUS) { launchSingleTop = true } },
+                    onRetryParcels = parcelsViewModel::load,
+                    onLogout = authRepository::signOut,
+                    navigationBar = { MainBottomBar(MainTab.HOME, openTab) },
+                )
+            }
             composable(AppDestinations.INVENTORY) { entry ->
                 val inventoryViewModel = mainViewModel(navController, entry, inventoryFactory)
                 val state by inventoryViewModel.state.collectAsStateWithLifecycle()
@@ -201,8 +262,8 @@ fun AppNavHost(
                     onSyncStatus = { navController.navigate(AppDestinations.SYNC_STATUS) { launchSingleTop = true } },
                 )
             }
-            composable(AppDestinations.SYNC_STATUS) {
-                val syncStatusViewModel: SyncStatusViewModel = viewModel(factory = syncStatusFactory)
+            composable(AppDestinations.SYNC_STATUS) { entry ->
+                val syncStatusViewModel = mainScopedViewModel<SyncStatusViewModel>(navController, entry, syncStatusFactory)
                 val state by syncStatusViewModel.state.collectAsStateWithLifecycle()
                 SyncStatusScreen(
                     state = state,
@@ -260,13 +321,23 @@ fun AppNavHost(
                 EntryScreen(
                     inventoryState = state, viewModel = entryViewModel,
                     onBack = { navController.popBackStack() },
-                    onDone = { navController.popBackStack(AppDestinations.INVENTORY, inclusive = false) },
+                    onDone = {
+                        if (!navController.popBackStack(AppDestinations.INVENTORY, inclusive = false)) {
+                            navController.navigate(AppDestinations.INVENTORY) {
+                                popUpTo(mainStart)
+                                launchSingleTop = true
+                            }
+                        }
+                    },
                     onRetryInventory = inventoryViewModel::load,
                     parcels = parcels,
                 )
             }
             if (tabsEnabled) {
-                composable(AppDestinations.PARCELS) { entry ->
+                composable(
+                    AppDestinations.PARCELS_FILTERED,
+                    arguments = listOf(navArgument("status") { type = NavType.StringType; defaultValue = "" }),
+                ) { entry ->
                     val inventoryViewModel = mainViewModel(navController, entry, inventoryFactory)
                     val inventoryState by inventoryViewModel.state.collectAsStateWithLifecycle()
                     val parcelsViewModel = mainScopedViewModel<ParcelsViewModel>(navController, entry, parcelsFactory)
@@ -278,6 +349,7 @@ fun AppNavHost(
                         onNewParcel = { navController.navigate(AppDestinations.PARCEL_NEW) { launchSingleTop = true } },
                         onSelect = { navController.navigate(AppDestinations.parcelDetail(it)) { launchSingleTop = true } },
                         navigationBar = { MainBottomBar(MainTab.PARCELS, openTab) },
+                        initialStatusFilter = entry.arguments?.getString("status")?.takeIf { it.isNotEmpty() },
                     )
                 }
                 composable(
@@ -377,7 +449,12 @@ fun AppNavHost(
                         viewModel = formViewModel,
                         pendingCount = inventoryState.pendingCount,
                         onBack = { navController.popBackStack() },
-                        onDone = { navController.popBackStack(AppDestinations.PARCELS, inclusive = false) },
+                        onDone = {
+                            navController.navigate(AppDestinations.PARCELS) {
+                                popUpTo(mainStart)
+                                launchSingleTop = true
+                            }
+                        },
                     )
                 }
             }
@@ -434,3 +511,14 @@ private fun SessionGuard(navController: NavController, session: SessionState, pr
 }
 
 private val PUBLIC_ROUTES = setOf(AppDestinations.LOGIN, AppDestinations.REGISTER)
+
+private val TAB_ROUTES = setOf(
+    AppDestinations.HOME,
+    AppDestinations.PARCELS,
+    AppDestinations.PARCELS_FILTERED,
+    AppDestinations.INVENTORY,
+    AppDestinations.ACTIVITIES,
+)
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.isTabChange(): Boolean =
+    initialState.destination.route in TAB_ROUTES && targetState.destination.route in TAB_ROUTES
