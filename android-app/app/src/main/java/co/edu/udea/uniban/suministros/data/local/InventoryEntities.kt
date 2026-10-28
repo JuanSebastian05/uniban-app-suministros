@@ -67,7 +67,7 @@ data class MovementEntity(
 )
 
 /**
- * Actividad productiva (HU_08), registrada sobre una parcela y su ciclo activo. **Sin clave foránea hacia
+ * Actividad productiva (HU_08), registrada sobre una parcela y su ciclo activo o el último ciclo cerrado durante el descanso. **Sin clave foránea hacia
  * `parcels`**: `ParcelRepository.refresh()` borra y reinserta las parcelas y una FK rompería ese refresco.
  * Nace en el dispositivo con UUID y `PENDING`; se sincroniza antes que sus consumos.
  */

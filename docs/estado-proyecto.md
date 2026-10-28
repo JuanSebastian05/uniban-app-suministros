@@ -1,12 +1,12 @@
 # Estado del proyecto
 
-> Actualizado el **27/10/2026** contra el código de esta copia del repositorio y el OpenAPI publicado por el Equipo 2. Este documento distingue lo que el código implementa de lo que se ha confirmado sobre GitHub, Render y Neon.
+> Actualizado el **28/10/2026** contra el código de esta copia del repositorio y el OpenAPI publicado por el Equipo 2. Este documento distingue lo que el código implementa de lo que se ha confirmado sobre GitHub, Render y Neon.
 
 ## Resumen ejecutivo
 
 La solución permite administrar inventario de forma local y sin conexión, registrar parcelas, ciclos y actividades, y sincronizar los datos con el backend. También están implementadas en el código ambas integraciones: se reciben aforamientos del Equipo 1 y se solicitan recomendaciones al Equipo 2.
 
-El código local contiene migraciones de backend hasta **0011** y Room versión **9**. Room 9 conserva el plan completo y las métricas de recomendaciones para consulta sin conexión; no requiere una nueva migración del backend. El usuario informó que la migración **0010 llegó a main** y que **SERVICE_API_KEY está configurada en Render**. Esta revisión no consultó GitHub, Render ni Neon; por eso no confirma qué versión está desplegada ni la revisión actual de la base de producción.
+El código local contiene migraciones de backend hasta **0012** y Room versión **10**. Las nuevas operaciones permiten cambiar de etapa, finalizar ciclos y comenzar el siguiente; durante el descanso, la parcela conserva el último ciclo para asociarle actividades. El usuario informó que la migración **0010 llegó a main** y que **SERVICE_API_KEY está configurada en Render**. Esta revisión no consultó GitHub, Render ni Neon; por eso no confirma qué versión está desplegada ni la revisión actual de la base de producción.
 
 ## Funcionalidad implementada en el código
 
@@ -15,8 +15,8 @@ El código local contiene migraciones de backend hasta **0011** y Room versión 
 | Identidad y perfiles | Implementada | Firebase Authentication; el backend mantiene el perfil del productor, exige autenticación en rutas de usuario y valida el rol PRODUCTOR. |
 | Inventario | Implementado | Catálogo por productor, consulta offline, entradas, consumos, pérdidas, ajustes, saldo no negativo e historial. La app no permite registrar SALIDA. |
 | Catálogo de empaque | Implementado en el código local de esta rama | cajas, carton, bolsas, categoría Empaque, unidad unidad, saldo inicial cero. El alta también se aplica a cuentas ya inicializadas sin borrar sus datos. |
-| Parcelas y ciclos | Implementados | Registro conectado al backend, consulta y copia local. |
-| Actividades productivas | Implementadas | Se guardan localmente y se sincronizan antes de los consumos asociados. |
+| Parcelas y ciclos | Implementados | Registro, cambio de etapa, cierre con estado derivado de descanso e inicio de ciclos siguientes; requiere conexión para modificar ciclos. |
+| Actividades productivas | Implementadas | Avisos orientativos según etapa sin bloqueos; durante el descanso se asocian al último ciclo cerrado. |
 | Sincronización | Implementada | Movimientos y actividades se envían con UUID idempotente. No hay descarga completa del inventario para reconstruirlo tras reinstalar o cambiar de teléfono. |
 | Integración Equipo 1 | Implementada en el código | GET /api/v1/service/parcels y POST /api/v1/aforamientos, protegidos por X-API-Key; idempotencia por UUID. La app consulta el aforamiento más reciente. |
 | HU_09 | Implementada en el código | Muestra el aforamiento más reciente de la parcela y conserva una copia local para consulta offline. |
@@ -48,8 +48,8 @@ El código local contiene migraciones de backend hasta **0011** y Room versión 
 
 | Componente | Versión en el código | Observación |
 | --- | --- | --- |
-| Room | 9 | Incluye parcelas/ciclos, actividades, aforamientos, recomendaciones completas y metadatos/errores de sincronización. Migraciones automáticas hasta 9. |
-| Alembic | Cabeza 0011_recomendaciones | Cadena 0001–0005 y 0007–0011. No existe una revisión 0006 en esta copia. |
+| Room | 10 | Incluye parcelas/ciclos, su historial de etapas, actividades, aforamientos, recomendaciones, estado actual y ciclo asociado en descanso. Migraciones automáticas hasta 10. |
+| Alembic | Cabeza 0012_ciclos_etapas_y_descanso | Cadena 0001–0005 y 0007–0012. No existe una revisión 0006 en esta copia. |
 | Producción Neon | No verificada en esta revisión | No inferirla de que una migración esté en main. Consultar alembic_version antes de nuevas migraciones. |
 
 ## Verificaciones que siguen pendientes de evidencia

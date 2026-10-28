@@ -8,7 +8,8 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ParcelDao {
     @Query("""
-        SELECT p.id, p.name, p.areaHa, c.id AS cycleId, c.startDate AS cycleStartDate, c.status AS cycleStatus
+        SELECT p.id, p.name, p.areaHa, c.id AS cycleId, c.startDate AS cycleStartDate, c.status AS cycleStatus,
+               p.currentStatus AS currentStatus, p.activityCycleId AS activityCycleId
         FROM parcels p LEFT JOIN production_cycles c ON c.parcelId = p.id AND c.endDate IS NULL
         ORDER BY p.name COLLATE NOCASE
     """)
@@ -20,6 +21,13 @@ interface ParcelDao {
     /** Ciclo activo de la parcela (HU_05: se asocia al consumo), o nulo si no tiene. */
     @Query("SELECT id FROM production_cycles WHERE parcelId = :parcelId AND endDate IS NULL LIMIT 1")
     suspend fun activeCycleId(parcelId: String): String?
+
+    /** Ciclo al que se asocian actividades: el activo o, durante el descanso, el último finalizado. */
+    @Query("SELECT activityCycleId FROM parcels WHERE id = :parcelId")
+    suspend fun activityCycleId(parcelId: String): String?
+
+    @Query("SELECT * FROM production_cycles WHERE parcelId = :parcelId AND endDate IS NULL LIMIT 1")
+    suspend fun activeCycle(parcelId: String): ProductionCycleEntity?
 
     /** Nombres registrados, para avisar de un nombre repetido antes de ir al servidor. */
     @Query("SELECT name FROM parcels")
@@ -48,6 +56,21 @@ interface ParcelDao {
 
     @Upsert
     suspend fun upsertCycles(cycles: List<ProductionCycleEntity>)
+
+    @Upsert
+    suspend fun upsertCycle(cycle: ProductionCycleEntity)
+
+    @Upsert
+    suspend fun upsertCycleStatusChange(change: ProductionCycleStatusChangeEntity)
+
+    @Query("UPDATE production_cycles SET status = :status WHERE parcelId = :parcelId AND endDate IS NULL")
+    suspend fun updateActiveCycleStatus(parcelId: String, status: String)
+
+    @Query("UPDATE production_cycles SET endDate = :endDate WHERE parcelId = :parcelId AND endDate IS NULL")
+    suspend fun finishActiveCycle(parcelId: String, endDate: String)
+
+    @Query("UPDATE parcels SET currentStatus = :status, activityCycleId = :activityCycleId WHERE id = :parcelId")
+    suspend fun updateLifecycleState(parcelId: String, status: String?, activityCycleId: String?)
 
     /** Los ciclos se borran en cascada. Solo se usa al reemplazar la copia local por la del servidor. */
     @Query("DELETE FROM parcels")

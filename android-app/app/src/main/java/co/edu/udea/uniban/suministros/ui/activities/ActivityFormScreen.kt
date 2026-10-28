@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -53,10 +54,12 @@ import co.edu.udea.uniban.suministros.ui.inventory.InventoryScaffold
 import co.edu.udea.uniban.suministros.ui.inventory.InventoryUiState
 import co.edu.udea.uniban.suministros.ui.inventory.LoadingOrError
 import co.edu.udea.uniban.suministros.ui.inventory.displayDate
+import co.edu.udea.uniban.suministros.ui.theme.UnibanPending
+import co.edu.udea.uniban.suministros.ui.theme.UnibanPendingText
 import java.time.LocalDate
 
 /**
- * «Registrar actividad» (HU_08). La actividad exige una parcela con ciclo activo; los insumos usados se
+ * «Registrar actividad» (HU_08). La actividad exige una parcela con ciclo asociado; los insumos usados se
  * guardan como consumos en el mismo flujo. Al guardar con éxito llama a [onDone].
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,6 +79,8 @@ fun ActivityFormScreen(
     val editable = !state.saving && state.saved == null
     val ready = !inventoryState.loading && inventoryState.error == null
     val selectedParcel = parcels.find { it.id == state.parcelId }
+    val selectedStatus = selectedParcel?.currentStatus ?: selectedParcel?.cycleStatus
+    val stageWarning = state.type?.stageWarning(selectedStatus)
     var parcelExpanded by remember { mutableStateOf(false) }
 
     InventoryScaffold(
@@ -108,13 +113,15 @@ fun ActivityFormScreen(
                     enabled = editable && parcels.isNotEmpty(), label = { Text("Parcela") },
                     placeholder = { Text("Seleccionar parcela") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(parcelExpanded) },
-                    isError = state.parcelError != null || (selectedParcel != null && selectedParcel.cycleId == null),
+                    isError = state.parcelError != null || (selectedParcel != null && selectedParcel.activityCycleId == null),
                     supportingText = {
                         Text(state.parcelError ?: when {
                             parcels.isEmpty() -> "Aún no tienes parcelas. Regístralas en la pestaña Parcelas."
                             selectedParcel == null -> "¿Dónde se hizo la actividad?"
+                            selectedParcel.activityCycleId == null ->
+                                "Esta parcela aún no tiene ciclos para asociar actividades. Inicia uno primero."
                             selectedParcel.cycleId == null ->
-                                "Esta parcela no tiene un ciclo activo: inicia uno para registrar actividades."
+                                "La parcela está en descanso; la actividad se asociará al último ciclo."
                             else -> "Se asocia al ciclo activo (inicio ${ParcelValidation.formatDate(selectedParcel.cycleStartDate.orEmpty())})."
                         })
                     },
@@ -151,6 +158,16 @@ fun ActivityFormScreen(
                 }
                 state.typeError?.let {
                     Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+                stageWarning?.let {
+                    Surface(
+                        color = UnibanPending,
+                        contentColor = UnibanPendingText,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().testTag("activity-stage-warning"),
+                    ) {
+                        Text(it, Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             }
 

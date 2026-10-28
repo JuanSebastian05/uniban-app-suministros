@@ -1,6 +1,6 @@
 # Despliegue del backend en Render y base Neon
 
-> Guía actualizada el 26/10/2026. En esta revisión no se consultó el panel de Render ni Neon. El usuario informó que SERVICE_API_KEY está configurada en Render y que la migración 0010 llegó a main.
+> Guía actualizada el 28/10/2026. En esta revisión no se consultó el panel de Render ni Neon. El usuario informó que SERVICE_API_KEY está configurada en Render y que la migración 0010 llegó a main.
 
 ## Servicio
 
@@ -34,7 +34,7 @@ Si cambia una variable, guardar y esperar a que Render complete el redeploy. Par
 
 ## Migraciones de base de datos
 
-Render ejecuta la API, pero no aplica las migraciones de Alembic automáticamente. El historial de esta copia del repositorio llega hasta 0011_recomendaciones.
+Render ejecuta la API, pero no aplica las migraciones de Alembic automáticamente. El historial de esta copia del repositorio llega hasta 0012_ciclos_etapas_y_descanso.
 
 Antes de cada despliegue que incorpore cambios de esquema:
 
@@ -44,7 +44,7 @@ Antes de cada despliegue que incorpore cambios de esquema:
 4. Despliega el código compatible con el esquema.
 5. Comprueba el estado del servicio, OpenAPI y el flujo funcional afectado.
 
-El usuario indicó que la migración 0010 llegó a main. No se conoce aquí si la 0011 llegó a main, se aplicó en Neon o quedó desplegada. Consulta la [lista de verificación](lista-verificacion-despliegue.md) y el [estado del proyecto](estado-proyecto.md); no uses esta frase como evidencia de la revisión de producción.
+El usuario indicó que la migración 0010 llegó a main. No se conoce aquí si las migraciones 0011 y 0012 llegaron a main, se aplicaron en Neon o quedaron desplegadas. Consulta la [lista de verificación](lista-verificacion-despliegue.md) y el [estado del proyecto](estado-proyecto.md); no uses esta frase como evidencia de la revisión de producción.
 
 ## Comprobaciones del servicio
 
@@ -64,5 +64,5 @@ En android-app/local.properties, configura la URL base https://uniban-app-sumini
 
 - SERVICE_API_KEY quedó configurada en Render.
 - La migración 0010 llegó a main.
-- La migración 0011 y su despliegue no están confirmados en esta revisión.
+- Las migraciones 0011 y 0012, y su despliegue, no están confirmados en esta revisión.
 - No se confirmó una prueba productiva conjunta con el Equipo 1 ni una llamada real al servicio del Equipo 2.

@@ -5,11 +5,15 @@ import co.edu.udea.uniban.suministros.data.local.AforamientoEntity
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
 import co.edu.udea.uniban.suministros.data.local.ParcelEntity
 import co.edu.udea.uniban.suministros.data.local.ProductionCycleEntity
+import co.edu.udea.uniban.suministros.data.local.ProductionCycleStatusChangeEntity
 import co.edu.udea.uniban.suministros.data.local.StarterInventory
 import co.edu.udea.uniban.suministros.data.remote.AforamientoDto
 import co.edu.udea.uniban.suministros.data.remote.ApiErrorDto
 import co.edu.udea.uniban.suministros.data.remote.CycleDto
+import co.edu.udea.uniban.suministros.data.remote.CycleFinishDto
 import co.edu.udea.uniban.suministros.data.remote.CycleResponseDto
+import co.edu.udea.uniban.suministros.data.remote.CycleStageUpdateDto
+import co.edu.udea.uniban.suministros.data.remote.CycleStartDto
 import co.edu.udea.uniban.suministros.data.remote.ParcelApi
 import co.edu.udea.uniban.suministros.data.remote.ParcelDto
 import co.edu.udea.uniban.suministros.data.remote.ParcelResponseDto
@@ -18,9 +22,11 @@ import java.io.IOException
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDate
+import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import retrofit2.Response
@@ -48,6 +54,11 @@ sealed interface ParcelSaveResult {
     /** Sin red o el servidor no respondió: el formulario se conserva para reintentar. */
     data object Offline : ParcelSaveResult
     data class Rejected(val message: String) : ParcelSaveResult
+}
+
+sealed interface CycleOperationResult {
+    data object Saved : CycleOperationResult
+    data class Failed(val message: String) : CycleOperationResult
 }
 
 /** Reglas del formulario de parcela, compartidas por el ViewModel y el repositorio. */
@@ -204,6 +215,7 @@ class ParcelRepository(
         )
         if (isDemo) {
             saveLocal(listOf(request.toResponse()))
+            draft.cycle?.let { recordCycleChange(it.id, null, it.status.name, it.startDate) }
             return ParcelSaveResult.Saved
         }
         val token = try {
@@ -225,6 +237,7 @@ class ParcelRepository(
         return when {
             response.isSuccessful -> {
                 saveLocal(listOf(response.body() ?: request.toResponse()))
+                draft.cycle?.let { recordCycleChange(it.id, null, it.status.name, it.startDate) }
                 ParcelSaveResult.Saved
             }
             code == 409 && errorCode(response) == "DUPLICATE_NAME" -> ParcelSaveResult.DuplicateName
@@ -232,6 +245,131 @@ class ParcelRepository(
             code == 408 || code == 429 || code >= 500 -> ParcelSaveResult.Offline
             else -> ParcelSaveResult.Rejected("El servidor no aceptó la parcela. Revisa los datos e intenta de nuevo.")
         }
+    }
+
+    suspend fun changeCycleStage(parcelId: String, status: CycleStatus): CycleOperationResult {
+        require(status == CycleStatus.EN_PREPARACION || status == CycleStatus.PRODUCCION)
+        if (isDemo) {
+            val cycle = dao.activeCycle(parcelId)
+                ?: return CycleOperationResult.Failed("La parcela no tiene un ciclo activo.")
+            database.withTransaction {
+                dao.updateActiveCycleStatus(parcelId, status.name)
+                dao.updateLifecycleState(parcelId, status.name, cycle.id)
+                if (cycle.status != status.name) recordCycleChange(cycle.id, cycle.status, status.name, LocalDate.now())
+            }
+            return CycleOperationResult.Saved
+        }
+        val token = idTokenOrError() ?: return CycleOperationResult.Failed(SESSION_MESSAGE)
+        return try {
+            val previous = dao.activeCycle(parcelId)
+            val effectiveDate = LocalDate.now()
+            val response = api.changeCycleStage(
+                "Bearer $token", parcelId, CycleStageUpdateDto(status.name, effectiveDate.toString()),
+            )
+            saveCycleResponse(response).also { result ->
+                if (result == CycleOperationResult.Saved && previous != null && previous.status != status.name) {
+                    recordCycleChange(previous.id, previous.status, status.name, effectiveDate)
+                }
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: IOException) {
+            CycleOperationResult.Failed("No se pudo conectar. Revisa tu conexión e intenta de nuevo.")
+        } catch (_: Exception) {
+            CycleOperationResult.Failed("No se pudo actualizar la etapa. Intenta de nuevo.")
+        }
+    }
+
+    suspend fun finishCycle(parcelId: String, endDate: LocalDate): CycleOperationResult {
+        if (isDemo) {
+            val cycle = dao.activeCycle(parcelId)
+                ?: return CycleOperationResult.Failed("La parcela no tiene un ciclo activo.")
+            if (endDate < LocalDate.parse(cycle.startDate)) {
+                return CycleOperationResult.Failed("La fecha de fin no puede ser anterior al inicio del ciclo.")
+            }
+            database.withTransaction {
+                dao.finishActiveCycle(parcelId, endDate.toString())
+                dao.updateLifecycleState(parcelId, CycleStatus.DESCANSO.name, cycle.id)
+                recordCycleChange(cycle.id, cycle.status, CycleStatus.DESCANSO.name, endDate)
+            }
+            return CycleOperationResult.Saved
+        }
+        val token = idTokenOrError() ?: return CycleOperationResult.Failed(SESSION_MESSAGE)
+        return try {
+            val previous = dao.activeCycle(parcelId)
+            saveCycleResponse(api.finishCycle("Bearer $token", parcelId, CycleFinishDto(endDate.toString()))).also { result ->
+                if (result == CycleOperationResult.Saved && previous != null) {
+                    recordCycleChange(previous.id, previous.status, CycleStatus.DESCANSO.name, endDate)
+                }
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: IOException) {
+            CycleOperationResult.Failed("No se pudo conectar. Revisa tu conexión e intenta de nuevo.")
+        } catch (_: Exception) {
+            CycleOperationResult.Failed("No se pudo finalizar el ciclo. Intenta de nuevo.")
+        }
+    }
+
+    suspend fun startCycle(parcelId: String, id: String, startDate: LocalDate): CycleOperationResult {
+        if (isDemo) {
+            if (dao.activeCycle(parcelId) != null) {
+                return CycleOperationResult.Failed("La parcela ya tiene un ciclo activo.")
+            }
+            val cycle = ProductionCycleEntity(id, parcelId, startDate.toString(), null, CycleStatus.EN_PREPARACION.name)
+            database.withTransaction {
+                dao.upsertCycle(cycle)
+                dao.updateLifecycleState(parcelId, CycleStatus.EN_PREPARACION.name, id)
+                recordCycleChange(id, null, CycleStatus.EN_PREPARACION.name, startDate)
+            }
+            return CycleOperationResult.Saved
+        }
+        if (dao.activeCycle(parcelId)?.id == id) return CycleOperationResult.Saved
+        val token = idTokenOrError() ?: return CycleOperationResult.Failed(SESSION_MESSAGE)
+        return try {
+            saveCycleResponse(api.startCycle("Bearer $token", parcelId, CycleStartDto(id, startDate.toString()))).also { result ->
+                if (result == CycleOperationResult.Saved) {
+                    recordCycleChange(id, null, CycleStatus.EN_PREPARACION.name, startDate)
+                }
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: IOException) {
+            CycleOperationResult.Failed("No se pudo conectar. Revisa tu conexión e intenta de nuevo.")
+        } catch (_: Exception) {
+            CycleOperationResult.Failed("No se pudo iniciar el ciclo. Intenta de nuevo.")
+        }
+    }
+
+    private suspend fun idTokenOrError(): String? = try {
+        idToken()
+    } catch (error: CancellationException) {
+        throw error
+    } catch (_: Exception) {
+        null
+    }
+
+    private suspend fun saveCycleResponse(response: Response<ParcelResponseDto>): CycleOperationResult {
+        val parcel = response.body()
+        if (response.isSuccessful && parcel != null) {
+            saveLocal(listOf(parcel))
+            return CycleOperationResult.Saved
+        }
+        val message = runCatching {
+            Gson().fromJson(response.errorBody()?.charStream(), ApiErrorDto::class.java)?.detail?.message
+        }.getOrNull()
+        return CycleOperationResult.Failed(message ?: "El servidor no pudo actualizar el ciclo (${response.code()}).")
+    }
+
+    private suspend fun recordCycleChange(
+        cycleId: String, fromStatus: String?, toStatus: String, effectiveDate: LocalDate,
+    ) {
+        dao.upsertCycleStatusChange(
+            ProductionCycleStatusChangeEntity(
+                id = UUID.randomUUID().toString(), cycleId = cycleId, fromStatus = fromStatus,
+                toStatus = toStatus, effectiveDate = effectiveDate.toString(), changedAt = Instant.now().toString(),
+            ),
+        )
     }
 
     /**
@@ -263,10 +401,15 @@ class ParcelRepository(
 
     private suspend fun saveLocalInTransaction(parcels: List<ParcelResponseDto>) {
         dao.upsertParcels(parcels.map {
-            ParcelEntity(it.id, it.name, it.areaHa.setScale(2, RoundingMode.HALF_UP).toPlainString())
+            ParcelEntity(
+                it.id, it.name, it.areaHa.setScale(2, RoundingMode.HALF_UP).toPlainString(),
+                it.currentStatus ?: it.activeCycle?.status, it.activityCycleId ?: it.activeCycle?.id,
+            )
         })
-        dao.upsertCycles(parcels.mapNotNull { parcel ->
-            parcel.activeCycle?.let { ProductionCycleEntity(it.id, parcel.id, it.startDate, it.endDate, it.status) }
+        dao.upsertCycles(parcels.flatMap { parcel ->
+            listOfNotNull(parcel.activeCycle, parcel.lastCycle).map {
+                ProductionCycleEntity(it.id, parcel.id, it.startDate, it.endDate, it.status)
+            }
         })
         dao.upsertAforamientos(parcels.mapNotNull { parcel -> parcel.aforamiento?.toEntity(parcel.id) })
     }
@@ -286,6 +429,8 @@ class ParcelRepository(
         name = name,
         areaHa = areaHa,
         activeCycle = cycle?.let { CycleResponseDto(it.id, it.startDate, null, it.status) },
+        currentStatus = cycle?.status,
+        activityCycleId = cycle?.id,
     )
 
     private fun errorCode(response: Response<*>): String? = runCatching {
