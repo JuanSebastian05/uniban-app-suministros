@@ -329,6 +329,8 @@ def request_recommendation(
             "Esta parcela todavía no tiene aforamiento. Cuando el Equipo 1 lo envíe podrás pedir la recomendación."
         )
     body = build_request_body(db, parcel, aforamiento, producer_id, firebase_uid, today or date.today())
+    aforamiento_id = aforamiento.id
+    cycle_id = uuid.UUID(body["parcel"]["activeCycle"]["id"]) if body["parcel"]["activeCycle"] else None
     # La llamada puede tardar minutos (el servicio se duerme): se suelta la conexión de la base mientras tanto.
     db.rollback()
 
@@ -351,9 +353,12 @@ def request_recommendation(
 
     generated_at = datetime.now(timezone.utc)
     out = _to_out(uuid.uuid4(), parcel_id, generated_at, reply)
+    out.aforamiento_id = aforamiento_id
+    out.cycle_id = cycle_id
     db.add(Recommendation(
         id=out.id, parcel_id=parcel_id, period=out.period, source_version=out.source_version,
         generated_at=generated_at, payload=out.model_dump(mode="json", by_alias=True),
+        aforamiento_id=aforamiento_id, cycle_id=cycle_id,
     ))
     db.commit()
     return out

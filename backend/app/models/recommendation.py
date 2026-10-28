@@ -33,3 +33,5 @@ class Recommendation(Base):
     source_version: Mapped[str] = mapped_column(String(60))
     generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     payload: Mapped[dict] = mapped_column(JsonDocument)
+    aforamiento_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("aforamientos.id"))
+    cycle_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("production_cycles.id"))

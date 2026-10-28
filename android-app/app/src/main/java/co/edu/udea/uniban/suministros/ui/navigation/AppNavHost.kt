@@ -77,6 +77,7 @@ fun AppNavHost(
     parcelRepositoryFor: ((uid: String) -> ParcelRepository)? = null,
     // HU_12: recomendaciones de la cuenta. Si es nulo, el detalle de la parcela no muestra esa sección.
     recommendationRepositoryFor: ((uid: String) -> RecommendationSource)? = null,
+    productionRepositoryFor: ((uid: String) -> co.edu.udea.uniban.suministros.data.ProductionSource)? = null,
 ) {
     val session by authRepository.sessionState.collectAsStateWithLifecycle()
     val profile by authRepository.profileState.collectAsStateWithLifecycle()
@@ -95,6 +96,8 @@ fun AppNavHost(
         uid?.let { recommendationRepositoryFor?.invoke(it) }
     }
     val currentRecommendationRepository by rememberUpdatedState(recommendationRepository)
+    val productionRepository = remember(uid, productionRepositoryFor) { uid?.let { productionRepositoryFor?.invoke(it) } }
+    val currentProductionRepository by rememberUpdatedState(productionRepository)
 
     if (session is SessionState.Loading) {
         Box(
@@ -234,7 +237,9 @@ fun AppNavHost(
                     onActivities = { openTab(MainTab.ACTIVITIES) },
                     onHistory = { navController.navigate(AppDestinations.history()) { launchSingleTop = true } },
                     onRecord = { record ->
-                        val route = if (record.kind == "ACTIVITY") {
+                        val route = if (record.kind == "DISPATCH" && productionRepositoryFor != null) {
+                            AppDestinations.production(record.parcelId.orEmpty())
+                        } else if (record.kind == "ACTIVITY") {
                             record.parcelId?.takeIf { id -> parcels.parcels.any { it.id == id } }
                                 ?.let(AppDestinations::parcelDetail) ?: AppDestinations.ACTIVITIES
                         } else record.inventoryId?.let(AppDestinations::detail) ?: AppDestinations.history()
@@ -408,6 +413,9 @@ fun AppNavHost(
                         onNewActivity = {
                             navController.navigate(AppDestinations.activityNew(id)) { launchSingleTop = true }
                         },
+                        onProduction = if (productionRepositoryFor == null) null else {
+                            { navController.navigate(AppDestinations.production(id)) { launchSingleTop = true } }
+                        },
                     )
                 }
                 composable(AppDestinations.ACTIVITIES) { entry ->
@@ -420,6 +428,9 @@ fun AppNavHost(
                         pendingCount = inventoryState.pendingCount,
                         onNewActivity = { navController.navigate(AppDestinations.activityNew()) { launchSingleTop = true } },
                         navigationBar = { MainBottomBar(MainTab.ACTIVITIES, openTab) },
+                        onProduction = if (productionRepositoryFor == null) null else {
+                            { navController.navigate(AppDestinations.production()) { launchSingleTop = true } }
+                        },
                     )
                 }
                 composable(
@@ -438,6 +449,27 @@ fun AppNavHost(
                         onBack = { navController.popBackStack() },
                         onDone = { navController.popBackStack() },
                         onRetryInventory = inventoryViewModel::load,
+                        onStructuredHarvest = if (productionRepositoryFor == null) null else {
+                            { id -> navController.navigate(AppDestinations.production(id)) { launchSingleTop = true } }
+                        },
+                    )
+                }
+                if (productionRepositoryFor != null) composable(
+                    AppDestinations.PRODUCTION,
+                    arguments = listOf(navArgument("parcelId") { type = NavType.StringType; defaultValue = "" }),
+                ) { entry ->
+                    val parcelsViewModel = mainScopedViewModel<ParcelsViewModel>(navController, entry, parcelsFactory)
+                    val parcels by parcelsViewModel.state.collectAsStateWithLifecycle()
+                    val productionViewModel: co.edu.udea.uniban.suministros.ui.production.ProductionViewModel = viewModel(
+                        factory = remember { viewModelFactory { initializer {
+                            co.edu.udea.uniban.suministros.ui.production.ProductionViewModel(checkNotNull(currentProductionRepository), createSavedStateHandle())
+                        } } },
+                    )
+                    co.edu.udea.uniban.suministros.ui.production.ProductionScreen(
+                        productionViewModel, parcels.parcels,
+                        onBack = { navController.popBackStack() },
+                        onParcel = { navController.navigate(AppDestinations.parcelDetail(it)) { launchSingleTop = true } },
+                        onEntry = { navController.navigate(AppDestinations.entry()) { launchSingleTop = true } },
                     )
                 }
                 composable(AppDestinations.PARCEL_NEW) { entry ->

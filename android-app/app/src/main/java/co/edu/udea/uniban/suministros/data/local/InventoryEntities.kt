@@ -64,6 +64,7 @@ data class MovementEntity(
     val activityId: String? = null,
     /** Causa más reciente del error de sincronización, si el último intento falló. */
     val syncError: String? = null,
+    val dispatchId: String? = null,
 )
 
 /**

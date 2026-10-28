@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -44,6 +45,7 @@ fun ActivitiesScreen(
     pendingCount: Int,
     onNewActivity: () -> Unit,
     navigationBar: @Composable () -> Unit,
+    onProduction: (() -> Unit)? = null,
 ) {
     InventoryScaffold(
         title = "Actividades",
@@ -60,6 +62,11 @@ fun ActivitiesScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (onProduction != null) item {
+                OutlinedButton(onClick = onProduction, modifier = Modifier.fillMaxWidth().testTag("activities-production")) {
+                    Text("Cosechas y despachos")
+                }
+            }
             if (activities.isEmpty()) {
                 item {
                     Text(

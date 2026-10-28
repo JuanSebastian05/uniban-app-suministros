@@ -82,6 +82,8 @@ class RecommendationMetricsOut(CamelModel):
 
 
 class RecommendationOut(CamelModel):
+    aforamiento_id: uuid.UUID | None = None
+    cycle_id: uuid.UUID | None = None
     id: uuid.UUID
     parcel_id: uuid.UUID
     period: str

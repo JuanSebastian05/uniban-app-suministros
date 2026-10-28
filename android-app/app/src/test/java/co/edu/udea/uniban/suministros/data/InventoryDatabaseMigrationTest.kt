@@ -25,6 +25,27 @@ class InventoryDatabaseMigrationTest {
 
     private val name = "migration-test"
 
+    @Test fun deLa10ALa11ConservaInventarioYRecomendacionesSinInventarProducto() {
+        helper.createDatabase(name, 10).apply {
+            execSQL("INSERT INTO producers(id,name) VALUES ('u1','Productor')")
+            execSQL("INSERT INTO locations(id,producerId,name) VALUES ('l1','u1','Bodega')")
+            execSQL("INSERT INTO supplies(id,name,category,unit) VALUES ('s1','cajas','Empaque','unidad')")
+            execSQL("INSERT INTO inventory(id,locationId,supplyId,initialQuantity,quantity) VALUES ('i1','l1','s1',49,50)")
+            execSQL("INSERT INTO movements(id,inventoryId,quantity,date,observation,createdAt,updatedAt,type,syncStatus) VALUES ('m1','i1',1,'2026-10-26','','2026-10-26T12:00:00Z','2026-10-26T12:00:00Z','ENTRADA','PENDING')")
+            execSQL("INSERT INTO parcel_recommendations(parcelId,recommendationId,period,generatedAt,sourceVersion,volumeBunches,cutDeadline,meetsWindow,reason,suppliesJson) VALUES ('p1','r1','2026-W44','2026-10-26T12:00:00Z','v1',145.6,'2026-10-27T16:00:00',1,NULL,'[]')")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(name, 11, true)
+        db.query("SELECT quantity FROM inventory WHERE id='i1'").use { it.moveToFirst(); assertEquals(50f, it.getFloat(0)) }
+        db.query("SELECT dispatchId FROM movements WHERE id='m1'").use { it.moveToFirst(); assertEquals(true, it.isNull(0)) }
+        db.query("SELECT volumeBunches FROM parcel_recommendations WHERE parcelId='p1'").use { it.moveToFirst(); assertEquals(145.6, it.getDouble(0), 0.0001) }
+        listOf("production_plans", "harvests", "dispatches").forEach { table ->
+            db.query("SELECT COUNT(*) FROM $table").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
+            db.query("PRAGMA foreign_key_list($table)").use { assertFalse("$table no debe depender de parcelas refrescables", it.moveToFirst()) }
+        }
+        db.close()
+    }
+
     @Test fun deLa5ALa7ConservaLasParcelasYCreaLasTablasNuevas() {
         helper.createDatabase(name, 5).apply {
             execSQL("INSERT INTO parcels(id, name, areaHa) VALUES ('p1', 'La Esperanza', '2.40')")

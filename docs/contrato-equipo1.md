@@ -1,25 +1,32 @@
-# Integración con el Equipo 1: parcelas y aforamientos
+# Contrato de integración con el Equipo 1
 
-> Estado actualizado el 26/10/2026 a partir del código del repositorio y de lo reportado por el usuario. Las rutas están implementadas. El usuario indicó que SERVICE_API_KEY está en Render y que la migración 0010 llegó a main; esta revisión no verificó el servidor ni Neon. Coordinar una prueba conjunta antes de tratar la integración desplegada como validada.
+**Propósito:** permitir que el Equipo 1 consulte las parcelas disponibles y envíe a nuestro backend los aforamientos realizados para ellas.
 
-El Equipo 1 consulta las parcelas registradas en el Equipo 3 y envía los aforamientos. La app Android no se comunica directamente con el Equipo 1; consulta al backend del Equipo 3.
+## Quién llama a quién
 
-## Dirección y autenticación
+- El Equipo 1 consulta y envía datos al backend de Uniban Suministros (Equipo 3).
+- La aplicación móvil no recibe aforamientos directamente del Equipo 1. Los consulta a nuestro backend.
+- Dirección base de nuestro backend: `https://uniban-app-suministros.onrender.com`.
+- Rutas incluidas en este contrato: `GET /api/v1/service/parcels` y `POST /api/v1/aforamientos`.
 
-- Servidor: https://uniban-app-suministros.onrender.com
-- Las dos rutas usan la cabecera X-API-Key con la clave compartida.
-- No se requiere token de Firebase.
-- La clave se guarda en los secretos de Render y en la configuración privada del servidor del Equipo 1. No se incluye en este documento, el JSON ni el repositorio.
-- El usuario reportó que la variable SERVICE_API_KEY ya se configuró en Render. La entrega segura de la clave al otro equipo y la prueba contra producción deben confirmarse con ellos.
+## Autenticación
 
-## 1. Consultar parcelas
+Ambas rutas requieren la cabecera `X-API-Key`. El valor es una clave compartida entre los equipos y se configura como secreto en el servidor. No se usa un token de Firebase para estas dos llamadas.
+
+~~~http
+X-API-Key: <clave-compartida>
+~~~
+
+La clave no debe aparecer en el código, en Postman compartido ni en este documento.
+
+## 1. Consultar las parcelas
 
 ~~~http
 GET /api/v1/service/parcels
-X-API-Key: SU_CLAVE
+X-API-Key: <clave-compartida>
 ~~~
 
-Ejemplo de respuesta que entrega actualmente el backend:
+Respuesta `200 OK`: lista de parcelas. Si todavía no hay parcelas, devuelve una lista vacía.
 
 ~~~json
 [
@@ -31,17 +38,19 @@ Ejemplo de respuesta que entrega actualmente el backend:
 ]
 ~~~
 
-Diferencia que requiere acuerdo: el ejemplo del acuerdo inicial representa areaHa como número (2.40), pero la respuesta actual serializa el área como texto ("2.40"). Confirmar con el Equipo 1 que puede convertirlo a número o ajustar el esquema si necesitan recibir un número JSON.
+El identificador `id` es el valor que se debe enviar como `parcelId` al registrar el aforamiento. Esta ruta lista parcelas de todos los productores y solo expone identificador, nombre y área; no devuelve datos personales ni de ciclo productivo.
 
-La lista incluye las parcelas existentes de todos los productores, con solo identificador, nombre y área. Se debe usar el id recibido como parcelId al enviar el aforamiento.
+**Diferencia frente al ejemplo acordado:** el ejemplo inicial del contrato mostraba `areaHa` como número. La respuesta actual del backend lo serializa como texto con dos decimales (por ejemplo, `"2.40"`). El Equipo 1 debe confirmar que puede convertirlo a número; si exige un número JSON, habrá que ajustar la serialización antes de declarar este punto compatible.
 
 ## 2. Enviar un aforamiento
 
 ~~~http
 POST /api/v1/aforamientos
-X-API-Key: SU_CLAVE
+X-API-Key: <clave-compartida>
 Content-Type: application/json
 ~~~
+
+Cuerpo:
 
 ~~~json
 {
@@ -54,37 +63,47 @@ Content-Type: application/json
 }
 ~~~
 
-| Campo | Regla implementada |
+| Campo | Significado y regla |
 | --- | --- |
-| id | UUID generado por el Equipo 1. Identifica el aforamiento y permite reintentos idempotentes. |
-| parcelId | UUID existente obtenido de la lista de parcelas. |
-| date | Fecha calendario en formato AAAA-MM-DD. |
-| areaHa | Área aforada en hectáreas, mayor que cero. Es informativa y no se compara con el área de la parcela. |
-| estimatedPlants | Número entero mayor o igual a cero. |
-| confidence | Opcional; número de 0 a 1. |
+| `id` | UUID creado por el Equipo 1 para identificar este aforamiento. Debe conservarse en los reintentos. |
+| `parcelId` | UUID de una parcela devuelta por la consulta anterior. |
+| `date` | Fecha del aforamiento con formato `AAAA-MM-DD`. |
+| `areaHa` | Área medida, en hectáreas; debe ser mayor que cero. Es informativa y no se compara con el área registrada de la parcela. |
+| `estimatedPlants` | Cantidad estimada de plantas; entero mayor o igual a cero. |
+| `confidence` | Confianza entre 0 y 1. Es opcional. |
 
-### Respuestas
+### Respuestas del registro
 
-- 201 CREATED: primer envío aceptado.
-- 200 DUPLICATE: mismo id y mismo contenido, no crea otro registro.
-- 401: clave ausente o incorrecta.
-- 404: la parcela indicada no existe.
-- 409: se reutilizó el id con contenido distinto.
-- 422: formato o valor inválido.
-- 503: SERVICE_API_KEY no está configurada en el servidor.
+| HTTP | Resultado |
+| --- | --- |
+| `201 Created` | Aforamiento nuevo guardado. El cuerpo indica `status: "CREATED"`. |
+| `200 OK` | Ya existía el mismo UUID con el mismo contenido. No crea una segunda fila y responde `status: "DUPLICATE"`. |
+| `401 Unauthorized` | Falta la clave o no coincide. |
+| `404 Not Found` | El UUID de parcela no existe. |
+| `409 Conflict` | Se reutilizó el UUID del aforamiento con contenido diferente. |
+| `422 Unprocessable Entity` | El JSON, el formato de fecha o alguno de los valores no cumple las reglas. |
+| `503 Service Unavailable` | El servidor no tiene configurada la clave de servicio. |
 
-Si no reciben respuesta, reintenten con el mismo id y el mismo contenido. Un nuevo aforamiento debe usar un UUID nuevo.
+Ejemplo de respuesta al primer envío:
 
-## Uso en la app y datos
+~~~json
+{
+  "id": "22222222-2222-4222-8222-222222222222",
+  "status": "CREATED"
+}
+~~~
 
-El productor consulta el aforamiento más reciente en el detalle de la parcela. La app usa su propia autenticación Firebase al consultar los endpoints de parcelas; el Equipo 1 no necesita llamarlos.
+Ejemplo al reenviar exactamente el mismo aforamiento:
 
-La migración 0010 crea la tabla central de aforamientos. El código local también contiene HU_09 y las migraciones 0011–0012 para recomendaciones y ciclo productivo. Según el usuario, 0010 está en main; el estado actual de Neon y del despliegue de Render debe comprobarse por separado.
+~~~json
+{
+  "id": "22222222-2222-4222-8222-222222222222",
+  "status": "DUPLICATE"
+}
+~~~
 
-## Prueba de integración propuesta
+Si una llamada falla o no se recibe respuesta, reintentar con el mismo UUID y el mismo contenido. Para un nuevo aforamiento se debe generar otro UUID.
 
-1. El Equipo 1 consulta las parcelas con X-API-Key.
-2. Envía un aforamiento usando un parcelId real.
-3. Reenvía el mismo cuerpo y UUID: debe recibir DUPLICATE.
-4. El Equipo 3 confirma que aparece el aforamiento en la parcela.
-5. Se documenta la prueba conjunta y se confirma si areaHa como texto en la consulta de parcelas es aceptable.
+## Estado y validación
+
+Las dos rutas están implementadas en el código de este repositorio. Este documento describe ese contrato; por sí solo no demuestra que la versión desplegada ni la base de datos de producción estén actualizadas. La validación operativa se completa al probar las dos llamadas contra el servidor y confirmar la recepción conjunta con ambos equipos.

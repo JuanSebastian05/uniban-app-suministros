@@ -76,7 +76,8 @@ class InventoryRepository(
     val syncIssues: Flow<List<SyncIssue>> = combine(
         dao.observeMovementSyncErrors(),
         database.activityDao().observeActivitySyncErrors(),
-    ) { movements, activities ->
+        database.productionDao().errors(),
+    ) { movements, activities, dispatches ->
         val movementIssues = movements.map { issue ->
             val context = buildList {
                 add("Cantidad: ${Quantity.format(issue.quantity)} ${issue.unit}")
@@ -104,7 +105,7 @@ class InventoryRepository(
                 reason = issue.syncError ?: DEFAULT_SYNC_ERROR,
             )
         }
-        (movementIssues + activityIssues).sortedByDescending(SyncIssue::date)
+        (movementIssues + activityIssues + dispatches).sortedByDescending(SyncIssue::date)
     }
 
     /** Movimientos recientes de un insumo, para el detalle del inventario (HU_03). */
@@ -271,6 +272,15 @@ class InventoryRepository(
                 }
                 existing.cycleId
             } else {
+                require(type != ActivityType.COSECHA) { "Usa el registro de cosecha con cantidad, aforamiento y recomendación." }
+                if (type == ActivityType.SIEMBRA) {
+                    val cycleAtDate = database.productionDao().cycleAt(parcelId, date.toString())
+                    val stage = cycleAtDate?.let {
+                        if (it.endDate != null && it.endDate <= date.toString()) "DESCANSO"
+                        else database.productionDao().stageAt(it.id, date.toString()) ?: it.status
+                    }
+                    require(stage == "EN_PREPARACION") { "Solo se permite siembra durante En preparación." }
+                }
                 val cycle = database.parcelDao().activityCycleId(parcelId)
                 requireNotNull(cycle) { "La parcela aún no ha iniciado un ciclo productivo." }
                 val now = Instant.now().toString()

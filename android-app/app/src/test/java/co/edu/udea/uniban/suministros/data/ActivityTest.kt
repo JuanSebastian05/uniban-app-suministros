@@ -74,6 +74,7 @@ class ActivityTest {
     // --- Registro ---
 
     @Test fun guardaLaActividadConSuTipoFechaCicloYEstadoPendiente() = runTest {
+        database.parcelDao().updateActiveCycleStatus("p1", "EN_PREPARACION")
         val activityId = id()
         val saved = register(activityId, type = ActivityType.SIEMBRA, observation = "  Lote norte ")
         assertEquals(ActivityType.SIEMBRA, saved.type)
@@ -178,7 +179,7 @@ class ActivityTest {
 
     @Test fun mismoIdConOtroContenidoSeRechaza() = runTest {
         val activityId = id()
-        register(activityId, type = ActivityType.SIEMBRA)
+        register(activityId, type = ActivityType.FERTILIZACION)
         assertThrows(IllegalArgumentException::class.java) {
             runBlocking { register(activityId, type = ActivityType.COSECHA) }
         }
@@ -286,7 +287,7 @@ class ActivityTest {
 
     @Test fun laSincronizacionEnviaPrimeroLaActividadYLuegoSusConsumos() = runTest {
         val activityId = id()
-        register(activityId, type = ActivityType.COSECHA, observation = "Lote 1", supplies = listOf(ActivitySupply(ureaId, "3")))
+        register(activityId, type = ActivityType.FERTILIZACION, observation = "Lote 1", supplies = listOf(ActivitySupply(ureaId, "3")))
         val api = Recorder()
         val summary = syncRepo(api).syncPending()
         assertEquals(2, summary.synced)
@@ -295,7 +296,7 @@ class ActivityTest {
         assertEquals(activityId, sent.id)
         assertEquals("p1", sent.parcelId)
         assertEquals("c1", sent.cycleId)
-        assertEquals("COSECHA", sent.type)
+        assertEquals("FERTILIZACION", sent.type)
         assertEquals("Lote 1", sent.observation)
         assertEquals(activityId, api.movements.single().activityId)
         assertEquals(SyncStatus.SYNCED, database.activityDao().findActivity(activityId)!!.syncStatus)

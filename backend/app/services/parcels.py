@@ -198,7 +198,7 @@ def list_parcels(db: Session, producer_id: uuid.UUID) -> list[ParcelOut]:
 
 
 def _owned_parcel(db: Session, parcel_id: uuid.UUID, producer_id: uuid.UUID) -> Parcel:
-    parcel = db.get(Parcel, parcel_id)
+    parcel = db.scalar(select(Parcel).where(Parcel.id == parcel_id).with_for_update())
     if parcel is None or parcel.producer_id != producer_id:
         raise ParcelConflict("PARCEL_NOT_FOUND", "La parcela no existe o pertenece a otro usuario.")
     return parcel
@@ -209,7 +209,7 @@ def _record_cycle_change(
 ) -> None:
     db.add(ProductionCycleStatusChange(
         id=uuid.uuid4(), cycle_id=cycle.id, from_status=from_status, to_status=to_status,
-        effective_date=effective_date,
+        effective_date=effective_date, changed_at=datetime.now(timezone.utc),
     ))
 
 

@@ -1,0 +1,21 @@
+# Contrato y decisiones de cosecha y despacho (HU_15–16)
+
+Diseño previo a implementación, 28/10/2026. Se conservan los contratos de los Equipos 1 y 2 y las modificaciones locales del usuario.
+
+- El cupo se identifica por parcela y `period` ISO de la recomendación, independientemente de cuántas recomendaciones se pidan. La primera cosecha fija la recomendación de referencia para ese periodo; las siguientes operaciones usan esa misma referencia, incluso después de actualizar el aforamiento o la recomendación visible.
+- El `periodo` que el backend **envía** se calcula con la semana ISO de la fecha del aforamiento. El `period` que **almacena** es el `periodo` que **responde el Equipo 2**, sin recalcularlo; el comportamiento existente incluso admite una respuesta para otra semana. Se conserva el formato `AAAA-Wnn` y no se cambia silenciosamente ninguno de esos cálculos. El cupo usa el periodo recibido. Si una petición repetida devuelve el mismo periodo, no lo renueva; si devuelve otro, se muestra como otra referencia semanal. Falta confirmar con el Equipo 2 si una diferencia representa semana del aforamiento, semana de corte o una replanificación; no se asume que un aforamiento nuevo sea obligatorio para cada periodo distinto de respuesta.
+- `volumeBunches` se conserva sin recalcular confianza. Si vale 145,6, una cantidad entera acumulada de 146 requiere confirmación explícita de excepción. El formulario sugiere el entero inferior pendiente; la carga del plan (por ejemplo, 146) se muestra por separado.
+- Una cosecha crea una única actividad `COSECHA`, con el mismo UUID, y su detalle estructurado. La actividad no se envía nuevamente por la ruta genérica. Las cosechas históricas sin cantidad se conservan, pero no crean saldo de producto.
+- Las etapas se validan según la fecha de la operación y el historial de ciclos: siembra en preparación; cosecha en producción; despacho en producción o descanso. Para registros del mismo día se considera además el instante de registro/envío, de modo que un cierre posterior no invalide una cosecha ya guardada offline. El ciclo de origen del producto no se sustituye al abrir otro ciclo. El servidor verifica nuevamente las etapas al sincronizar.
+- Los despachos son parciales y consumen como máximo el total de empaques del plan. Para cada material se asigna `redondear2(requerido × min(despachadoAcumulado/cargaPlan, 1)) − asignadoAnterior`. Se evita descontar el total por cada parcial. Si la carga real queda por debajo de la planeada, queda visible la fracción pendiente del plan; si supera la carga planeada, no se cobran empaques adicionales automáticamente.
+- El despacho y todos sus movimientos `CONSUMO` se aceptan en una sola transacción. El servidor verifica las cantidades y pertenencia de cada inventario; no confía en cantidades enviadas por el teléfono. Un faltante impide guardar toda la operación y pide una entrada de inventario.
+- Se serializan las operaciones de una misma parcela en PostgreSQL para proteger el cupo semanal y el saldo frente a teléfonos concurrentes. Los UUID son idempotentes; un UUID con contenido diferente es conflicto.
+- Room guarda operaciones y consumos antes de pedir WorkManager. Se envían primero entradas/movimientos independientes, después cosechas y finalmente despachos elegibles. Los consumos de despacho no se envían por separado.
+
+## API propia del Equipo 3
+
+- `POST /api/v1/harvests`: UUID, parcela, ciclo, recomendación, aforamiento, fecha real, racimos enteros positivos, observación y confirmación de excepción. 201 creado, 200 reintento idéntico, 409 conflicto de contexto/cupo/etapa.
+- `POST /api/v1/dispatches`: UUID, parcela, ciclo de origen, recomendación, fecha/hora real con zona, racimos enteros, vehículo, orden y consumos con contexto de inventario. 201/200/409 con la misma semántica; valida saldo y consumo acumulado de empaques.
+- `GET /api/v1/production/{parcelId}`: historial estructurado de cosechas y despachos y recomendaciones de origen para reconstruir avance y saldo local. Nunca consulta al Equipo 2.
+
+Las recomendaciones existentes no tienen procedencia explícita de aforamiento/ciclo. Se conservarán; las operaciones nuevas necesitan una recomendación con esa trazabilidad, obtenida después de actualizar el backend. No se adivina el origen de las recomendaciones históricas.

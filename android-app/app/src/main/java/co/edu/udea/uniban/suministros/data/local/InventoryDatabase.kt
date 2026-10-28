@@ -7,6 +7,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 /**
+ * Versión 11 (HU_15–16): planes de origen, cosechas, despachos y consumos enlazados al despacho.
  * Versión 10 (HU_14): conserva el estado de parcela, el ciclo asociado a actividades durante el descanso y el historial de cambios.
  * Versión 9 (HU_12): conserva el plan completo y las métricas de la recomendación para consulta sin conexión.
  * Versión 8 (HU_10): conserva la última sincronización exitosa y la causa del error más reciente por registro.
@@ -19,20 +20,21 @@ import androidx.room.RoomDatabase
  *
  * Room genera cada migración a partir de los esquemas exportados en `app/schemas/...` (desde `1.json`
  * hasta la versión anterior); no se borran ni modifican datos. Al compilar, Room escribe el esquema
- * de la versión nueva (`10.json`) en la misma carpeta: debe versionarse junto con el cambio.
+ * de la versión nueva (`11.json`) en la misma carpeta: debe versionarse junto con el cambio.
  */
 @Database(
     entities = [ProducerEntity::class, LocationEntity::class, SupplyEntity::class,
         InventoryEntity::class, MovementEntity::class, ParcelEntity::class, ProductionCycleEntity::class,
         ProductionCycleStatusChangeEntity::class, ActivityEntity::class, AforamientoEntity::class,
-        RecommendationEntity::class, SyncMetadataEntity::class],
-    version = 10,
+        RecommendationEntity::class, SyncMetadataEntity::class, ProductionPlanEntity::class, HarvestEntity::class, DispatchEntity::class],
+    version = 11,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5), AutoMigration(from = 5, to = 6),
         AutoMigration(from = 6, to = 7), AutoMigration(from = 7, to = 8), AutoMigration(from = 8, to = 9),
         AutoMigration(from = 9, to = 10),
+        AutoMigration(from = 10, to = 11),
     ],
 )
 abstract class InventoryDatabase : RoomDatabase() {
@@ -41,6 +43,7 @@ abstract class InventoryDatabase : RoomDatabase() {
     abstract fun parcelDao(): ParcelDao
     abstract fun activityDao(): ActivityDao
     abstract fun syncMetadataDao(): SyncMetadataDao
+    abstract fun productionDao(): ProductionDao
 
     companion object {
         /**

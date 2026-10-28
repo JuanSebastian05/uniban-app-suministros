@@ -71,6 +71,7 @@ fun ActivityFormScreen(
     onBack: () -> Unit,
     onDone: () -> Unit,
     onRetryInventory: () -> Unit,
+    onStructuredHarvest: ((String) -> Unit)? = null,
 ) {
     val state = viewModel.state
     LaunchedEffect(state.saved) { if (state.saved != null) onDone() }
@@ -148,7 +149,10 @@ fun ActivityFormScreen(
                         row.forEach { type ->
                             FilterChip(
                                 selected = state.type == type,
-                                onClick = { viewModel.selectType(type) },
+                                onClick = {
+                                    if (type == ActivityType.COSECHA && onStructuredHarvest != null) onStructuredHarvest(state.parcelId)
+                                    else viewModel.selectType(type)
+                                },
                                 label = { Text(type.label) },
                                 enabled = editable,
                                 modifier = Modifier.testTag("activity-type-${type.name}"),

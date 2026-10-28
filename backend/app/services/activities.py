@@ -12,6 +12,7 @@ import logging
 import uuid
 
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Activity, Parcel, ProductionCycle
@@ -45,12 +46,19 @@ def _existing_result(db: Session, existing: Activity, data: ActivityIn, producer
 
 
 def _check_context(db: Session, data: ActivityIn, producer_id: uuid.UUID) -> None:
-    parcel = db.get(Parcel, data.parcel_id)
+    parcel = db.scalar(select(Parcel).where(Parcel.id == data.parcel_id).with_for_update())
     if parcel is None or parcel.producer_id != producer_id:
         raise ActivityConflict("La parcela no existe o pertenece a otro usuario.")
     cycle = db.get(ProductionCycle, data.cycle_id)
     if cycle is None or cycle.parcel_id != parcel.id:
         raise ActivityConflict("El ciclo no pertenece a la parcela indicada.")
+    if data.type == "COSECHA":
+        raise ActivityConflict("Registra la cosecha estructurada con cantidad, aforamiento y recomendación.")
+    if data.type == "SIEMBRA":
+        from app.services.production import stage_at
+        active, stage = stage_at(db, parcel.id, data.date, data.created_at)
+        if active is None or active.id != cycle.id or stage != "EN_PREPARACION":
+            raise ActivityConflict("Solo se permite siembra durante En preparación.")
 
 
 def sync_activity(db: Session, data: ActivityIn, producer_id: uuid.UUID) -> str:

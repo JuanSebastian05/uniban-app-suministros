@@ -79,6 +79,7 @@ fun ParcelDetailScreen(
     onChangeCycleStage: ((CycleStatus) -> Unit)? = null,
     onFinishCycle: ((LocalDate) -> Unit)? = null,
     onStartCycle: ((LocalDate) -> Unit)? = null,
+    onProduction: (() -> Unit)? = null,
 ) {
     val parcel = state.parcels.find { it.id == parcelId }
     var showStageDialog by remember { mutableStateOf(false) }
@@ -160,6 +161,11 @@ fun ParcelDetailScreen(
                             modifier = Modifier.padding(top = 8.dp),
                         )
                         RecommendationSection(recommendation, onRequestRecommendation)
+                    }
+                    if (onProduction != null) {
+                        OutlinedButton(onClick = onProduction, modifier = Modifier.fillMaxWidth().testTag("open-production")) {
+                            Text("Cosechas y despachos")
+                        }
                     }
                     Text(
                         "ACTIVIDADES",

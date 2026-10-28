@@ -42,6 +42,7 @@ class UnibanApplication : Application() {
     }
 
     private val activityApi by lazy { retrofit.create(ActivityApi::class.java) }
+    private val productionApi by lazy { retrofit.create(co.edu.udea.uniban.suministros.data.remote.ProductionApi::class.java) }
 
     val authRepository: AuthRepository by lazy {
         FirebaseAuthRepository(this, retrofit.create(UserApi::class.java))
@@ -71,7 +72,11 @@ class UnibanApplication : Application() {
 
     /** Sincroniza los movimientos de [uid] con el token de esa misma cuenta. */
     fun movementSyncRepository(uid: String): MovementSyncRepository =
-        MovementSyncRepository(database(uid), movementApi, activityApi) { authRepository.idToken(uid) }
+        MovementSyncRepository(database(uid), movementApi, activityApi, productionApi) { authRepository.idToken(uid) }
+
+    fun productionRepository(uid: String): co.edu.udea.uniban.suministros.data.ProductionRepository =
+        co.edu.udea.uniban.suministros.data.ProductionRepository(database(uid), productionApi, uid,
+            onSaved = { SyncScheduler.enqueue(this) }) { authRepository.idToken(uid) }
 
     override fun onCreate() {
         super.onCreate()

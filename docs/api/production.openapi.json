@@ -1,0 +1,1746 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Uniban Suministros API",
+    "description": "Backend del Equipo 3 – gestión y trazabilidad de suministros (Plátano / Unibán).",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/harvests": {
+      "post": {
+        "tags": [
+          "cosechas y despachos"
+        ],
+        "summary": "Harvest",
+        "operationId": "harvest_api_v1_harvests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HarvestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivitySyncOut"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Cosecha ya recibida, idéntica."
+          },
+          "409": {
+            "description": "Conflicto de cupo, etapa, contexto o UUID."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dispatches": {
+      "post": {
+        "tags": [
+          "cosechas y despachos"
+        ],
+        "summary": "Dispatch",
+        "operationId": "dispatch_api_v1_dispatches_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DispatchIn-Input"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivitySyncOut"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Despacho ya recibido, idéntico."
+          },
+          "409": {
+            "description": "Faltante de producto o empaques, etapa, contexto o UUID."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/production/{parcel_id}": {
+      "get": {
+        "tags": [
+          "cosechas y despachos"
+        ],
+        "summary": "History",
+        "operationId": "history_api_v1_production__parcel_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "parcel_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Parcel Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionHistoryOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Parcela inexistente o ajena."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ActivityIn": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "parcelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Parcelid"
+          },
+          "cycleId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Cycleid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "FERTILIZACION",
+              "SIEMBRA",
+              "COSECHA",
+              "APLICACION_INSUMO",
+              "CONTROL_FITOSANITARIO",
+              "OTRA"
+            ],
+            "title": "Type"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "observation": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Observation",
+            "default": ""
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "parcelId",
+          "cycleId",
+          "type",
+          "date",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "ActivityIn"
+      },
+      "ActivitySyncOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CREATED",
+              "DUPLICATE"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "ActivitySyncOut"
+      },
+      "AforamientoIn": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "parcelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Parcelid"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "areaHa": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 99999.99,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Areaha"
+          },
+          "estimatedPlants": {
+            "type": "integer",
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Estimatedplants"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "parcelId",
+          "date",
+          "areaHa",
+          "estimatedPlants"
+        ],
+        "title": "AforamientoIn"
+      },
+      "AforamientoOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "parcelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Parcelid"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "areaHa": {
+            "type": "string",
+            "title": "Areaha"
+          },
+          "estimatedPlants": {
+            "type": "integer",
+            "title": "Estimatedplants"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "parcelId",
+          "date",
+          "areaHa",
+          "estimatedPlants",
+          "confidence"
+        ],
+        "title": "AforamientoOut",
+        "description": "Aforamiento tal como lo ve la app (HU_09)."
+      },
+      "AforamientoSyncOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CREATED",
+              "DUPLICATE"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "AforamientoSyncOut"
+      },
+      "CycleFinishIn": {
+        "properties": {
+          "endDate": {
+            "type": "string",
+            "format": "date",
+            "title": "Enddate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "endDate"
+        ],
+        "title": "CycleFinishIn"
+      },
+      "CycleIn": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date",
+            "title": "Startdate"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "EN_PREPARACION",
+              "PRODUCCION"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "startDate",
+          "status"
+        ],
+        "title": "CycleIn"
+      },
+      "CycleOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date",
+            "title": "Startdate"
+          },
+          "endDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enddate"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "EN_PREPARACION",
+              "PRODUCCION",
+              "DESCANSO"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "startDate",
+          "endDate",
+          "status"
+        ],
+        "title": "CycleOut"
+      },
+      "CycleStageUpdateIn": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "EN_PREPARACION",
+              "PRODUCCION"
+            ],
+            "title": "Status"
+          },
+          "effectiveDate": {
+            "type": "string",
+            "format": "date",
+            "title": "Effectivedate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "effectiveDate"
+        ],
+        "title": "CycleStageUpdateIn",
+        "description": "Etapa activa del ciclo. Descanso se registra cerrando el ciclo, no como su etapa."
+      },
+      "CycleStartIn": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date",
+            "title": "Startdate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "startDate"
+        ],
+        "title": "CycleStartIn"
+      },
+      "DispatchIn-Input": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "parcelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Parcelid"
+          },
+          "cycleId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Cycleid"
+          },
+          "recommendationId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Recommendationid"
+          },
+          "dispatchedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Dispatchedat"
+          },
+          "quantity": {
+            "type": "integer",
+            "maximum": 1000000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Quantity"
+          },
+          "vehicleId": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Vehicleid",
+            "default": ""
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Order"
+          },
+          "observation": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Observation",
+            "default": ""
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "consumptions": {
+            "items": {
+              "$ref": "#/components/schemas/MovementIn-Input"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Consumptions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "parcelId",
+          "cycleId",
+          "recommendationId",
+          "dispatchedAt",
+          "quantity",
+          "order",
+          "createdAt"
+        ],
+        "title": "DispatchIn"
+      },
+      "DispatchIn-Output": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "parcelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Parcelid"
+          },
+          "cycleId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Cycleid"
+          },
+          "recommendationId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Recommendationid"
+          },
+          "dispatchedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Dispatchedat"
+          },
+          "quantity": {
+            "type": "integer",
+            "maximum": 1000000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Quantity"
+          },
+          "vehicleId": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Vehicleid",
+            "default": ""
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Order"
+          },
+          "observation": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Observation",
+            "default": ""
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "consumptions": {
+            "items": {
+              "$ref": "#/components/schemas/MovementIn-Output"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Consumptions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "parcelId",
+          "cycleId",
+          "recommendationId",
+          "dispatchedAt",
+          "quantity",
+          "order",
+          "createdAt"
+        ],
+        "title": "DispatchIn"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HarvestIn": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "parcelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Parcelid"
+          },
+          "cycleId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Cycleid"
+          },
+          "recommendationId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Recommendationid"
+          },
+          "aforamientoId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Aforamientoid"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "quantity": {
+            "type": "integer",
+            "maximum": 1000000000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Quantity"
+          },
+          "observation": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Observation",
+            "default": ""
+          },
+          "exceptionConfirmed": {
+            "type": "boolean",
+            "title": "Exceptionconfirmed",
+            "default": false
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "parcelId",
+          "cycleId",
+          "recommendationId",
+          "aforamientoId",
+          "date",
+          "quantity",
+          "createdAt"
+        ],
+        "title": "HarvestIn"
+      },
+      "InventoryIn-Input": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "initialQuantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 99999.99,
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Initialquantity"
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationIn"
+          },
+          "supply": {
+            "$ref": "#/components/schemas/SupplyIn"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "initialQuantity",
+          "location",
+          "supply"
+        ],
+        "title": "InventoryIn"
+      },
+      "InventoryIn-Output": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "initialQuantity": {
+            "type": "string",
+            "title": "Initialquantity"
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationIn"
+          },
+          "supply": {
+            "$ref": "#/components/schemas/SupplyIn"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "initialQuantity",
+          "location",
+          "supply"
+        ],
+        "title": "InventoryIn"
+      },
+      "InventoryItemOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "supplyId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Supplyid"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "location": {
+            "type": "string",
+            "title": "Location"
+          },
+          "quantity": {
+            "type": "string",
+            "title": "Quantity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "supplyId",
+          "name",
+          "category",
+          "unit",
+          "location",
+          "quantity"
+        ],
+        "title": "InventoryItemOut"
+      },
+      "LocationIn": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "producer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProducerIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "LocationIn"
+      },
+      "MovementIn-Input": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Type"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 99999.99,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "observation": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Observation",
+            "default": ""
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          },
+          "inventory": {
+            "$ref": "#/components/schemas/InventoryIn-Input"
+          },
+          "parcelId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parcelid"
+          },
+          "cycleId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cycleid"
+          },
+          "lossReason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "DESPERDICIO",
+                  "MAL_MANEJO",
+                  "CLIMA",
+                  "OTRO"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lossreason"
+          },
+          "adjustDirection": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "AUMENTO",
+                  "DISMINUCION"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustdirection"
+          },
+          "activityId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activityid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "quantity",
+          "date",
+          "createdAt",
+          "updatedAt",
+          "inventory"
+        ],
+        "title": "MovementIn"
+      },
+      "MovementIn-Output": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Type"
+          },
+          "quantity": {
+            "type": "string",
+            "title": "Quantity"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "observation": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Observation",
+            "default": ""
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          },
+          "inventory": {
+            "$ref": "#/components/schemas/InventoryIn-Output"
+          },
+          "parcelId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parcelid"
+          },
+          "cycleId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cycleid"
+          },
+          "lossReason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "DESPERDICIO",
+                  "MAL_MANEJO",
+                  "CLIMA",
+                  "OTRO"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lossreason"
+          },
+          "adjustDirection": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "AUMENTO",
+                  "DISMINUCION"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustdirection"
+          },
+          "activityId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activityid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "quantity",
+          "date",
+          "createdAt",
+          "updatedAt",
+          "inventory"
+        ],
+        "title": "MovementIn"
+      },
+      "MovementSyncOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CREATED",
+              "DUPLICATE"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "MovementSyncOut"
+      },
+      "ParcelIn": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Name"
+          },
+          "areaHa": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 99999.99,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Areaha"
+          },
+          "cycle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CycleIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "areaHa"
+        ],
+        "title": "ParcelIn"
+      },
+      "ParcelOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "areaHa": {
+            "type": "string",
+            "title": "Areaha"
+          },
+          "activeCycle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CycleOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "currentStatus": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "EN_PREPARACION",
+                  "PRODUCCION",
+                  "DESCANSO"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currentstatus"
+          },
+          "activityCycleId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activitycycleid"
+          },
+          "lastCycle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CycleOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "aforamiento": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AforamientoOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "areaHa",
+          "activeCycle"
+        ],
+        "title": "ParcelOut"
+      },
+      "ProducerIn": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ProducerIn"
+      },
+      "ProductionHistoryOut": {
+        "properties": {
+          "harvests": {
+            "items": {
+              "$ref": "#/components/schemas/HarvestIn"
+            },
+            "type": "array",
+            "title": "Harvests"
+          },
+          "dispatches": {
+            "items": {
+              "$ref": "#/components/schemas/DispatchIn-Output"
+            },
+            "type": "array",
+            "title": "Dispatches"
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/RecommendationOut"
+            },
+            "type": "array",
+            "title": "Recommendations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "harvests",
+          "dispatches",
+          "recommendations"
+        ],
+        "title": "ProductionHistoryOut"
+      },
+      "RecommendationMetricsOut": {
+        "properties": {
+          "windowCompliance": {
+            "type": "number",
+            "title": "Windowcompliance"
+          },
+          "capacityUse": {
+            "type": "number",
+            "title": "Capacityuse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "windowCompliance",
+          "capacityUse"
+        ],
+        "title": "RecommendationMetricsOut"
+      },
+      "RecommendationOut": {
+        "properties": {
+          "aforamientoId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aforamientoid"
+          },
+          "cycleId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cycleid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "parcelId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Parcelid"
+          },
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generatedat"
+          },
+          "sourceVersion": {
+            "type": "string",
+            "title": "Sourceversion"
+          },
+          "volumeBunches": {
+            "type": "number",
+            "title": "Volumebunches"
+          },
+          "cutDeadline": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Cutdeadline"
+          },
+          "meetsWindow": {
+            "type": "boolean",
+            "title": "Meetswindow"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/RecommendationPlanOut"
+          },
+          "supplies": {
+            "items": {
+              "$ref": "#/components/schemas/RecommendationSupplyOut"
+            },
+            "type": "array",
+            "title": "Supplies"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/RecommendationMetricsOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "parcelId",
+          "period",
+          "generatedAt",
+          "sourceVersion",
+          "volumeBunches",
+          "cutDeadline",
+          "meetsWindow",
+          "plan",
+          "supplies",
+          "metrics"
+        ],
+        "title": "RecommendationOut"
+      },
+      "RecommendationPlanOut": {
+        "properties": {
+          "parcelId": {
+            "type": "string",
+            "title": "Parcelid"
+          },
+          "cutDate": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Cutdate"
+          },
+          "order": {
+            "type": "integer",
+            "title": "Order"
+          },
+          "estimatedLoadBunches": {
+            "type": "integer",
+            "title": "Estimatedloadbunches"
+          },
+          "meetsWindow": {
+            "type": "boolean",
+            "title": "Meetswindow"
+          },
+          "vehicleId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicleid"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "parcelId",
+          "cutDate",
+          "order",
+          "estimatedLoadBunches",
+          "meetsWindow",
+          "vehicleId",
+          "reason"
+        ],
+        "title": "RecommendationPlanOut",
+        "description": "Plan de corte completo que entrega el Equipo 2."
+      },
+      "RecommendationSupplyOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "requiredQuantity": {
+            "type": "number",
+            "title": "Requiredquantity"
+          },
+          "availableQuantity": {
+            "type": "number",
+            "title": "Availablequantity"
+          },
+          "deficit": {
+            "type": "number",
+            "title": "Deficit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "date",
+          "requiredQuantity",
+          "availableQuantity",
+          "deficit"
+        ],
+        "title": "RecommendationSupplyOut",
+        "description": "Un insumo de empaque con su necesidad. El Equipo 2 no entrega «exceso»: solo requerido, disponible y déficit."
+      },
+      "RegisterIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "document": {
+            "type": "string",
+            "maxLength": 30,
+            "minLength": 1,
+            "title": "Document"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "document"
+        ],
+        "title": "RegisterIn"
+      },
+      "ServiceParcelOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "areaHa": {
+            "type": "string",
+            "title": "Areaha"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "areaHa"
+        ],
+        "title": "ServiceParcelOut",
+        "description": "Lo único que se entrega al Equipo 1: sin productor, documento, ciclo ni otros datos (privacidad)."
+      },
+      "SupplyIn": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "category": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Category"
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Unit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "category",
+          "unit"
+        ],
+        "title": "SupplyIn"
+      },
+      "UserOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "document": {
+            "type": "string",
+            "title": "Document"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "producerId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Producerid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "name",
+          "document",
+          "phone",
+          "role",
+          "producerId"
+        ],
+        "title": "UserOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}
