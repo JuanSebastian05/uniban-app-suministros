@@ -29,7 +29,7 @@ La UI no accede directamente al DAO ni conoce detalles HTTP. El Equipo 1 se aute
 | ui/navigation | Navegación, protección de sesión y pestañas principales. |
 | data/auth | Estado de sesión y perfil; integración con Firebase. |
 | data | Repositorios de inventario, parcelas, sincronización e integración con recomendaciones. |
-| data/local | Entidades, DAO y base Room, versión 9. Esquemas exportados en android-app/app/schemas. |
+| data/local | Entidades, DAO y base Room, versión 10. Esquemas exportados en android-app/app/schemas. |
 | data/remote | Interfaces Retrofit para usuarios, movimientos, actividades, parcelas y recomendaciones. |
 | sync | Programación y ejecución de sincronización con WorkManager. |
 | core/network | Cliente HTTP, URL base y tiempos de espera. |
@@ -38,7 +38,7 @@ Cada cuenta utiliza una base local con nombre asociado a su UID. Las tablas loca
 
 ## Backend
 
-La API organiza rutas en api/v1, contratos Pydantic en schemas, reglas de negocio en services, modelos SQLAlchemy en models y sesiones de base de datos en db. Alembic mantiene el esquema PostgreSQL; la revisión más reciente en este repositorio es 0011_recomendaciones.
+La API organiza rutas en api/v1, contratos Pydantic en schemas, reglas de negocio en services, modelos SQLAlchemy en models y sesiones de base de datos en db. Alembic mantiene el esquema PostgreSQL; la revisión más reciente en este repositorio es 0012_ciclos_etapas_y_descanso.
 
 ### Rutas principales
 

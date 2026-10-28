@@ -1,6 +1,6 @@
 # Avisos y acuerdos vigentes del equipo
 
-> Actualizado el 27/10/2026. Para el estado funcional, consultar [estado del proyecto](estado-proyecto.md); para los contratos externos, consultar los documentos de cada equipo. Las notas antiguas sobre ramas y PR ya no son instrucciones vigentes.
+> Actualizado el 28/10/2026. Para el estado funcional, consultar [estado del proyecto](estado-proyecto.md); para los contratos externos, consultar los documentos de cada equipo. Las notas antiguas sobre ramas y PR ya no son instrucciones vigentes.
 
 ## Integración con el Equipo 1
 
@@ -26,11 +26,11 @@ Ver [contrato de Equipo 2](contrato-equipo2.md) y [TXT para compartir](integraci
 
 ## Versiones de esquema y despliegue
 
-- En este repositorio, Alembic tiene cabeza 0011_recomendaciones y Room está en versión 9 (plan y métricas completas de HU_12).
+- En este repositorio, Alembic tiene cabeza 0012_ciclos_etapas_y_descanso y Room está en versión 10 (gestión de ciclos y estado de descanso).
 - La revisión real de Neon no se puede deducir de la rama main ni del código que Render expone. Consultar la revisión antes de modificar la base.
 - Render no ejecuta Alembic automáticamente. Ensayar en una base temporal, aplicar el esquema compatible y luego desplegar el código.
 - Antes de una nueva migración, comprobar que Alembic tenga una sola cabeza y que la revisión pueda subirse desde la versión real de la base.
-- El usuario informó que 0010 llegó a main. La aplicación de 0011 y la versión activa de Render no están confirmadas en este documento.
+- El usuario informó que 0010 llegó a main. La aplicación de 0011/0012 y la versión activa de Render no están confirmadas en este documento.
 
 Ver [despliegue](despliegue-render.md) y [lista de verificación](lista-verificacion-despliegue.md).
 

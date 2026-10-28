@@ -1,5 +1,7 @@
 package co.edu.udea.uniban.suministros.ui.parcels
 
+import android.app.DatePickerDialog
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,13 +13,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -65,8 +74,16 @@ fun ParcelDetailScreen(
     // HU_12: última recomendación del Equipo 2 y botón para pedir una nueva. Nulo = no se muestra la sección.
     recommendation: RecommendationUiState? = null,
     onRequestRecommendation: () -> Unit = {},
+    cycleSaving: Boolean = false,
+    cycleError: String? = null,
+    onChangeCycleStage: ((CycleStatus) -> Unit)? = null,
+    onFinishCycle: ((LocalDate) -> Unit)? = null,
+    onStartCycle: ((LocalDate) -> Unit)? = null,
 ) {
     val parcel = state.parcels.find { it.id == parcelId }
+    var showStageDialog by remember { mutableStateOf(false) }
+    var showFinishDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     InventoryScaffold(
         title = parcel?.name ?: "Detalle de la parcela",
         pendingCount = pendingCount,
@@ -88,7 +105,46 @@ fun ParcelDetailScreen(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    if (parcel.cycleStartDate == null) NoActiveCycle() else ActiveCycle(parcel, today)
+                    if (parcel.cycleStartDate == null) {
+                        NoActiveCycle(resting = parcel.currentStatus == CycleStatus.DESCANSO.name)
+                        if (onStartCycle != null) {
+                            OutlinedButton(
+                                enabled = !cycleSaving,
+                                onClick = {
+                                    DatePickerDialog(
+                                        context,
+                                        { _, year, month, day ->
+                                            onStartCycle(LocalDate.of(year, month + 1, day))
+                                        },
+                                        today.year, today.monthValue - 1, today.dayOfMonth,
+                                    ).show()
+                                },
+                                modifier = Modifier.fillMaxWidth().testTag("start-cycle"),
+                            ) { Text(if (parcel.currentStatus == CycleStatus.DESCANSO.name) "Iniciar nuevo ciclo" else "Iniciar ciclo") }
+                        }
+                    } else {
+                        ActiveCycle(parcel, today)
+                        if (onChangeCycleStage != null && parcel.currentStatus != CycleStatus.DESCANSO.name) {
+                            OutlinedButton(
+                                enabled = !cycleSaving,
+                                onClick = { showStageDialog = true },
+                                modifier = Modifier.fillMaxWidth().testTag("change-cycle-stage"),
+                            ) { Text("Cambiar etapa") }
+                        }
+                        if (onFinishCycle != null) {
+                            OutlinedButton(
+                                enabled = !cycleSaving,
+                                onClick = { showFinishDialog = true },
+                                modifier = Modifier.fillMaxWidth().testTag("finish-cycle"),
+                            ) { Text("Finalizar ciclo") }
+                        }
+                    }
+                    if (cycleSaving) {
+                        Text("Actualizando ciclo…", style = MaterialTheme.typography.bodySmall)
+                    }
+                    cycleError?.let {
+                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
                     Text(
                         "AFORAMIENTO",
                         style = MaterialTheme.typography.labelMedium,
@@ -121,7 +177,7 @@ fun ParcelDetailScreen(
                     }
                     activities.forEach { ActivityCard(it, activeCycleId = parcel.cycleId) }
                     if (onNewActivity != null) {
-                        if (parcel.cycleId == null) {
+                        if (parcel.activityCycleId == null) {
                             Text(
                                 "Inicia un ciclo productivo para registrar actividades en esta parcela.",
                                 style = MaterialTheme.typography.bodySmall,
@@ -160,12 +216,45 @@ fun ParcelDetailScreen(
             }
         }
     }
+
+    if (showStageDialog && parcel != null && onChangeCycleStage != null) {
+        AlertDialog(
+            onDismissRequest = { if (!cycleSaving) showStageDialog = false },
+            title = { Text("Cambiar etapa") },
+            text = { Text("Selecciona la etapa actual del cultivo.") },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CycleStatus.entries.filter { it != CycleStatus.DESCANSO }.forEach { stage ->
+                        TextButton(
+                            enabled = !cycleSaving && parcel.currentStatus != stage.name,
+                            onClick = { onChangeCycleStage(stage); showStageDialog = false },
+                        ) { Text(stage.label) }
+                    }
+                }
+            },
+            dismissButton = { TextButton(onClick = { showStageDialog = false }) { Text("Cancelar") } },
+        )
+    }
+    if (showFinishDialog && onFinishCycle != null) {
+        AlertDialog(
+            onDismissRequest = { if (!cycleSaving) showFinishDialog = false },
+            title = { Text("Finalizar ciclo") },
+            text = { Text("La parcela quedará en descanso. Podrás iniciar otro ciclo cuando corresponda.") },
+            confirmButton = {
+                TextButton(
+                    enabled = !cycleSaving,
+                    onClick = { onFinishCycle(today); showFinishDialog = false },
+                ) { Text("Finalizar") }
+            },
+            dismissButton = { TextButton(onClick = { showFinishDialog = false }) { Text("Cancelar") } },
+        )
+    }
 }
 
 /** Banda verde con los cuatro datos principales, como en el mockup. */
 @Composable
 private fun SummaryHeader(parcel: ParcelSummary) {
-    val status = CycleStatus.fromCode(parcel.cycleStatus)
+    val status = CycleStatus.fromCode(parcel.currentStatus ?: parcel.cycleStatus)
     Column(
         Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.primary).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -175,7 +264,15 @@ private fun SummaryHeader(parcel: ParcelSummary) {
             HeaderTile("Estado", status?.label ?: "—", Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            HeaderTile("Ciclo", if (parcel.cycleStartDate == null) "Sin ciclo activo" else "Activo", Modifier.weight(1f))
+            HeaderTile(
+                "Ciclo",
+                when {
+                    parcel.cycleStartDate != null -> "Activo"
+                    parcel.currentStatus == CycleStatus.DESCANSO.name -> "En descanso"
+                    else -> "Sin ciclo activo"
+                },
+                Modifier.weight(1f),
+            )
             HeaderTile("Inicio", parcel.cycleStartDate?.let(ParcelValidation::formatDate) ?: "—", Modifier.weight(1f))
         }
     }
@@ -208,7 +305,7 @@ private fun ActiveCycle(parcel: ParcelSummary, today: LocalDate) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Etapa actual", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                StatusChip(CycleStatus.fromCode(parcel.cycleStatus))
+                StatusChip(CycleStatus.fromCode(parcel.currentStatus ?: parcel.cycleStatus))
             }
             HorizontalDivider()
             DetailRow("Fecha de inicio", ParcelValidation.formatDate(start))
@@ -226,7 +323,7 @@ private fun ActiveCycle(parcel: ParcelSummary, today: LocalDate) {
 }
 
 @Composable
-private fun NoActiveCycle() {
+private fun NoActiveCycle(resting: Boolean) {
     Surface(
         color = UnibanPending,
         contentColor = UnibanPendingText,
@@ -234,10 +331,13 @@ private fun NoActiveCycle() {
         modifier = Modifier.fillMaxWidth().testTag("no-active-cycle"),
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Esta parcela no tiene un ciclo productivo activo.", fontWeight = FontWeight.Bold)
             Text(
-                "Los ciclos se inician al registrar la parcela. Iniciar un ciclo en una parcela existente " +
-                    "aún no está disponible.",
+                if (resting) "La parcela está en descanso." else "Esta parcela no tiene un ciclo productivo activo.",
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                if (resting) "Puedes iniciar un nuevo ciclo cuando comience la siguiente etapa de producción."
+                else "Puedes iniciar un ciclo productivo para comenzar a registrar sus actividades.",
                 style = MaterialTheme.typography.bodySmall,
             )
         }

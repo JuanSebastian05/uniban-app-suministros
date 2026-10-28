@@ -2,7 +2,7 @@
 
 Aplicación Android offline-first para que productores de plátano gestionen inventario, movimientos, parcelas y actividades. Un backend FastAPI central sincroniza los datos, recibe aforamientos del Equipo 1 y consulta recomendaciones del Equipo 2.
 
-> **Estado de referencia: 27/10/2026.** HU_01–10, HU_12–14 y las integraciones de servicio con los Equipos 1 y 2 están implementadas en el código local. HU_11 está parcialmente implementada. El tipo de movimiento **SALIDA** todavía no se puede registrar desde la app. El estado del código y las verificaciones de despliegue se distinguen en [estado del proyecto](docs/estado-proyecto.md).
+> **Estado de referencia: 28/10/2026.** HU_01–10, HU_12–14 y las integraciones de servicio con los Equipos 1 y 2 están implementadas en el código local. HU_11 está parcialmente implementada. El tipo de movimiento **SALIDA** todavía no se puede registrar desde la app. El estado del código y las verificaciones de despliegue se distinguen en [estado del proyecto](docs/estado-proyecto.md).
 
 ## Qué resuelve
 
@@ -22,7 +22,7 @@ La app Android se comunica únicamente con nuestro backend. El Equipo 1 escribe 
 | App Android | Kotlin, Jetpack Compose, Room, Retrofit, WorkManager; uso offline-first. |
 | Identidad | Firebase Authentication; el backend verifica el token y el rol de productor. |
 | Backend | FastAPI, SQLAlchemy, Alembic y PostgreSQL. |
-| Base local | Room, actualmente versión 9. |
+| Base local | Room, actualmente versión 10. |
 | Base central | PostgreSQL; configuración de producción documentada para Neon. |
 | Servicio web | Render, URL https://uniban-app-suministros.onrender.com. |
 
@@ -68,14 +68,14 @@ Copy-Item .env.example .env
 
 - Salud: http://localhost:8000/health
 - API interactiva: http://localhost:8000/docs
-- La cabeza del historial de migraciones en este repositorio es 0011_recomendaciones; use alembic upgrade head en una base local vacía.
+- La cabeza del historial de migraciones en este repositorio es 0012_ciclos_etapas_y_descanso; use alembic upgrade head en una base local vacía.
 - Configura SERVICE_API_KEY localmente para ensayar las rutas del Equipo 1. Mantén las claves y cadenas de conexión fuera del repositorio.
 
 ## Integraciones entre equipos
 
 - **Equipo 1 → Equipo 3:** GET /api/v1/service/parcels y POST /api/v1/aforamientos, con X-API-Key. La clave se configura como secreto. El contrato está en [contrato del Equipo 1](docs/contrato-equipo1.md).
 - **Equipo 3 → Equipo 2:** el backend usa POST /api/v1/recomendar; la app pide la recomendación a nuestro backend. El contrato y las diferencias pendientes están en [contrato del Equipo 2](docs/contrato-equipo2.md).
-- Según el usuario, SERVICE_API_KEY ya está configurada en Render y la migración 0010 llegó a main. No se ha confirmado en esta revisión que la versión desplegada de Render y la base Neon tengan la migración 0011, ni una prueba real conjunta con ambos equipos.
+- Según el usuario, SERVICE_API_KEY ya está configurada en Render y la migración 0010 llegó a main. No se ha confirmado en esta revisión que la versión desplegada de Render y la base Neon tengan las migraciones 0011–0012, ni una prueba real conjunta con ambos equipos.
 
 ## Documentación del proyecto
 

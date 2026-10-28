@@ -79,7 +79,7 @@ Si no reciben respuesta, reintenten con el mismo id y el mismo contenido. Un nue
 
 El productor consulta el aforamiento más reciente en el detalle de la parcela. La app usa su propia autenticación Firebase al consultar los endpoints de parcelas; el Equipo 1 no necesita llamarlos.
 
-La migración 0010 crea la tabla central de aforamientos. El código local también contiene HU_09 y la migración 0011 para recomendaciones. Según el usuario, 0010 está en main; el estado actual de Neon y del despliegue de Render debe comprobarse por separado.
+La migración 0010 crea la tabla central de aforamientos. El código local también contiene HU_09 y las migraciones 0011–0012 para recomendaciones y ciclo productivo. Según el usuario, 0010 está en main; el estado actual de Neon y del despliegue de Render debe comprobarse por separado.
 
 ## Prueba de integración propuesta
 

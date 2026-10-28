@@ -134,7 +134,7 @@ private fun ParcelCard(parcel: ParcelSummary, onClick: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            StatusChip(CycleStatus.fromCode(parcel.cycleStatus))
+            StatusChip(CycleStatus.fromCode(parcel.currentStatus ?: parcel.cycleStatus))
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
         }
     }

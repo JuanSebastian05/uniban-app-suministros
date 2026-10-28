@@ -16,7 +16,7 @@ CycleStatus = Literal["EN_PREPARACION", "PRODUCCION", "DESCANSO"]
 class CycleIn(CamelModel):
     id: uuid.UUID
     start_date: date
-    status: CycleStatus
+    status: Literal["EN_PREPARACION", "PRODUCCION"]
 
 
 class ParcelIn(CamelModel):
@@ -33,6 +33,21 @@ class ParcelIn(CamelModel):
         if not cleaned:
             raise ValueError("El nombre es obligatorio.")
         return cleaned
+
+
+class CycleStageUpdateIn(CamelModel):
+    """Etapa activa del ciclo. Descanso se registra cerrando el ciclo, no como su etapa."""
+    status: Literal["EN_PREPARACION", "PRODUCCION"]
+    effective_date: date
+
+
+class CycleStartIn(CamelModel):
+    id: uuid.UUID
+    start_date: date
+
+
+class CycleFinishIn(CamelModel):
+    end_date: date
 
 
 class CycleOut(CamelModel):
@@ -55,5 +70,11 @@ class ParcelOut(CamelModel):
     name: str
     area_ha: Decimal
     active_cycle: CycleOut | None
+    # Estado operativo de la parcela: etapa del ciclo, DESCANSO tras cerrar uno, o nulo si nunca inició.
+    current_status: CycleStatus | None = None
+    # Ciclo al que se pueden asociar actividades: el activo o, durante el descanso, el último finalizado.
+    activity_cycle_id: uuid.UUID | None = None
+    # Último ciclo cerrado, conservado localmente para asociar actividades durante el descanso.
+    last_cycle: CycleOut | None = None
     # Aforamiento más reciente recibido del Equipo 1 (HU_09); nulo si la parcela no tiene ninguno.
     aforamiento: AforamientoOut | None = None

@@ -157,8 +157,8 @@ La respuesta documentada no incluye un campo de exceso. La app no calcula exceso
 - El backend consulta el servicio externo con reintento ante fallos temporales; la app permite una espera más larga para esta operación.
 - Si el servicio no responde, nuestro backend informa indisponibilidad. Si la respuesta externa no corresponde al esquema esperado, devuelve error de respuesta.
 - `EQUIPO2_BASE_URL` permite cambiar la URL. `EQUIPO2_API_KEY` se admite como configuración opcional, pero el OpenAPI no declara esa autenticación y el usuario no ha reportado que el equipo la exija.
-- La migración 0011 crea la tabla central de recomendaciones. El código Android usa Room 9; `8 → 9` conserva el plan y las métricas completas en la copia sin conexión.
+- La migración 0011 crea la tabla central de recomendaciones. El código Android usa Room 10; `8 → 9` conserva el plan y las métricas completas y `9 → 10` agrega estado de ciclo a la copia local.
 
 ## Estado de despliegue
 
-El código local incluye la migración 0011. El usuario indicó que 0010 llegó a main; no hay confirmación en esta revisión de que 0011 esté en main, aplicada en Neon o desplegada en Render. Verificar Neon y Render antes de una prueba con datos reales.
+El código local incluye la migración 0012. El usuario indicó que 0010 llegó a main; no hay confirmación en esta revisión de que 0011/0012 estén en main, aplicadas en Neon o desplegadas en Render. Verificar Neon y Render antes de una prueba con datos reales.

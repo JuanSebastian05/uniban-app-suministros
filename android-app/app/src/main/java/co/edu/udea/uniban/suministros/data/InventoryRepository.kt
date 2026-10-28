@@ -242,7 +242,7 @@ class InventoryRepository(
      * (HU_08). Todo o nada: si algún insumo no alcanza se lanza [ActivityStockException] y no se guarda
      * ni la actividad ni los demás consumos. Funciona sin conexión: todo queda PENDING.
      *
-     * - Exige que la parcela tenga un **ciclo activo**; la actividad y sus consumos se asocian a él.
+     * - Exige que la parcela tenga un ciclo; en descanso usa el último ciclo cerrado.
      * - Reintentar con el mismo [id] y los mismos datos no duplica nada: los consumos usan un UUID derivado de
      *   la actividad y del insumo.
      */
@@ -270,8 +270,8 @@ class InventoryRepository(
                 }
                 existing.cycleId
             } else {
-                val cycle = database.parcelDao().activeCycleId(parcelId)
-                requireNotNull(cycle) { "La parcela no tiene un ciclo activo. Inicia un ciclo para registrar actividades." }
+                val cycle = database.parcelDao().activityCycleId(parcelId)
+                requireNotNull(cycle) { "La parcela aún no ha iniciado un ciclo productivo." }
                 val now = Instant.now().toString()
                 activityDao.insertActivity(ActivityEntity(
                     id = id, parcelId = parcelId, cycleId = cycle, type = type.name, date = date.toString(),

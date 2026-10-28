@@ -22,7 +22,7 @@ data class ParcelFormUiState(
     val area: String = "",
     val startCycle: Boolean = false,
     val startDate: LocalDate = LocalDate.now(),
-    val status: CycleStatus = CycleStatus.PRODUCCION,
+    val status: CycleStatus = CycleStatus.EN_PREPARACION,
     val saving: Boolean = false,
     val saved: Boolean = false,
     val nameError: String? = null,
@@ -46,7 +46,7 @@ class ParcelFormViewModel(
             area = savedState[KEY_AREA] ?: "",
             startCycle = savedState[KEY_START_CYCLE] ?: false,
             startDate = savedState.get<String>(KEY_DATE)?.let(LocalDate::parse) ?: LocalDate.now(),
-            status = savedState.get<String>(KEY_STATUS)?.let(CycleStatus::fromCode) ?: CycleStatus.PRODUCCION,
+            status = savedState.get<String>(KEY_STATUS)?.let(CycleStatus::fromCode) ?: CycleStatus.EN_PREPARACION,
         )
     )
         private set

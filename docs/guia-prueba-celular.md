@@ -9,7 +9,7 @@ Se necesita Android Studio, Firebase de prueba configurado en google-services.js
 En el backend local:
 
 1. Configurar PostgreSQL temporal y variables privadas en backend/.env.
-2. Aplicar el esquema completo del repositorio con alembic upgrade head; en esta copia la revisión de cabeza es 0011.
+2. Aplicar el esquema completo del repositorio con alembic upgrade head; en esta copia la revisión de cabeza es 0012.
 3. Iniciar FastAPI y confirmar /health.
 4. Configurar api.baseUrl en android-app/local.properties: el emulador usa http://10.0.2.2:8000/; un celular físico usa la IP local del computador.
 5. Instalar la app debug sin desinstalar una instalación que contenga datos pendientes.
@@ -41,8 +41,11 @@ Con un insumo que tenga saldo, comprobar:
 
 - Crear una parcela con ciclo activo y otra sin ciclo.
 - Consultar el detalle, área y estado del ciclo.
+- Cambiar de En preparación a Producción y confirmar que el estado se actualiza en la lista y el detalle.
+- Finalizar el ciclo y confirmar que aparece En descanso; iniciar otro y confirmar que comienza En preparación.
 - Intentar registrar una parcela sin conexión; confirmar que se informa que requiere conexión.
 - Registrar una actividad productiva con un insumo; comprobar que actividad y consumo quedan relacionados.
+- En descanso, registrar siembra o cosecha: debe aparecer un aviso orientativo y permitir guardar la actividad.
 - Probar una cantidad mayor que el saldo; no debe guardarse parcialmente la actividad.
 - Ver la actividad en el detalle de parcela y en el historial del movimiento asociado.
 
