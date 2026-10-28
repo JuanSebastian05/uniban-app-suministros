@@ -6,6 +6,9 @@ import androidx.test.core.app.ApplicationProvider
 import co.edu.udea.uniban.suministros.data.local.InventoryDatabase
 import co.edu.udea.uniban.suministros.data.local.StarterInventory
 import co.edu.udea.uniban.suministros.data.remote.AforamientoDto
+import co.edu.udea.uniban.suministros.data.remote.CycleStageUpdateDto
+import co.edu.udea.uniban.suministros.data.remote.CycleFinishDto
+import co.edu.udea.uniban.suministros.data.remote.CycleStartDto
 import co.edu.udea.uniban.suministros.data.remote.ParcelApi
 import co.edu.udea.uniban.suministros.data.remote.ParcelDto
 import co.edu.udea.uniban.suministros.data.remote.ParcelResponseDto
@@ -47,7 +50,7 @@ class ParcelAforamientoTest {
         AforamientoDto("a-$date", parcelId, date, BigDecimal(area), plants, confidence?.let(::BigDecimal))
 
     private fun parcel(id: String = "p1", aforamiento: AforamientoDto? = null) =
-        ParcelResponseDto(id, "Parcela $id", BigDecimal("2.40"), null, aforamiento)
+        ParcelResponseDto(id, "Parcela $id", BigDecimal("2.40"), null, aforamiento = aforamiento)
 
     // --- refreshAforamiento: GET /parcels/{id}/aforamiento ---
 
@@ -191,6 +194,15 @@ private class FakeAforamientoApi : ParcelApi {
     var failWith: IOException? = null
     var listed: List<ParcelResponseDto> = emptyList()
     var aforamientoResult: Response<AforamientoDto> = Response.success(null)
+
+    override suspend fun changeCycleStage(authorization: String, parcelId: String, request: CycleStageUpdateDto): Response<ParcelResponseDto> =
+        error("La gestión de ciclos no se usa en estas pruebas.")
+
+    override suspend fun finishCycle(authorization: String, parcelId: String, request: CycleFinishDto): Response<ParcelResponseDto> =
+        error("La gestión de ciclos no se usa en estas pruebas.")
+
+    override suspend fun startCycle(authorization: String, parcelId: String, request: CycleStartDto): Response<ParcelResponseDto> =
+        error("La gestión de ciclos no se usa en estas pruebas.")
 
     override suspend fun create(authorization: String, parcel: ParcelDto): Response<ParcelResponseDto> =
         error("no se usa")
