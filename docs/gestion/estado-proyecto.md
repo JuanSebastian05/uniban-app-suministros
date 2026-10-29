@@ -23,22 +23,24 @@ Verificación de estas correcciones: **340 pruebas Android y 298 del backend apr
 
 | Área | Estado actual | Alcance y límites |
 | --- | --- | --- |
-| Inicio | Implementado en código local | Bienvenida, resumen de parcelas con acceso por estado, acciones rápidas, errores, registros recientes y sincronización. Cambio inmediato entre las cuatro pestañas, incluida la lista general de Actividades. Ver [inicio.md](inicio.md). |
+| Inicio | Implementado en código local | Bienvenida, resumen de parcelas con acceso por estado, acciones rápidas, errores, registros recientes y sincronización. Cambio inmediato entre las cuatro pestañas, incluida la lista general de Actividades. Ver [inicio.md](../funcionalidades/inicio.md). |
 | Identidad y perfiles | Implementada | Firebase Authentication; el backend mantiene el perfil del productor, exige autenticación en rutas de usuario y valida el rol PRODUCTOR. |
 | Inventario | Implementado | Catálogo por productor, consulta offline, entradas, consumos, pérdidas, ajustes, saldo no negativo e historial. La app no permite registrar SALIDA. |
 | Catálogo de empaque | Implementado en el código local de esta rama | cajas, carton, bolsas, categoría Empaque, unidad unidad, saldo inicial cero. El alta también se aplica a cuentas ya inicializadas sin borrar sus datos. |
 | Parcelas y ciclos | Implementados | Registro, cambio de etapa, cierre con estado derivado de descanso e inicio de ciclos siguientes; requiere conexión para modificar ciclos. |
 | Actividades productivas | Implementadas | Siembra solo en preparación; cosecha estructurada solo en producción. Las demás actividades conservan su comportamiento, incluido el último ciclo durante el descanso. |
-| HU_15 Cosecha real | Implementada en código local | Parciales contra una recomendación de origen por parcela/periodo; exceso requiere confirmación. Una actividad COSECHA por operación. Ver [hu15.md](hu15.md). |
-| HU_16 Despacho | Implementada en código local | Saldo real, consumo acumulado de empaques sin duplicar, guardado atómico y sincronización. Producción o descanso. Ver [hu16.md](hu16.md). |
+| HU_15 Cosecha real | Implementada en código local | Parciales contra una recomendación de origen por parcela/periodo; exceso requiere confirmación. Una actividad COSECHA por operación. Ver [hu15.md](../historias-usuario/hu15.md). |
+| HU_16 Despacho | Implementada en código local | Saldo real, consumo acumulado de empaques sin duplicar, guardado atómico y sincronización. Producción o descanso. Ver [hu16.md](../historias-usuario/hu16.md). |
 | Sincronización | Implementada | Movimientos y actividades se envían con UUID idempotente. No hay descarga completa del inventario para reconstruirlo tras reinstalar o cambiar de teléfono. |
 | Integración Equipo 1 | Implementada en el código | GET /api/v1/service/parcels y POST /api/v1/aforamientos, protegidos por X-API-Key; idempotencia por UUID. La app consulta el aforamiento más reciente. |
 | HU_09 | Implementada en el código | Muestra el aforamiento más reciente de la parcela y conserva una copia local para consulta offline. |
 | Integración Equipo 2 y HU_12 | Implementadas en el código local | La app pide una recomendación a nuestro backend; este envía solo cajas, carton y bolsas, valida y guarda la respuesta. La app muestra resumen, plan de corte, insumos, métricas y versión del método, también sin conexión. La llamada real desde Render todavía no se verificó. |
-| HU_10 Estado de sincronización | Implementada en código local | Resumen de pendientes, actividad en curso, última sincronización exitosa, errores por movimiento/actividad y reintento manual. Falta ejecutar la demostración manual en dispositivo. Ver [hu10.md](hu10.md). |
-| HU_11 Buscar y filtrar insumos | Implementada en código local | Búsqueda por nombre y selector de categoría combinables, sin conexión. Pendiente demostración manual en dispositivo. Ver [hu11.md](hu11.md). |
+| HU_10 Estado de sincronización | Implementada en código local | Resumen de pendientes, actividad en curso, última sincronización exitosa, errores por movimiento/actividad y reintento manual. Falta ejecutar la demostración manual en dispositivo. Ver [hu10.md](../historias-usuario/hu10.md). |
+| HU_11 Buscar y filtrar insumos | Implementada en código local | Búsqueda por nombre y selector de categoría combinables, sin conexión. Pendiente demostración manual en dispositivo. Ver [hu11.md](../historias-usuario/hu11.md). |
 
 ## Integraciones: situación y pendientes
+
+Ajuste solicitado por el Equipo 2 (28/10/2026): `build_request_body` calcula la ventana con `today + timedelta(days=1)`, desde la solicitud, para evitar ventanas pasadas cuando el aforamiento es antiguo. Conserva su fecha y semana ISO originales. Pasaron las 52 pruebas locales de recomendaciones, incluidos aforamiento antiguo y cambio de año. Solo requiere desplegar el backend; sin migración ni APK nuevo. No se realizó una llamada al servicio real ni un despliegue desde esta tarea.
 
 ### Equipo 1
 
@@ -50,11 +52,13 @@ Verificación de estas correcciones: **340 pruebas Android y 298 del backend apr
 
 ### Equipo 2
 
+Aclaraciones contractuales del 28/10/2026: ventana del día siguiente a la consulta, horas locales de Colombia, confianza numérica obligatoria (`null` produce `422` en el Equipo 2), consumos ya utilizados y resumen `consumo_reciente`. Para una ventana que termina el 30/10 a las 16:00, el ejemplo de fecha límite es el 30/10 a las 12:55. Pendiente adaptar el caso de confianza nula e incorporar el resumen cuando el equipo proporcione su estructura; esta revisión solo actualiza documentación.
+
 - El backend tiene el cliente y las rutas autenticadas por Firebase para crear y consultar una recomendación.
 - El Equipo 2 compartió `POST https://platano-logistica-api.onrender.com/api/v1/recomendar` y Swagger. El cliente local ya usa esa ruta y envía `Content-Type: application/json`.
 - Swagger acepta `inventory` como lista de objetos genéricos y la respuesta coincide con lo que valida nuestro backend. El backend envía exactamente cajas, carton y bolsas, categoría Empaque, unidad unidad, y completa con saldo cero los productos que aún no se han sincronizado desde el celular.
-- El Equipo 2 aceptó el JSON. Se conservan los consumos recientes de empaques para un posible uso futuro en coeficientes; por ahora no los procesa. Las pérdidas dejaron de enviarse.
-- La solicitud incluye una ventana de despacho sintética de 10 horas, de 06:00 a 16:00 del día siguiente al aforamiento, con los campos `ventana_despacho.inicio` y `.fin`.
+- El Equipo 2 aceptó el JSON. El Equipo 2 ya utiliza los consumos recientes de empaques y devuelve un resumen en `consumo_reciente`. Las pérdidas dejaron de enviarse.
+- La solicitud incluye una ventana de despacho sintética de 10 horas, de 06:00 a 16:00 del día siguiente a la consulta, con los campos `ventana_despacho.inicio` y `.fin`.
 - Swagger no publica un requisito de API key. Confirmar con el equipo si basta `Content-Type` o si existe autenticación adicional fuera del OpenAPI.
 - Vehículo, capacidad y tiempo de acarreo siguen bajo los valores del Equipo 2; la ventana es sintética para la demostración y no representa un horario operativo real.
 
@@ -68,19 +72,21 @@ Verificación de estas correcciones: **340 pruebas Android y 298 del backend apr
 
 ## Verificaciones que siguen pendientes de evidencia
 
-La ampliación HU_15–16 pasó 330 pruebas Android y 293 pruebas del backend en bases locales de prueba, incluido sincronizar una cosecha después de un cierre posterior en el mismo día. Se generó APK y lint no reportó errores. El SQL de subida/bajada de 0013 se compiló con dialecto PostgreSQL sin abrir una conexión; **no equivale a ejecutar la migración en PostgreSQL**. No se encontraron binarios locales de PostgreSQL ni Docker para ese ensayo. Quedan pendientes el ensayo de Alembic en PostgreSQL temporal y la demostración en dispositivo. Ver [diseño](cosecha-despacho-diseno.md), [arquitectura](arquitectura/README.md) y [OpenAPI propio](api/production.openapi.json).
+La ampliación HU_15–16 pasó 330 pruebas Android y 293 pruebas del backend en bases locales de prueba, incluido sincronizar una cosecha después de un cierre posterior en el mismo día. Se generó APK y lint no reportó errores. El SQL de subida/bajada de 0013 se compiló con dialecto PostgreSQL sin abrir una conexión; **no equivale a ejecutar la migración en PostgreSQL**. No se encontraron binarios locales de PostgreSQL ni Docker para ese ensayo. Quedan pendientes el ensayo de Alembic en PostgreSQL temporal y la demostración en dispositivo. Ver [diseño](../arquitectura/cosecha-despacho-diseno.md), [arquitectura](../arquitectura/README.md) y [OpenAPI propio](../api/production.openapi.json).
 
 Confirmación pendiente con el Equipo 2: la semana enviada es la del aforamiento, mientras que el periodo guardado es el recibido en su respuesta. Cuando difieren, el código conserva la respuesta y no la reinterpreta. El avance se agrupa por ese periodo recibido.
 
 1. Confirmar la revisión desplegada en Neon y que Render esté ejecutando el código correspondiente.
 2. Ejecutar una prueba conjunta del Equipo 1 contra las rutas desplegadas, incluyendo lectura de parcelas y reenvío idempotente de un aforamiento.
-3. Probar una recomendación contra el servicio real del Equipo 2 con la ventana sintética; confirmar autenticación adicional y guardar evidencia de la respuesta. `consumptions` se conserva para posible uso futuro, pero actualmente el Equipo 2 no lo procesa.
+3. Probar una recomendación contra el servicio real del Equipo 2 con la ventana sintética; confirmar autenticación adicional y guardar evidencia de la respuesta. El Equipo 2 ya utiliza `consumptions` y devuelve `consumo_reciente`; su incorporación a la respuesta propia está pendiente.
 4. Hacer una demostración manual de los flujos principales en emulador o celular, con Firebase real y modo avión, y guardar los resultados.
 5. Confirmar el MER actualizado con el equipo y revisar su presentación para el informe académico.
 
 ## Documentos de referencia
 
-- Contratos: [Equipo 1](contrato-equipo1.md), [Equipo 2](contrato-equipo2.md).
-- Instrucciones de operación: [Render y Neon](despliegue-render.md), [lista de migraciones](lista-verificacion-despliegue.md), [prueba manual](guia-prueba-celular.md).
-- Detalles por funcionalidad: [HU_09](hu09.md), [HU_12](hu12.md), y las demás fichas enlazadas desde el README.
+La documentación se reorganizó por tema el 28/10/2026. Consulta el [índice general](../README.md) para ubicar historias de usuario, contratos, guías de operación y arquitectura; se conservaron las entregas y los documentos existentes.
+
+- Contratos: [Equipo 1](../integraciones/contrato-equipo1.md), [Equipo 2](../integraciones/contrato-equipo2.md).
+- Instrucciones de operación: [Render y Neon](../operacion/despliegue-render.md), [lista de migraciones](../operacion/lista-verificacion-despliegue.md), [prueba manual](../operacion/guia-prueba-celular.md).
+- Detalles por funcionalidad: [HU_09](../historias-usuario/hu09.md), [HU_12](../historias-usuario/hu12.md), y las demás fichas enlazadas desde el README.
 - Avisos históricos: [avisos-equipo.md]. Para el estado vigente, priorizar este documento y los contratos.

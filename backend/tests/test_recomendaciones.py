@@ -21,11 +21,12 @@ from app.core.security import FirebaseIdentity, get_current_identity
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
-from app.models import Aforamiento, Recommendation
+from app.models import Aforamiento, Parcel, Recommendation
 from app.services.recommendations import (
     Equipo2BadResponse,
     Equipo2Client,
     Equipo2Unavailable,
+    build_request_body,
     get_equipo2_client,
     iso_period,
 )
@@ -220,11 +221,30 @@ def test_la_solicitud_al_equipo2_lleva_el_contrato_y_los_campos_directos(client,
     assert body["calidad_confianza"] == 0.87
     assert body["area_ha"] == 2.41  # el área del aforamiento, no la de la parcela
     assert body["ventana_despacho"] == {
-        "inicio": "2026-10-30T06:00:00", "fin": "2026-10-30T16:00:00",
+        "inicio": f"{TODAY + timedelta(days=1)}T06:00:00",
+        "fin": f"{TODAY + timedelta(days=1)}T16:00:00",
     }
     assert "losses" not in body
     # La ventana es sintética; vehículo, capacidad y acarreo siguen bajo los valores del Equipo 2.
     assert not {"vehiculo_id", "capacidad_vehiculo_racimos", "tiempo_acarreo_min"} & set(body)
+
+
+@pytest.mark.parametrize("today,tomorrow", [
+    (date(2026, 10, 29), "2026-10-30"),
+    (date(2026, 11, 5), "2026-11-06"),
+    (date(2026, 12, 31), "2027-01-01"),
+])
+def test_ventana_desde_la_solicitud_conserva_fecha_y_periodo_del_aforamiento(session_factory, ready, today, tomorrow):
+    with session_factory() as db:
+        parcel = db.get(Parcel, uuid.UUID(ready["id"]))
+        aforamiento = db.scalar(select(Aforamiento).where(Aforamiento.parcel_id == parcel.id))
+        body = build_request_body(db, parcel, aforamiento, parcel.producer_id, ANA.uid, today)
+
+    assert body["ventana_despacho"] == {
+        "inicio": f"{tomorrow}T06:00:00", "fin": f"{tomorrow}T16:00:00",
+    }
+    assert body["aforamiento"]["date"] == "2026-10-29"
+    assert body["aforamiento"]["period"] == body["periodo"] == "2026-W44"
 
 
 def test_solo_envia_empaques_y_sus_movimientos(client, session_factory, ready, equipo2):
@@ -401,8 +421,13 @@ def test_sin_recomendaciones_responde_404(client, ready):
     assert response.json()["detail"]["code"] == "NO_RECOMMENDATION"
 
 
-def test_devuelve_la_ultima_guardada(client, ready, equipo2):
+def test_devuelve_la_ultima_guardada(client, ready, equipo2, session_factory):
     first = post_recommendation(client, ready["id"]).json()
+    # Fechas distintas sin depender de la resolución del reloj en Windows.
+    with session_factory() as db:
+        saved = db.get(Recommendation, uuid.UUID(first["id"]))
+        saved.generated_at -= timedelta(seconds=1)
+        db.commit()
     equipo2.answer = lambda body: reply(
         parcela_id=body["parcela_id"], periodo="2026-W45", volumen_racimos=2100.0, version_metodo="v0.4.0",
     )

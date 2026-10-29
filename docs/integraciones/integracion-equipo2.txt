@@ -1,7 +1,7 @@
 INTEGRACIÓN UNIBÁN: EQUIPO 3 → EQUIPO 2
 Solicitud de recomendación de logística e insumos de empaque
 
-Este documento resume el acuerdo vigente para la solicitud. El Equipo 2 aceptó el JSON que enviamos; la forma definitiva de la respuesta todavía la define el Equipo 2.
+Este documento resume el contrato y las aclaraciones confirmadas por el Equipo 2. Las horas de ventana y plan corresponden a hora local de Colombia (America/Bogota, UTC-05:00), en formato ISO 8601 sin sufijo de zona horaria.
 
 1. ENDPOINT COMPARTIDO
 
@@ -21,13 +21,15 @@ En la documentación consultada no aparece autenticación por API Key. Por favor
 - Fecha, periodo ISO, plantas estimadas y confianza del aforamiento más reciente.
 - Inventario de los tres insumos de empaque: cajas, carton y bolsas. Todos se envían con categoría Empaque y unidad unidad. Si un producto aún no tiene movimientos sincronizados, su cantidad se envía en cero.
 - Consumos de esos insumos asociados a la parcela dentro de los últimos 90 días.
-- Una ventana sintética de despacho, de 06:00 a 16:00 del día siguiente al aforamiento (10 horas, más de las 3 horas mínimas indicadas por el Equipo 2). Es un dato de demostración, no un horario operativo real.
+- Una ventana sintética de despacho, de 06:00 a 16:00 del día siguiente a la consulta (10 horas, más de las 3 horas mínimas indicadas por el Equipo 2). Es un dato de demostración, no un horario operativo real.
 
 No enviamos los demás insumos agrícolas ni los ajustes como eventos. La cantidad del inventario ya refleja sus efectos.
 
-Además del formato anidado que aparece abajo, el backend agrega estos campos directos que figuran en Swagger: parcela_id, periodo, num_plantas_estimado, area_ha y calidad_confianza (si existe). areaHa corresponde al área de la parcela; area_ha corresponde al área registrada en el aforamiento.
+Además del formato anidado que aparece abajo, el backend agrega estos campos directos que figuran en Swagger: parcela_id, periodo, num_plantas_estimado, area_ha y calidad_confianza (obligatoria, igual a aforamiento.confidence). areaHa corresponde al área de la parcela; area_ha corresponde al área registrada en el aforamiento.
 
-El Equipo 2 actualmente no utiliza `consumptions`, pero acordamos conservarlo para una posible calibración futura con datos reales. `losses` se quitó de la solicitud.
+El Equipo 2 ya utiliza `consumptions` y devuelve un resumen en `consumo_reciente`. `losses` se quitó de la solicitud.
+
+La confianza es obligatoria y numérica. Si llega null, el Equipo 2 responde HTTP 422. No se debe omitir ni inventar un valor. El código actual aún requiere adaptar el caso de aforamientos sin confianza.
 
 3. EJEMPLO DEL JSON QUE ENVIARÍAMOS
 
@@ -108,20 +110,20 @@ Los UUID y cantidades son ilustrativos; en una solicitud real se envían los ide
   "calidad_confianza": 0.87
 }
 
-4. RESPUESTA: PROPUESTA DEL EQUIPO 3, PENDIENTE DE DEFINICIÓN DEL EQUIPO 2
+4. RESPUESTA ACORDADA CON EL EQUIPO 2
 
-Para que nuestra app pueda mostrar un resultado, necesitamos recibir una respuesta JSON con la recomendación calculada. El siguiente ejemplo refleja una propuesta de integración del Equipo 3 y la forma que actualmente se observa en Swagger. No pretende imponer el contrato: el Equipo 2 define los campos, tipos, reglas y significado final, y nosotros ajustaremos el backend y la app a ese contrato.
+El siguiente ejemplo muestra los campos del plan. Para la ventana del 30/10/2026 de 06:00 a 16:00, la fecha límite es 2026-10-30T12:55:00 (16:00 menos 3 horas y 5 minutos). La respuesta también incluye consumo_reciente, cuyo formato detallado debe proporcionar el Equipo 2; no se inventa su estructura en este ejemplo.
 
 {
   "parcela_id": "11111111-1111-4111-8111-111111111111",
   "periodo": "2026-W44",
   "volumen_racimos": 1850,
-  "fecha_limite_corte": "2026-11-02T14:30:00",
+  "fecha_limite_corte": "2026-10-30T12:55:00",
   "cumple_ventana": true,
   "version_metodo": "v0.3.1",
   "item_plan": {
     "parcela_id": "11111111-1111-4111-8111-111111111111",
-    "fecha_corte": "2026-11-02T08:00:00",
+    "fecha_corte": "2026-10-30T12:55:00",
     "vehiculo_id": "V-3",
     "orden": 1,
     "carga_estimada_racimos": 420,
@@ -131,7 +133,7 @@ Para que nuestra app pueda mostrar un resultado, necesitamos recibir una respues
   "insumos": [
     {
       "insumo": "cajas",
-      "fecha": "2026-11-01",
+      "fecha": "2026-10-30",
       "cantidad_requerida": 120,
       "inventario_disponible": 80,
       "deficit": 40
@@ -143,11 +145,12 @@ Para que nuestra app pueda mostrar un resultado, necesitamos recibir una respues
   }
 }
 
-Por favor confirmen o propongan el JSON definitivo de respuesta y el significado/unidad de cada campo, en especial fechas y zonas horarias, volumen, cantidad requerida, inventario disponible, déficit, métricas y observaciones.
+La respuesta usa hora local de Colombia. Nuestro backend todavía no transforma ni expone consumo_reciente a la app.
 
 5. PUNTOS QUE SIGUEN PENDIENTES
 
 1) ¿Se requiere autenticación adicional al encabezado Content-Type?
-2) ¿Cuál es el contrato definitivo de respuesta? La estructura del ejemplo sigue siendo una propuesta del Equipo 3, sujeta a la definición del Equipo 2.
+2) Recibir la estructura detallada de consumo_reciente e incorporarla al modelo y a la respuesta propia.
+3) Adaptar la validación del backend para impedir solicitudes con confianza nula.
 
-Cuando se acuerde la respuesta y la autenticación, hacemos una prueba conjunta con datos de prueba y ajustamos el contrato si hace falta.
+Después de adaptar los puntos pendientes, realizar una prueba conjunta con datos de prueba.

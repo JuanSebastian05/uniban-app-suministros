@@ -42,7 +42,7 @@ Documentación publicada por el Equipo 2: [Swagger](https://platano-logistica-ap
 
 El formato aceptado para esta integración incluye los datos anidados acordados y los campos directos publicados por el Equipo 2. Nuestro backend envía ambos para que el receptor pueda leer el formato que utiliza. Los campos que describen la misma parcela o el mismo período deben coincidir.
 
-### Solicitud que genera actualmente el backend
+### Solicitud acordada con el Equipo 2
 
 ~~~json
 {
@@ -109,20 +109,23 @@ El formato aceptado para esta integración incluye los datos anidados acordados 
 
 Los UUID del ejemplo son ilustrativos. En una llamada real:
 
+La ventana del ejemplo supone que la solicitud se realiza el 29/10/2026; se calcula desde esa fecha, aunque el aforamiento sea anterior.
+
 - `producerId` es el identificador UUID interno del productor; no es el UID de Firebase.
 - `parcel.id` y `parcela_id` identifican la misma parcela.
 - `areaHa` corresponde al área registrada de la parcela. `area_ha` corresponde al área incluida en el aforamiento.
 - `period` y `periodo` representan la semana ISO del aforamiento.
-- `activeCycle` puede ser `null` si la parcela no tiene un ciclo activo. `confidence` contiene la confianza recibida o `null` si no existe; `calidad_confianza` se omite en ese caso.
+- `activeCycle` puede ser `null` si la parcela no tiene un ciclo activo.
+- La confianza es obligatoria: `aforamiento.confidence` y su equivalente directo `calidad_confianza` deben contener el mismo valor numérico. El Equipo 2 rechaza una confianza `null` con HTTP `422`; no se debe omitir ni inventar un valor para sustituirla.
 
 ### Reglas de los datos enviados
 
 | Dato | Qué se envía |
 | --- | --- |
 | Inventario | Solo `cajas`, `carton` y `bolsas`, siempre con unidad `unidad` y categoría `Empaque`. Si un material aún no tiene inventario sincronizado, se incluye con cantidad cero. Las existencias se suman entre las ubicaciones del productor. |
-| Consumos | Movimientos de tipo CONSUMO de esos tres materiales, asociados a la parcela y registrados en los últimos 90 días. El Equipo 2 confirmó que por ahora no los utiliza; se mantienen para una posible calibración futura. |
+| Consumos | Movimientos de tipo CONSUMO de esos tres materiales, asociados a la parcela y registrados en los últimos 90 días. El Equipo 2 ya los utiliza y devuelve un resumen en `consumo_reciente`. |
 | Pérdidas | No se envían. |
-| Ventana de despacho | Dato sintético para la demostración: del día siguiente al aforamiento, desde las 06:00 hasta las 16:00 (10 horas). Se entrega como fecha y hora local sin zona horaria explícita. No representa una cita real de despacho. |
+| Ventana de despacho | Dato sintético para la demostración: del día siguiente a la consulta, desde las 06:00 hasta las 16:00 (10 horas). Se entrega en hora local de Colombia (`America/Bogota`, UTC−05:00), en formato ISO 8601 sin sufijo de zona horaria. No representa una cita real de despacho. |
 
 ## C. Respuesta del Equipo 2
 
@@ -133,12 +136,12 @@ El Equipo 2 confirmó este formato de respuesta:
   "parcela_id": "11111111-1111-4111-8111-111111111111",
   "periodo": "2026-W44",
   "volumen_racimos": 145.6,
-  "fecha_limite_corte": "2026-10-29T13:55:00",
+  "fecha_limite_corte": "2026-10-30T12:55:00",
   "cumple_ventana": true,
   "version_metodo": "determinista-v1",
   "item_plan": {
     "parcela_id": "11111111-1111-4111-8111-111111111111",
-    "fecha_corte": "2026-10-29T13:55:00",
+    "fecha_corte": "2026-10-30T12:55:00",
     "vehiculo_id": "V-3",
     "orden": 1,
     "carga_estimada_racimos": 146,
@@ -148,7 +151,7 @@ El Equipo 2 confirmó este formato de respuesta:
   "insumos": [
     {
       "insumo": "cajas",
-      "fecha": "2026-10-29",
+      "fecha": "2026-10-30",
       "cantidad_requerida": 123.76,
       "inventario_disponible": 80,
       "deficit": 43.76
@@ -161,7 +164,9 @@ El Equipo 2 confirmó este formato de respuesta:
 }
 ~~~
 
-Este ejemplo fue compartido por el Equipo 2 con datos de prueba. Los campos de fecha y hora siguen el formato ISO 8601. En el acuerdo compartido no se especifica una zona horaria; ese detalle aún debe aclararse entre los equipos.
+Este ejemplo fue compartido por el Equipo 2 con datos de prueba. Para la ventana del 30/10/2026 de 06:00 a 16:00, la fecha límite es `2026-10-30T12:55:00`: 16:00 menos 3 horas y 5 minutos. Las horas de la ventana y del plan son hora local de Colombia (`America/Bogota`, UTC−05:00), con formato ISO 8601 sin sufijo de zona horaria.
+
+La respuesta también incluye `consumo_reciente`, con el resumen de los consumos enviados. El ejemplo anterior muestra los campos del plan; no reproduce ese resumen porque su estructura detallada aún no fue proporcionada en esta aclaración. No se debe inferir su formato.
 
 Nuestro backend comprueba que la respuesta incluya la parcela solicitada tanto en el nivel principal como en el plan, además de validar fechas, tipos, rangos y nombres de insumo. Si la respuesta no cumple el formato esperado, la recomendación no se guarda y la app recibe un error.
 
@@ -178,9 +183,14 @@ La respuesta del Equipo 2 usa nombres en español y snake_case. Nuestro backend 
 | `item_plan` | `plan`, con fecha, vehículo, orden, carga, cumplimiento y motivo |
 | `insumos` | `supplies`, con nombre, fecha, cantidad requerida, disponible y déficit |
 | `metricas` | `metrics`, con cumplimiento de ventana y uso de capacidad |
+| `consumo_reciente` | Resumen informado por el Equipo 2; todavía no se transforma ni se expone a la app en el código actual |
 | — | `id` y `generatedAt`, creados por nuestro backend |
 
-La app muestra los datos recibidos; no recalcula el plan, el déficit ni las métricas.
+La app muestra el plan y las métricas recibidas. Para operar con empaques, redondea las cantidades requeridas hacia arriba a unidades enteras y calcula el déficit correspondiente.
+
+### Diferencias pendientes entre contrato y código
+
+Esta actualización documenta las aclaraciones del Equipo 2. El backend todavía permite construir una solicitud con `confidence: null` y omitir `calidad_confianza` si el aforamiento no trae confianza; ese caso ahora incumple el contrato y el Equipo 2 responde `422` (nuestro backend lo comunica como `502`). También queda pendiente incorporar `consumo_reciente` al modelo y a la respuesta propia cuando se disponga de su estructura. No se modificó el código de esos dos comportamientos en esta revisión documental.
 
 ## Errores y comportamiento de la llamada
 

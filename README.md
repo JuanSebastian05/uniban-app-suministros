@@ -2,15 +2,15 @@
 
 Aplicación Android offline-first para que productores de plátano gestionen inventario, movimientos, parcelas y actividades. Un backend FastAPI central sincroniza los datos, recibe aforamientos del Equipo 1 y consulta recomendaciones del Equipo 2.
 
-> **Estado de referencia: 28/10/2026.** HU_01–16 y las integraciones de servicio con los Equipos 1 y 2 están implementadas en el código local. HU_11 incluye búsqueda por nombre y filtro por categoría combinables sin conexión. El tipo de movimiento **SALIDA** todavía no se puede registrar desde la app. El estado del código y las verificaciones de despliegue se distinguen en [estado del proyecto](docs/estado-proyecto.md).
+> **Estado de referencia: 28/10/2026.** HU_01–16 y las integraciones de servicio con los Equipos 1 y 2 están implementadas en el código local. HU_11 incluye búsqueda por nombre y filtro por categoría combinables sin conexión. El tipo de movimiento **SALIDA** todavía no se puede registrar desde la app. El estado del código y las verificaciones de despliegue se distinguen en [estado del proyecto](docs/gestion/estado-proyecto.md).
 
 ## Qué resuelve
 
-- Ofrece una pantalla de [Inicio](docs/inicio.md) con resumen de parcelas, acciones rápidas, registros recientes y estado de sincronización.
+- Ofrece una pantalla de [Inicio](docs/funcionalidades/inicio.md) con resumen de parcelas, acciones rápidas, registros recientes y estado de sincronización.
 - Registra usuarios productores, parcelas y ciclos productivos.
 - Mantiene el inventario disponible sin conexión, registra entradas, consumos, pérdidas y ajustes, y conserva historial por insumo.
 - Registra actividades productivas y sus consumos relacionados.
-- Registra [cosechas reales por periodo](docs/hu15.md) y [despachos con consumo de empaques](docs/hu16.md), manteniendo el balance de racimos separado del inventario de insumos.
+- Registra [cosechas reales por periodo](docs/historias-usuario/hu15.md) y [despachos con consumo de empaques](docs/historias-usuario/hu16.md), manteniendo el balance de racimos separado del inventario de insumos.
 - Sincroniza actividades y movimientos con el backend cuando vuelve la conexión.
 - Recibe del Equipo 1 el aforamiento de una parcela y lo muestra al productor.
 - Envía información operativa al Equipo 2 para solicitar recomendaciones y las guarda para consulta sin conexión.
@@ -75,19 +75,21 @@ Copy-Item .env.example .env
 
 ## Integraciones entre equipos
 
-- **Equipo 1 → Equipo 3:** GET /api/v1/service/parcels y POST /api/v1/aforamientos, con X-API-Key. La clave se configura como secreto. El contrato está en [contrato del Equipo 1](docs/contrato-equipo1.md).
-- **Equipo 3 → Equipo 2:** el backend envía la solicitud acordada a POST /api/v1/recomendar y valida la respuesta confirmada; la app pide la recomendación a nuestro backend. Ver el [contrato del Equipo 2](docs/contrato-equipo2.md).
+- **Equipo 1 → Equipo 3:** GET /api/v1/service/parcels y POST /api/v1/aforamientos, con X-API-Key. La clave se configura como secreto. El contrato está en [contrato del Equipo 1](docs/integraciones/contrato-equipo1.md).
+- **Equipo 3 → Equipo 2:** el backend envía la solicitud acordada a POST /api/v1/recomendar y valida la respuesta confirmada; la app pide la recomendación a nuestro backend. Ver el [contrato del Equipo 2](docs/integraciones/contrato-equipo2.md).
 - Los contratos describen el código del repositorio y los acuerdos compartidos. El despliegue de Render, las migraciones aplicadas en producción y las pruebas de extremo a extremo se verifican por separado.
 
 ## Documentación del proyecto
 
-- [Estado del código y tareas de integración](docs/estado-proyecto.md)
+El [índice de documentación](docs/README.md) reúne las historias de usuario, contratos, guías de operación, arquitectura y entregas académicas por tema.
+
+- [Estado del código y tareas de integración](docs/gestion/estado-proyecto.md)
 - [Arquitectura Android y backend](docs/arquitectura/README.md)
-- [Historias de usuario](docs/hu01.md) a [HU_16](docs/hu16.md), incluyendo [HU_15: cosecha real](docs/hu15.md) y [HU_16: despacho](docs/hu16.md)
-- [Contrato y guía operativa del Equipo 1](docs/contrato-equipo1.md) y [TXT para compartir](docs/integracion-equipo1.txt)
-- [Contrato del Equipo 2](docs/contrato-equipo2.md) y [TXT para compartir](docs/integracion-equipo2.txt)
-- [Despliegue Render y Neon](docs/despliegue-render.md) y [lista de migraciones](docs/lista-verificacion-despliegue.md)
-- [Guía de prueba manual](docs/guia-prueba-celular.md)
+- [Historias de usuario](docs/historias-usuario/hu01.md) a [HU_16](docs/historias-usuario/hu16.md), incluyendo [HU_15: cosecha real](docs/historias-usuario/hu15.md) y [HU_16: despacho](docs/historias-usuario/hu16.md)
+- [Contrato y guía operativa del Equipo 1](docs/integraciones/contrato-equipo1.md) y [TXT para compartir](docs/integraciones/integracion-equipo1.txt)
+- [Contrato del Equipo 2](docs/integraciones/contrato-equipo2.md) y [TXT para compartir](docs/integraciones/integracion-equipo2.txt)
+- [Despliegue Render y Neon](docs/operacion/despliegue-render.md) y [lista de migraciones](docs/operacion/lista-verificacion-despliegue.md)
+- [Guía de prueba manual](docs/operacion/guia-prueba-celular.md)
 - [Actualización técnica del 26/10/2026](docs/avances/Actualizacion-tecnica-y-avances-2026-10-26.pdf). El PDF de avances de semanas 5–6 se conserva como registro histórico.
 - [Requisitos originales](docs/requisitos/HU_y_Requisitos_Tecnicos_Equipo3.pdf) y [anteproyecto](docs/avances/AnteproyectoInicial-PI1-Equipo3-Uniban.pdf): documentos de referencia académica; pueden conservar decisiones anteriores al código actual.
 
@@ -96,4 +98,4 @@ Copy-Item .env.example .env
 - La app registra ENTRADA, CONSUMO, PERDIDA y AJUSTE; SALIDA no está habilitada en el formulario.
 - La sincronización actual es de subida de movimientos y actividades; el backend sí expone consultas de inventario y parcelas, pero la app no reconstruye todo el inventario desde el servidor al reinstalar.
 - La solicitud de recomendación envía cajas, carton y bolsas, incluso con saldo cero; conserva consumos de empaque para posible uso futuro, pero omite pérdidas. Incluye una ventana sintética de despacho de 06:00 a 16:00 para el día después del aforamiento.
-- Para el Equipo 2 queda por aclarar la zona horaria de sus campos de fecha y hora; la ventana de despacho que enviamos es sintética para la demostración. Consulte el [contrato del Equipo 2](docs/contrato-equipo2.md) para los formatos y límites acordados.
+- Para el Equipo 2 queda por aclarar la zona horaria de sus campos de fecha y hora; la ventana de despacho que enviamos es sintética para la demostración. Consulte el [contrato del Equipo 2](docs/integraciones/contrato-equipo2.md) para los formatos y límites acordados.

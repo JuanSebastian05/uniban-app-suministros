@@ -2,7 +2,7 @@
 
 La app está diseñada offline-first: la información operativa se guarda primero en Room y se sincroniza con el backend cuando hay conexión. La base local es independiente por cuenta de Firebase. El backend central valida identidad y permisos, persiste los datos en PostgreSQL y actúa como puente entre los equipos.
 
-El estado y los límites actuales están en [estado del proyecto](../estado-proyecto.md).
+El estado y los límites actuales están en [estado del proyecto](../gestion/estado-proyecto.md).
 
 ## Recorrido de datos
 
@@ -68,4 +68,4 @@ La API organiza rutas en api/v1, contratos Pydantic en schemas, reglas de negoci
 - Las claves de servicio y las conexiones de base de datos se configuran como secretos fuera del repositorio.
 - El backend conserva los registros centrales; Room permite seguir trabajando offline, pero la app no descarga el inventario completo para restaurar un teléfono nuevo.
 
-Para las variables y los pasos de ejecución, ver [README del backend](../../backend/README.md). Para producción, ver [despliegue](../despliegue-render.md).
+Para las variables y los pasos de ejecución, ver [README del backend](../../backend/README.md). Para producción, ver [despliegue](../operacion/despliegue-render.md).
