@@ -1,6 +1,6 @@
 # Guía de prueba manual en celular o emulador
 
-> Esta guía prueba la app y el backend actual. No reemplaza una prueba de contrato con el Equipo 1 o el Equipo 2. Registrar en [estado del proyecto](estado-proyecto.md) la fecha, el dispositivo, la versión instalada y los pasos que pasaron.
+> Esta guía prueba la app y el backend actual. No reemplaza una prueba de contrato con el Equipo 1 o el Equipo 2. Registrar en [estado del proyecto](../gestion/estado-proyecto.md) la fecha, el dispositivo, la versión instalada y los pasos que pasaron.
 
 ## Preparación segura
 
@@ -81,7 +81,7 @@ Este paso llama al servicio externo real y puede crear tráfico o guardar datos.
 - Volver a abrir sin conexión; debe mostrarse la última respuesta local.
 - Registrar los campos enviados y recibidos sin incluir claves ni datos personales.
 
-El backend envía solo cajas, carton y bolsas, también cuando su saldo sea cero; conserva consumos de esos empaques para posible uso futuro, excluye pérdidas y agrega una ventana sintética de 06:00 a 16:00 para el día siguiente al aforamiento. El Equipo 2 actualmente no procesa `consumptions`. Antes de una prueba real, confirmar autenticación adicional y registrar la respuesta recibida. Ver [contrato-equipo2.md](contrato-equipo2.md).
+El backend envía solo cajas, carton y bolsas, también cuando su saldo sea cero; envía consumos recientes de esos empaques, excluye pérdidas y agrega una ventana sintética de 06:00 a 16:00 para el día siguiente a la consulta. El Equipo 2 ya utiliza `consumptions` y devuelve un resumen en `consumo_reciente`. Antes de una prueba real, confirmar autenticación adicional y registrar la respuesta recibida. Ver [contrato-equipo2.md](../integraciones/contrato-equipo2.md).
 
 ## 7. Evidencia y resultado
 

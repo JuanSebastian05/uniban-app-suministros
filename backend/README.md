@@ -2,7 +2,7 @@
 
 API central de la solución. Atiende a la app Android y sirve como puente con los Equipos 1 y 2. El backend está organizado en FastAPI, SQLAlchemy 2, Alembic y PostgreSQL.
 
-> El código de esta copia incluye migraciones hasta 0013_cosechas_despachos. La revisión efectiva de Neon y la versión que Render está ejecutando deben verificarse por separado; consultar [estado del proyecto](../docs/estado-proyecto.md).
+> El código de esta copia incluye migraciones hasta 0013_cosechas_despachos. La revisión efectiva de Neon y la versión que Render está ejecutando deben verificarse por separado; consultar [estado del proyecto](../docs/gestion/estado-proyecto.md).
 
 ## Funciones disponibles
 
@@ -68,7 +68,7 @@ Aplica migraciones con Alembic, no crees tablas manualmente:
 .venv\Scripts\python.exe -m alembic upgrade head
 ~~~
 
-La revisión de cabeza de este repositorio es 0012_ciclos_etapas_y_descanso. En Neon, revisa primero la revisión aplicada y sigue el procedimiento de [migraciones de despliegue](../docs/lista-verificacion-despliegue.md). Render no ejecuta migraciones por sí mismo.
+La revisión de cabeza de este repositorio es 0012_ciclos_etapas_y_descanso. En Neon, revisa primero la revisión aplicada y sigue el procedimiento de [migraciones de despliegue](../docs/operacion/lista-verificacion-despliegue.md). Render no ejecuta migraciones por sí mismo.
 
 ## Configuración
 
@@ -86,8 +86,8 @@ Las variables están en .env.example. Las claves sensibles deben permanecer en u
 
 ## Despliegue
 
-La URL configurada para el servicio es https://uniban-app-suministros.onrender.com/. Los pasos, variables y comprobaciones están en [despliegue Render](../docs/despliegue-render.md).
+La URL configurada para el servicio es https://uniban-app-suministros.onrender.com/. Los pasos, variables y comprobaciones están en [despliegue Render](../docs/operacion/despliegue-render.md).
 
 ## Límite del contrato del Equipo 2
 
-El backend envía solo cajas, carton y bolsas, incluso con saldo cero; los consumos y pérdidas se filtran a esos mismos productos. Usa `POST https://platano-logistica-api.onrender.com/api/v1/recomendar` con `Content-Type: application/json`, y valida/guarda la respuesta. Swagger no declara consumos ni pérdidas, así que su uso debe confirmarse con el Equipo 2. Ver [contrato del Equipo 2](../docs/contrato-equipo2.md).
+El backend envía solo cajas, carton y bolsas, incluso con saldo cero; los consumos y pérdidas se filtran a esos mismos productos. Usa `POST https://platano-logistica-api.onrender.com/api/v1/recomendar` con `Content-Type: application/json`, y valida/guarda la respuesta. Swagger no declara consumos ni pérdidas, así que su uso debe confirmarse con el Equipo 2. Ver [contrato del Equipo 2](../docs/integraciones/contrato-equipo2.md).

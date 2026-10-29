@@ -1,7 +1,5 @@
 # Inicio: resumen de la finca
 
-> Implementado en el código local el 28/10/2026 a partir de los mockups de `docs/mockups/inicio/` y los ajustes acordados con el usuario. No incorpora una nueva historia del documento de requisitos ni cambia esquemas de base de datos.
-
 ## Contenido y navegación
 
 - La app completa abre **Inicio** al iniciar sesión o completar el perfil. La barra fija tiene **Inicio, Parcelas, Inventario y Actividades**. Actividades conserva su lista general.

@@ -1,6 +1,6 @@
 # Guía actual de integración con los Equipos 1 y 2
 
-> Actualizada el 27/10/2026 a partir del código del repositorio, el endpoint compartido y el OpenAPI del Equipo 2. Para el estado vigente del código, consultar [estado del proyecto](estado-proyecto.md). Las muestras no sustituyen la confirmación de los contratos con los otros equipos.
+> Actualizada el 27/10/2026 a partir del código del repositorio, el endpoint compartido y el OpenAPI del Equipo 2. Para el estado vigente del código, consultar [estado del proyecto](../gestion/estado-proyecto.md). Las muestras no sustituyen la confirmación de los contratos con los otros equipos.
 
 ## Resumen de responsabilidades
 
@@ -28,8 +28,8 @@ El backend tiene una ruta para pedir una recomendación para una parcela y otra 
 - exige que exista un aforamiento; sin este, devuelve un conflicto y no llama al Equipo 2;
 - forma un cuerpo con productor, parcela, ciclo activo, aforamiento e inventario de cajas, carton y bolsas;
 - calcula el periodo como semana ISO derivada de la fecha del aforamiento;
-- conserva consumos recientes de esos empaques para posible calibración futura, aunque el Equipo 2 actualmente no los procesa; no envía pérdidas;
-- agrega una ventana de despacho sintética de 06:00 a 16:00 para el día siguiente al aforamiento;
+- envía consumos recientes de esos empaques, que el Equipo 2 ya utiliza y resume en `consumo_reciente`; no envía pérdidas;
+- agrega una ventana de despacho sintética de 06:00 a 16:00 para el día siguiente a la consulta;
 - envía `Content-Type: application/json` a `POST https://platano-logistica-api.onrender.com/api/v1/recomendar`;
 - completa con saldo cero los empaques aún no sincronizados desde el celular y suma existencias entre ubicaciones;
 - procesa y guarda la respuesta del servicio.

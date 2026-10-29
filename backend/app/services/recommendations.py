@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 RECOMMEND_PATH = "/api/v1/recomendar"
 HEALTH_PATH = "/salud"  # su endpoint de salud: sirve para despertarlo antes de pedir la recomendación
 
-# Ventana de consumos y pérdidas que se envían al Equipo 2 (ver docs/contrato-equipo2.md).
+# Ventana de consumos y pérdidas que se envían al Equipo 2 (ver docs/integraciones/contrato-equipo2.md).
 RECENT_DAYS = 90
 PACKAGING_NAMES = ("cajas", "carton", "bolsas")
 
@@ -244,7 +244,7 @@ def build_request_body(
 
     El servicio acepta «formato directo o formato del Equipo 3»: se envían los dos para no depender de cómo mapee los
     objetos anidados (su OpenAPI solo dice ``object``). La ventana de despacho es sintética para la demostración:
-    va del día siguiente al aforamiento, de 06:00 a 16:00, con el formato local sin zona horaria del ejemplo acordado.
+    va del día siguiente a la solicitud, de 06:00 a 16:00, con el formato local sin zona horaria del ejemplo acordado.
     """
     cycle = db.scalar(
         select(ProductionCycle).where(ProductionCycle.parcel_id == parcel.id, ProductionCycle.end_date.is_(None))
@@ -252,7 +252,7 @@ def build_request_body(
     period = iso_period(aforamiento.date)
     confidence = None if aforamiento.confidence is None else _number(aforamiento.confidence)
     since = today - timedelta(days=RECENT_DAYS)
-    dispatch_date = aforamiento.date + timedelta(days=1)
+    dispatch_date = today + timedelta(days=1)
     body: dict = {
         "producerId": str(producer_id),
         "parcel": {

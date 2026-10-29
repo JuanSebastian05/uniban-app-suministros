@@ -6,7 +6,7 @@ contradicen, gana el repo: verifica y corrige este archivo.
 
 ## Antes de empezar (obligatorio)
 
-1. Lee [`docs/avisos-equipo.md`](docs/avisos-equipo.md) y [`docs/estado-proyecto.md`](docs/estado-proyecto.md).
+1. Lee [`docs/gestion/avisos-equipo.md`](docs/gestion/avisos-equipo.md) y [`docs/gestion/estado-proyecto.md`](docs/gestion/estado-proyecto.md).
 2. Revisa `git status`, la rama actual y el código pertinente antes de concluir que una nota documental sigue vigente.
 3. No cambies de rama ni actualices desde un remoto sin comprobar primero si hay trabajo local que preservar.
    Sigue el flujo de ramas acordado por el usuario/equipo para la tarea actual.
@@ -36,8 +36,8 @@ No agregues tecnologías fuera de esta lista sin acordarlo con el equipo (Cierre
   ni «Add files via upload» de GitHub. **No hagas commit ni push si el usuario no lo pidió.**
 - **Documentación viva (en el mismo PR):** cada HU tiene `docs/huNN.md` (historia, criterios y cómo se
   cumplen, decisiones, modelo, API, archivos, demostración manual, pendiente). Además actualiza
-  [`docs/estado-proyecto.md`](docs/estado-proyecto.md) (estado, bitácora) y, si afecta a otros,
-  [`docs/avisos-equipo.md`](docs/avisos-equipo.md). Tu contexto es finito: lo que no esté escrito en el
+  [`docs/gestion/estado-proyecto.md`](docs/gestion/estado-proyecto.md) (estado, bitácora) y, si afecta a otros,
+  [`docs/gestion/avisos-equipo.md`](docs/gestion/avisos-equipo.md). Tu contexto es finito: lo que no esté escrito en el
   repo se pierde.
 - **Pruebas:** nada se mergea con pruebas rojas. Toda HU nueva lleva pruebas y una demostración manual.
 - **Verifica antes de afirmar:** di qué corriste y qué no. Compilar no es probar.
@@ -80,7 +80,7 @@ cd backend; .venv\Scripts\python.exe -m alembic upgrade head
 - **Cero secretos en el repo** (es público): `backend/.env`, `android-app/app/google-services.json` y
   `android-app/local.properties` están en `.gitignore`. Nunca imprimas ni pegues sus valores.
 - **No pruebes migraciones contra la base compartida de Neon.** Ensáyalas en una base temporal o rama de desarrollo;
-  para producción consulta el procedimiento vigente en `docs/lista-verificacion-despliegue.md`.
+  para producción consulta el procedimiento vigente en `docs/operacion/lista-verificacion-despliegue.md`.
 - **Movimientos de inventario:** solo de inserción; las correcciones son AJUSTE; la existencia nunca queda
   negativa; se actualizan en la misma transacción (RT_10). Todo registro nace en el dispositivo con UUID y
   `PENDING`; el backend es idempotente por UUID.
@@ -95,14 +95,14 @@ cd backend; .venv\Scripts\python.exe -m alembic upgrade head
 
 | Qué | Dónde |
 | --- | --- |
-| Estado, pendientes, bitácora, por dónde retomar | [`docs/estado-proyecto.md`](docs/estado-proyecto.md) |
-| Avisos entre compañeros (migraciones, archivos compartidos, despliegue) | [`docs/avisos-equipo.md`](docs/avisos-equipo.md) |
+| Estado, pendientes, bitácora, por dónde retomar | [`docs/gestion/estado-proyecto.md`](docs/gestion/estado-proyecto.md) |
+| Avisos entre compañeros (migraciones, archivos compartidos, despliegue) | [`docs/gestion/avisos-equipo.md`](docs/gestion/avisos-equipo.md) |
 | Historias de usuario y criterios | [`docs/requisitos/HU_y_Requisitos_Tecnicos_Equipo3.pdf`](docs/requisitos/HU_y_Requisitos_Tecnicos_Equipo3.pdf) |
-| Guía de cada HU (qué se hizo y cómo demostrarlo) | `docs/hu01.md` … `docs/hu14.md` |
+| Guía de cada HU (qué se hizo y cómo demostrarlo) | `docs/historias-usuario/hu01.md` … `docs/historias-usuario/hu14.md` |
 | Modelo de datos (MER) y mockups | `docs/modelo-datos/MERv2.drawio`, `docs/mockups/MockupsFigma.zip` |
-| Despliegue en Render + Neon | [`docs/despliegue-render.md`](docs/despliegue-render.md) |
+| Despliegue en Render + Neon | [`docs/operacion/despliegue-render.md`](docs/operacion/despliegue-render.md) |
 | Arquitectura | [`docs/arquitectura/README.md`](docs/arquitectura/README.md) |
-| Integración con los Equipos 1 y 2 | [`docs/guia-integracion-equipos.md`](docs/guia-integracion-equipos.md) y contratos individuales |
+| Integración con los Equipos 1 y 2 | [`docs/integraciones/guia-integracion-equipos.md`](docs/integraciones/guia-integracion-equipos.md) y contratos individuales |
 
 ## Trampas conocidas
 

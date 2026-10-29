@@ -11,7 +11,7 @@ Create Date: 2026-10-21
 
 NOTA PARA EL EQUIPO: la migración 0006 está reservada para aforamientos (HU_09). Quien haga merge
 en segundo lugar debe cambiar su ``down_revision`` al id de la anterior para mantener una sola
-cabeza (``alembic heads`` debe mostrar un único resultado). Ver docs/avisos-equipo.md.
+cabeza (``alembic heads`` debe mostrar un único resultado). Ver docs/gestion/avisos-equipo.md.
 """
 
 import sqlalchemy as sa
