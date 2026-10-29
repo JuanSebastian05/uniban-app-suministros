@@ -156,6 +156,11 @@ private fun RecommendationCard(recommendation: ParcelRecommendation) {
                     modifier = Modifier.testTag("recommendation-no-supplies"),
                 )
             }
+            if (recommendation.supplies.isNotEmpty()) Text(
+                "Empaques en unidades enteras, redondeados hacia arriba.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             recommendation.supplies.forEach { SupplyRow(it) }
             recommendation.metrics?.let { metrics ->
                 if (metrics.windowCompliance != null || metrics.capacityUse != null) {
@@ -213,7 +218,10 @@ private fun WindowIndicator(meets: Boolean, isPlan: Boolean = false) {
 
 @Composable
 private fun SupplyRow(supply: RecommendationSupply) {
-    val hasDeficit = supply.deficit > 0
+    val required = kotlin.math.ceil(supply.requiredQuantity)
+    val available = kotlin.math.floor(supply.availableQuantity)
+    val deficit = (required - available).coerceAtLeast(0.0)
+    val hasDeficit = deficit > 0
     Column(Modifier.fillMaxWidth().testTag("supply-${supply.name}"), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row {
             Text(supply.name, Modifier.weight(1f), fontWeight = FontWeight.Bold)
@@ -224,13 +232,13 @@ private fun SupplyRow(supply: RecommendationSupply) {
             )
         }
         Text(
-            "Requerido ${formatAmount(supply.requiredQuantity)} · Disponible ${formatAmount(supply.availableQuantity)}",
+            "Requerido ${formatAmount(required)} · Disponible ${formatAmount(available)}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (hasDeficit) {
             Text(
-                "Déficit: ${formatAmount(supply.deficit)}",
+                "Déficit: ${formatAmount(deficit)}",
                 color = MaterialTheme.colorScheme.error,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.testTag("deficit-${supply.name}"),

@@ -393,6 +393,16 @@ fun AppNavHost(
                         )
                     } else null
                     val recommendation = recommendationViewModel?.state?.collectAsStateWithLifecycle()?.value
+                    val productionViewModel: co.edu.udea.uniban.suministros.ui.production.ProductionViewModel? =
+                        if (productionRepositoryFor != null) viewModel(
+                            key = "production-summary-$id",
+                            factory = remember(id) { viewModelFactory { initializer {
+                                co.edu.udea.uniban.suministros.ui.production.ProductionViewModel(
+                                    checkNotNull(currentProductionRepository), createSavedStateHandle(),
+                                )
+                            } } },
+                        ) else null
+                    val production = productionViewModel?.overview?.collectAsStateWithLifecycle()?.value
                     ParcelDetailScreen(
                         parcelId = id,
                         state = state,
@@ -401,6 +411,7 @@ fun AppNavHost(
                         onRetry = parcelsViewModel::load,
                         consumptions = consumptions,
                         activities = activities,
+                        production = production,
                         aforamiento = aforamiento,
                         onRetryAforamiento = aforamientoViewModel::reload,
                         recommendation = recommendation,

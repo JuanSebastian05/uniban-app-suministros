@@ -54,6 +54,21 @@ class ActivityScreensTest {
         compose.onNodeWithTag("no-activities").assertIsDisplayed()
     }
 
+    @Test fun elListadoGeneralIncluyeDespachosConCantidadYPeriodo() {
+        val item = ActivityListItem("d1", "p1", "La Esperanza", "DESPACHO", "2026-10-28", "", "PENDING", 3, 73, "2026-W44")
+        compose.setContent { UnibanTheme { ActivitiesScreen(listOf(item), 1, {}, {}) } }
+        compose.onNodeWithText("Despacho").assertIsDisplayed()
+        compose.onNodeWithText("73 racimos").assertIsDisplayed()
+        compose.onNodeWithText("Periodo 2026-W44").assertIsDisplayed()
+        compose.onNodeWithTag("no-activities").assertDoesNotExist()
+    }
+
+    @Test fun elDetalleDeParcelaIncluyeDespachosConCantidad() {
+        showDetail(withCycle, listOf(ParcelActivity("d1", "DESPACHO", "2026-10-28", "", "c1", "PENDING", 3, 73, "2026-W44")))
+        compose.onNodeWithText("Despacho").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("73 racimos").performScrollTo().assertIsDisplayed()
+    }
+
     @Test fun laListaMuestraTipoParcelaFechaInsumosYEstado() {
         val item = ActivityListItem("a1", "p1", "La Esperanza", "FERTILIZACION", "2026-10-24", "Lote norte", "PENDING", 2)
         compose.setContent { UnibanTheme { ActivitiesScreen(listOf(item), 1, {}, {}) } }

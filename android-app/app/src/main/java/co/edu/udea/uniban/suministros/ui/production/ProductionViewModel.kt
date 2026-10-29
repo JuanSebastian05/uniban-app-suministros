@@ -21,6 +21,8 @@ data class ProductionForm(
     val exceptionConfirmed: Boolean = false,
 )
 
+data class ProductionSaved(val mode: String, val quantity: Int)
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProductionViewModel(private val source: ProductionSource, private val saved: SavedStateHandle) : ViewModel() {
     val parcelId = MutableStateFlow(saved.get<String>("parcelId").orEmpty())
@@ -37,6 +39,14 @@ class ProductionViewModel(private val source: ProductionSource, private val save
     var error by mutableStateOf<String?>(null); private set
     var notice by mutableStateOf<String?>(null); private set
     var refreshing by mutableStateOf(false); private set
+    var savedConfirmation by mutableStateOf(saved.get<Int>("savedQuantity")?.let {
+        ProductionSaved(saved["savedMode"] ?: "COSECHA", it)
+    }); private set
+
+    fun dismissSaved() {
+        savedConfirmation = null
+        saved.remove<Int>("savedQuantity"); saved.remove<String>("savedMode")
+    }
     private var requestId = saved.get<String>("requestId") ?: UUID.randomUUID().toString().also { saved["requestId"] = it }
 
     private fun persist() {
@@ -92,6 +102,8 @@ class ProductionViewModel(private val source: ProductionSource, private val save
                         requireNotNull(form.order.toIntOrNull()) { "El orden debe ser un entero positivo." }, form.observation)
                 }
                 notice = "Registro guardado en este dispositivo. Pendiente de sincronización."
+                savedConfirmation = ProductionSaved(form.mode, quantity)
+                saved["savedMode"] = form.mode; saved["savedQuantity"] = quantity
                 form = form.copy(quantity = "", observation = "", exceptionConfirmed = false)
                 requestId = UUID.randomUUID().toString()
                 persist()
