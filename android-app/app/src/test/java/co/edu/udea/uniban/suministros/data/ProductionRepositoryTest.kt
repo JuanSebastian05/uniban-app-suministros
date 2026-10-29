@@ -2,6 +2,7 @@ package co.edu.udea.uniban.suministros.data
 
 import android.app.Application
 import androidx.room.Room
+import androidx.room.withTransaction
 import androidx.test.core.app.ApplicationProvider
 import co.edu.udea.uniban.suministros.data.local.*
 import co.edu.udea.uniban.suministros.data.remote.*
@@ -48,6 +49,66 @@ class ProductionRepositoryTest {
         repo = ProductionRepository(db, api, "demo") { "token" }
     }
     @After fun tearDown() { db.close() }
+
+    @Test fun elDespachoApareceEnLosDosListadosSinCrearOtraActividad() = runBlocking {
+        val harvestId = id()
+        val dispatchId = id()
+        repo.harvest(harvestId, planId, 100, date.minusDays(1), "", false)
+        repo.dispatch(dispatchId, planId, 73, at, "V-3", 1, "Despacho real")
+        val all = db.activityDao().observeActivities().first()
+        val parcel = db.activityDao().observeParcelActivities(parcelId).first()
+        assertEquals(2, all.size)
+        assertEquals(2, parcel.size)
+        assertEquals(73, all.single { it.type == "DESPACHO" }.quantity)
+        assertEquals("Despacho real", parcel.single { it.type == "DESPACHO" }.observation)
+        assertEquals("2026-W44", parcel.single { it.type == "DESPACHO" }.period)
+        assertNull(db.activityDao().findActivity(dispatchId))
+        assertNotNull(db.activityDao().findActivity(harvestId))
+    }
+
+    @Test fun redondeaEmpaquesHaciaArribaYReparteSoloUnidadesEnteras() = runBlocking {
+        plan = plan.copy(supplies = plan.supplies!!.map { it.copy(requiredQuantity = it.requiredQuantity + 0.2) })
+        db.productionDao().savePlan(requireNotNull(plan.productionPlan(gson)))
+        repo.harvest(id(), planId, 146, date.minusDays(1), "", true)
+        repo.dispatch(id(), planId, 73, at, "V-3", 1, "")
+        repo.dispatch(id(), planId, 73, at, "V-3", 1, "")
+        val stock = db.inventoryDao().observeInventory().first().associateBy { it.name }
+        assertEquals(399f, stock["cajas"]!!.quantity)
+        assertEquals(299f, stock["carton"]!!.quantity)
+        assertEquals(199f, stock["bolsas"]!!.quantity)
+        val rows = db.inventoryDao().observeMovements().first()
+        assertTrue(rows.all { it.quantity % 1f == 0f })
+        assertTrue(db.productionDao().pendingDispatches().all { it.toDto(gson).packingPolicy == "whole_units_v1" })
+    }
+
+    @Test fun losParcialesAntiguosSeConservanYLosNuevosDescuentanEnteros() = runBlocking {
+        plan = plan.copy(supplies = plan.supplies!!.map { it.copy(requiredQuantity = it.requiredQuantity + 0.2) })
+        db.productionDao().savePlan(requireNotNull(plan.productionPlan(gson)))
+        repo.harvest(id(), planId, 146, date.minusDays(1), "", true)
+        val legacyId = id()
+        repo.dispatch(legacyId, planId, 73, at, "V-3", 1, "")
+        val original = db.productionDao().dispatch(legacyId)!!.toDto(gson)
+        val legacy = original.consumptions.map { movement ->
+            val requirement = plan.supplies!!.first { it.name == movement.inventory.supply.name }.requiredQuantity.toBigDecimal()
+            movement.copy(quantity = requirement.multiply(73.toBigDecimal()).divide(146.toBigDecimal(), 2, java.math.RoundingMode.HALF_UP))
+        }
+        // Simula una fila de la versión ya instalada, cuyo JSON era una lista sin política.
+        db.withTransaction {
+            db.openHelper.writableDatabase.execSQL("UPDATE dispatches SET consumptionsJson = ? WHERE id = ?", arrayOf(gson.toJson(legacy), legacyId))
+            legacy.forEach { movement ->
+                db.inventoryDao().updateQuantity(movement.inventory.id, (500.toBigDecimal() - movement.quantity).toFloat())
+                db.openHelper.writableDatabase.execSQL("UPDATE movements SET quantity = ? WHERE id = ?", arrayOf(movement.quantity.toDouble(), movement.id))
+            }
+        }
+        assertEquals("legacy_decimal", db.productionDao().dispatch(legacyId)!!.toDto(gson).packingPolicy)
+        val newId = id()
+        repo.dispatch(newId, planId, 73, at, "V-3", 1, "")
+        assertTrue(db.productionDao().dispatch(newId)!!.toDto(gson).consumptions.all { it.quantity.stripTrailingZeros().scale() <= 0 })
+        val stock = db.inventoryDao().observeInventory().first().first { it.name == "cajas" }
+        assertEquals(399.9f, stock.quantity, 0.001f)
+        assertEquals(gson.toJson(legacy), db.productionDao().dispatch(legacyId)!!.consumptionsJson)
+        assertEquals(0, repo.observe(parcelId).first().periods.single().available)
+    }
     private fun id() = UUID.randomUUID().toString()
 
     @Test fun cosechaCreaUnaSolaActividadYReintentarNoDuplica() = runBlocking {

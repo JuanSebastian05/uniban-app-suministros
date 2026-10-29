@@ -1,7 +1,7 @@
 """Cupo semanal y saldo real: validación y escritura atómicas bajo bloqueo de parcela."""
 import uuid
 from datetime import date, datetime, timedelta, timezone
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, ROUND_CEILING, ROUND_FLOOR
 from sqlalchemy import func, select, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -48,6 +48,8 @@ def stage_at(db: Session, parcel_id: uuid.UUID, day: date, recorded_at: datetime
 
 def _payload(data):
     payload = data.model_dump(mode="json", by_alias=True)
+    if payload.get("packingPolicy") == "legacy_decimal":
+        payload.pop("packingPolicy")  # Idempotencia con payloads guardados antes de introducir la política.
     if "consumptions" in payload:
         payload["consumptions"].sort(key=lambda item: item["id"])
     return payload
@@ -125,7 +127,7 @@ def sync_harvest(db: Session, data: HarvestIn, producer_id: uuid.UUID):
         raise
 
 
-def packaging_targets(payload, shipped):
+def packaging_targets(payload, shipped, policy="legacy_decimal"):
     load = payload.get("plan", {}).get("estimatedLoadBunches", 0)
     if load <= 0:
         raise ProductionConflict("La carga del plan debe ser positiva para distribuir empaques.")
@@ -135,8 +137,26 @@ def packaging_targets(payload, shipped):
         name = _packaging_name(supply["name"])
         if name is None or name in targets:
             raise ProductionConflict("El plan contiene empaques desconocidos o repetidos.")
-        targets[name] = (Decimal(str(supply["requiredQuantity"])) * fraction).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        required = Decimal(str(supply["requiredQuantity"]))
+        if policy == "whole_units_v1":
+            required = required.to_integral_value(rounding=ROUND_CEILING)
+            targets[name] = (required * min(Decimal(shipped), Decimal(load)) / Decimal(load)).to_integral_value(rounding=ROUND_CEILING)
+        else:
+            targets[name] = (required * fraction).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     return targets
+
+
+def _assigned_packaging(db, parcel_id, period):
+    rows = db.execute(select(Supply.name, func.sum(Movement.quantity)).select_from(Movement)
+        .join(Inventory, Movement.inventory_id == Inventory.id)
+        .join(Supply, Inventory.supply_id == Supply.id)
+        .join(Dispatch, Movement.dispatch_id == Dispatch.id)
+        .where(Dispatch.parcel_id == parcel_id, Dispatch.period == period).group_by(Supply.name)).all()
+    result = {}
+    for raw_name, quantity in rows:
+        name = _packaging_name(raw_name)
+        result[name] = result.get(name, Decimal(0)) + quantity
+    return result
 
 
 def sync_dispatch(db: Session, data: DispatchIn, producer_id: uuid.UUID):
@@ -158,8 +178,15 @@ def sync_dispatch(db: Session, data: DispatchIn, producer_id: uuid.UUID):
         shipped = _total(db, Dispatch, data.parcel_id, rec.period)
         if shipped + data.quantity > min(harvested, harvested_by_date):
             raise ProductionConflict(f"Solo hay {max(0, min(harvested, harvested_by_date) - shipped)} racimos disponibles para esa fecha.")
-        before, after = packaging_targets(rec.payload, shipped), packaging_targets(rec.payload, shipped + data.quantity)
-        expected = {name: after[name] - before[name] for name in after if after[name] > before[name]}
+        assigned = _assigned_packaging(db, data.parcel_id, rec.period)
+        if data.packing_policy == "whole_units_v1":
+            after = packaging_targets(rec.payload, shipped + data.quantity, data.packing_policy)
+            expected = {name: max(Decimal(0), target - assigned.get(name, Decimal(0)).to_integral_value(rounding=ROUND_CEILING))
+                        for name, target in after.items()}
+            expected = {name: quantity for name, quantity in expected.items() if quantity > 0}
+        else:
+            before, after = packaging_targets(rec.payload, shipped), packaging_targets(rec.payload, shipped + data.quantity)
+            expected = {name: after[name] - before[name] for name in after if after[name] > before[name]}
         provided = {}
         inventory_ids = set()
         # Bloqueos siempre en orden de UUID para evitar interbloqueos entre parcelas con empaques compartidos.
@@ -168,6 +195,8 @@ def sync_dispatch(db: Session, data: DispatchIn, producer_id: uuid.UUID):
             if name is None or movement.inventory.id in inventory_ids or movement.type != "CONSUMO" or movement.activity_id is not None or \
                     movement.parcel_id != data.parcel_id or movement.cycle_id != cycle.id or movement.date != day:
                 raise ProductionConflict("El consumo de empaque no corresponde al despacho.")
+            if data.packing_policy == "whole_units_v1" and movement.quantity != movement.quantity.to_integral_value():
+                raise ProductionConflict("Cajas, cartón y bolsas deben consumirse en unidades enteras.")
             if db.get(Movement, movement.id) is not None:
                 raise ProductionConflict("El UUID de un consumo ya fue utilizado.")
             inventory = _ensure_inventory(db, movement.inventory, producer_id)
@@ -177,11 +206,15 @@ def sync_dispatch(db: Session, data: DispatchIn, producer_id: uuid.UUID):
             # Refrescar tras obtener el bloqueo: el inventario puede ser compartido por otras parcelas.
             inventory = db.scalar(select(Inventory).where(Inventory.id == inventory.id).with_for_update().execution_options(populate_existing=True))
             if inventory.quantity < movement.quantity:
-                raise ProductionConflict(f"Faltan {movement.quantity - inventory.quantity} unidades de {name}. Registra una entrada de inventario.")
+                usable = inventory.quantity.to_integral_value(rounding=ROUND_FLOOR) if data.packing_policy == "whole_units_v1" else inventory.quantity
+                raise ProductionConflict(f"Faltan {movement.quantity - usable} unidades de {name}. Registra una entrada de inventario.")
             provided[name] = provided.get(name, Decimal(0)) + movement.quantity
             inventory_ids.add(movement.inventory.id)
         if provided != expected:
             raise ProductionConflict("Los empaques no coinciden con la distribución acumulada del plan. Actualiza el avance.")
+        caps = packaging_targets(rec.payload, rec.payload["plan"]["estimatedLoadBunches"], "whole_units_v1")
+        if any(assigned.get(name, Decimal(0)) + quantity > caps[name] for name, quantity in provided.items()):
+            raise ProductionConflict("El plan ya tiene empaques asignados. Actualiza el avance antes de reintentar.")
         db.add(Dispatch(id=data.id, parcel_id=data.parcel_id, cycle_id=cycle.id, recommendation_id=rec.id,
                         period=rec.period, quantity=data.quantity, dispatched_at=data.dispatched_at, request_payload=_payload(data)))
         db.flush()

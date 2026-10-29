@@ -77,7 +77,7 @@ fun ActivitiesScreen(
                     )
                 }
             }
-            items(activities, key = { it.id }) { ActivityCard(it) }
+            items(activities, key = { "${it.type}:${it.id}" }) { ActivityCard(it) }
         }
     }
 }
@@ -91,7 +91,7 @@ private fun ActivityCard(activity: ActivityListItem) {
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-                ActivityType.fromCode(activity.type)?.label ?: activity.type,
+                if (activity.type == "DESPACHO") "Despacho" else ActivityType.fromCode(activity.type)?.label ?: activity.type,
                 style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
             )
             Text(
@@ -99,6 +99,8 @@ private fun ActivityCard(activity: ActivityListItem) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            activity.quantity?.let { Text("$it racimos", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold) }
+            activity.period?.let { Text("Periodo $it", style = MaterialTheme.typography.bodySmall) }
             if (activity.consumptionCount > 0) {
                 Text(
                     "${activity.consumptionCount} ${if (activity.consumptionCount == 1) "insumo usado" else "insumos usados"}",

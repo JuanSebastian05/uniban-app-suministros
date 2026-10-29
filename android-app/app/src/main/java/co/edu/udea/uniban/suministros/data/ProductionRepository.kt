@@ -25,6 +25,7 @@ internal fun packagingName(name: String): String = Normalizer.normalize(name.tri
 data class ProductionPeriod(
     val reference: ProductionPlanEntity, val plan: RecommendationDto,
     val harvested: Int, val dispatched: Int,
+    val consumedPacking: Map<String, BigDecimal> = emptyMap(),
 ) {
     val available get() = harvested - dispatched
     val remaining get() = (plan.volumeBunches - harvested).coerceAtLeast(0.0)
@@ -64,7 +65,8 @@ class ProductionRepository(
             reference?.let {
                 ProductionPeriod(it, gson.fromJson(it.payloadJson, RecommendationDto::class.java),
                     harvests.filter { row -> row.period == it.period }.sumOf { row -> row.quantity },
-                    dispatches.filter { row -> row.period == it.period }.sumOf { row -> row.quantity })
+                    dispatches.filter { row -> row.period == it.period }.sumOf { row -> row.quantity },
+                    assignedPacking(dispatches.filter { row -> row.period == it.period }, gson))
             }
         }.sortedByDescending { it.reference.period }
         ProductionOverview(false, periods, harvests, dispatches, inventory)
@@ -125,11 +127,12 @@ class ProductionRepository(
             val date = at.atZoneSameInstant(ZoneId.of("America/Bogota")).toLocalDate()
             require(stage(ref.parcelId, date).second in listOf("PRODUCCION", "DESCANSO")) { "Solo se puede despachar en Producción o Descanso." }
             val harvests = dao.periodHarvests(ref.parcelId, ref.period)
-            val shipped = dao.periodDispatches(ref.parcelId, ref.period).sumOf { it.quantity }
+            val previousDispatches = dao.periodDispatches(ref.parcelId, ref.period)
+            val shipped = previousDispatches.sumOf { it.quantity }
             val available = harvests.filter { it.date <= date.toString() }.sumOf { it.quantity } - shipped
             require(quantity <= available) { "Solo hay ${available.coerceAtLeast(0)} racimos disponibles para esa fecha." }
             val items = database.inventoryDao().observeInventory().first()
-            val lines = packing(plan, shipped, quantity, items)
+            val lines = packing(plan, shipped, quantity, items, assignedPacking(previousDispatches, gson))
             val missing = lines.filter { it.shortage > BigDecimal.ZERO }
             require(missing.isEmpty()) { missing.joinToString("; ", prefix = "Registra una entrada de inventario. Faltan: ") { "${it.shortage} de ${it.name}" } }
             val now = Instant.now().truncatedTo(ChronoUnit.MILLIS).toString()
@@ -139,7 +142,7 @@ class ProductionRepository(
                 var remaining = line.quantity
                 items.filter { packagingName(it.category) == "empaque" && packagingName(it.name) == line.name && it.unit == "unidad" }
                     .sortedBy { it.id }.forEach { item ->
-                        val used = remaining.min(item.quantity.toString().toBigDecimal())
+                        val used = remaining.min(item.quantity.toString().toBigDecimal().setScale(0, RoundingMode.FLOOR))
                         if (used > BigDecimal.ZERO) {
                             val movementId = UUID.nameUUIDFromBytes("$id|${item.id}".toByteArray()).toString()
                             val movement = MovementEntity(movementId, item.id, used.toFloat(), date.toString(), "Empaque del despacho", now, now,
@@ -157,7 +160,7 @@ class ProductionRepository(
                     }
             }
             dao.insertDispatch(DispatchEntity(id, ref.parcelId, ref.cycleId, ref.id, ref.period, quantity,
-                at.toString(), vehicle.trim(), order, observation.trim(), now, gson.toJson(consumptions)))
+                at.toString(), vehicle.trim(), order, observation.trim(), now, packingJson(consumptions, "whole_units_v1", gson)))
             movements.forEach { database.inventoryDao().insertMovement(it) }
         }
         onSaved()
@@ -186,7 +189,7 @@ class ProductionRepository(
                     val plan = requireNotNull(dao.plan(remote.recommendationId))
                     if (dao.dispatch(remote.id) == null) dao.insertDispatch(DispatchEntity(remote.id, parcelId, remote.cycleId, remote.recommendationId,
                         plan.period, remote.quantity, remote.dispatchedAt, remote.vehicleId, remote.order, remote.observation,
-                        remote.createdAt, gson.toJson(remote.consumptions), "SYNCED"))
+                        remote.createdAt, packingJson(remote.consumptions, remote.packingPolicy, gson), "SYNCED"))
                     else require(dao.dispatch(remote.id)!!.toDto(gson).canonical() == remote.canonical()) { "Conflicto con un despacho local." }
                     dao.dispatchStatus(remote.id, "SYNCED", null)
                     dao.consumptionStatus(remote.id, "SYNCED", null)
@@ -198,7 +201,8 @@ class ProductionRepository(
     }
 
     companion object {
-        fun packing(plan: RecommendationDto, shipped: Int, quantity: Int, items: List<InventoryItem>): List<PackingLine> {
+        fun packing(plan: RecommendationDto, shipped: Int, quantity: Int, items: List<InventoryItem>,
+                    consumed: Map<String, BigDecimal>? = null): List<PackingLine> {
             val load = requireNotNull(plan.plan?.estimatedLoadBunches) { "Actualiza el plan de despacho." }
             require(load > 0) { "El plan necesita una carga positiva para distribuir empaques." }
             val supplies = plan.supplies.orEmpty()
@@ -206,23 +210,39 @@ class ProductionRepository(
             return supplies.map { supply ->
                 val name = packagingName(supply.name)
                 require(name in listOf("cajas", "carton", "bolsas")) { "El plan contiene un empaque desconocido." }
-                fun target(count: Int) = supply.requiredQuantity.toBigDecimal()
-                    .multiply(count.coerceAtMost(load).toBigDecimal()).divide(load.toBigDecimal(), 2, RoundingMode.HALF_UP)
-                PackingLine(name, target(shipped + quantity) - target(shipped),
+                fun target(count: Int) = supply.requiredQuantity.toBigDecimal().setScale(0, RoundingMode.CEILING)
+                    .multiply(count.coerceAtMost(load).toBigDecimal()).divide(load.toBigDecimal(), 0, RoundingMode.CEILING)
+                val alreadyUsed = consumed?.getOrDefault(name, BigDecimal.ZERO)?.setScale(0, RoundingMode.CEILING) ?: target(shipped)
+                PackingLine(name, (target(shipped + quantity) - alreadyUsed).max(BigDecimal.ZERO),
                     items.filter { packagingName(it.category) == "empaque" && packagingName(it.name) == name && it.unit == "unidad" }
-                        .fold(BigDecimal.ZERO) { total, it -> total + it.quantity.toString().toBigDecimal() })
+                        .fold(BigDecimal.ZERO) { total, it -> total + it.quantity.toString().toBigDecimal().setScale(0, RoundingMode.FLOOR) })
             }.filter { it.quantity > BigDecimal.ZERO }
         }
     }
 }
 
 internal fun HarvestEntity.toDto() = HarvestDto(id, parcelId, cycleId, recommendationId, aforamientoId, date, quantity, observation, exceptionConfirmed, createdAt)
-internal fun DispatchEntity.toDto(gson: Gson) = DispatchDto(id, parcelId, cycleId, recommendationId, dispatchedAt, quantity, vehicleId, order,
-    observation, createdAt, gson.fromJson(consumptionsJson, Array<MovementDto>::class.java).toList())
+private data class PackingPayload(val packingPolicy: String, val items: List<MovementDto>)
+private fun readPacking(text: String, gson: Gson): PackingPayload {
+    val json = com.google.gson.JsonParser.parseString(text)
+    return if (json.isJsonArray) PackingPayload("legacy_decimal", gson.fromJson(json, Array<MovementDto>::class.java).toList())
+        else gson.fromJson(json, PackingPayload::class.java)
+}
+private fun packingJson(items: List<MovementDto>, policy: String?, gson: Gson): String =
+    if (policy == "whole_units_v1") gson.toJson(PackingPayload(policy, items)) else gson.toJson(items)
+private fun assignedPacking(dispatches: List<DispatchEntity>, gson: Gson): Map<String, BigDecimal> =
+    dispatches.flatMap { readPacking(it.consumptionsJson, gson).items }.groupBy { packagingName(it.inventory.supply.name) }
+        .mapValues { (_, rows) -> rows.fold(BigDecimal.ZERO) { sum, item -> sum + item.quantity } }
+
+internal fun DispatchEntity.toDto(gson: Gson): DispatchDto {
+    val packing = readPacking(consumptionsJson, gson)
+    return DispatchDto(id, parcelId, cycleId, recommendationId, dispatchedAt, quantity, vehicleId, order,
+        observation, createdAt, packing.items, packing.packingPolicy)
+}
 
 private fun timestamp(text: String) = Instant.parse(text).truncatedTo(ChronoUnit.MILLIS).toString()
 private fun HarvestDto.canonical() = copy(createdAt = timestamp(createdAt))
-private fun DispatchDto.canonical() = copy(dispatchedAt = OffsetDateTime.parse(dispatchedAt).toInstant().toString(),
+private fun DispatchDto.canonical() = copy(packingPolicy = packingPolicy ?: "legacy_decimal", dispatchedAt = OffsetDateTime.parse(dispatchedAt).toInstant().toString(),
     createdAt = timestamp(createdAt), consumptions = consumptions.sortedBy { it.id }.map {
         it.copy(quantity = it.quantity.stripTrailingZeros(), createdAt = timestamp(it.createdAt), updatedAt = timestamp(it.updatedAt),
             inventory = it.inventory.copy(initialQuantity = it.inventory.initialQuantity.stripTrailingZeros()))

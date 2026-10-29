@@ -26,13 +26,15 @@ Ver [contrato de Equipo 2](contrato-equipo2.md) y [TXT para compartir](integraci
 
 ## Versiones de esquema y despliegue
 
+- El usuario reportó el despliegue de cosechas y despachos. No se consultaron Render ni Neon para verificarlo de forma independiente. Las correcciones posteriores del 28/10 agregan confirmaciones, despachos en ambos listados, pendientes en la parcela y empaques enteros. Requieren desplegar primero el backend y después instalar el nuevo APK; **no requieren otra migración**.
+- La API propia de despachos acepta `packingPolicy`: los registros nuevos usan `whole_units_v1`; los anteriores conservan `legacy_decimal`. Se mantienen los consumos históricos y los reenvíos pendientes, sin modificar los contratos de los Equipos 1 y 2. Ver [HU_16](hu16.md).
 - En este repositorio, Alembic tiene cabeza **0013_cosechas_despachos** y Room está en versión **11** (cosecha real y despacho). La migración anterior 0012 y los esquemas históricos no se modificaron.
 - Antes de instalar el APK de HU_15–16 en un entorno compartido, ensayar 0013 en PostgreSQL temporal y desplegar backend con esa migración. No se aplicó a Neon desde esta tarea.
 - Las cosechas y despachos son datos del Equipo 3. Se preservan rutas y JSON de los otros equipos y las modificaciones locales del usuario en ambos contratos. Las recomendaciones antiguas sin trazabilidad de ciclo/aforamiento se conservan; para operaciones nuevas se necesita solicitar una recomendación con esa procedencia.
 - La revisión real de Neon no se puede deducir de la rama main ni del código que Render expone. Consultar la revisión antes de modificar la base.
 - Render no ejecuta Alembic automáticamente. Ensayar en una base temporal, aplicar el esquema compatible y luego desplegar el código.
 - Antes de una nueva migración, comprobar que Alembic tenga una sola cabeza y que la revisión pueda subirse desde la versión real de la base.
-- El usuario informó que 0010 llegó a main. La aplicación de 0011/0012 y la versión activa de Render no están confirmadas en este documento.
+- El usuario informó inicialmente que 0010 llegó a main y posteriormente que desplegó toda la ampliación. La revisión activa de Render y Neon requiere comprobación independiente.
 
 Ver [despliegue](despliegue-render.md) y [lista de verificación](lista-verificacion-despliegue.md).
 

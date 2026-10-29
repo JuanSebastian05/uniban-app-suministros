@@ -9,6 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -27,10 +29,28 @@ fun ProductionScreen(vm: ProductionViewModel, parcels: List<ParcelSummary>, onBa
     val period = data.periods.firstOrNull { it.reference.id == vm.planId } ?: data.periods.firstOrNull()
     LaunchedEffect(period?.reference?.id) { period?.let { if (vm.planId != it.reference.id) vm.selectPlan(it) } }
     val form = vm.form
+    val focus = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val scroll = rememberScrollState()
+    LaunchedEffect(vm.error) {
+        if (vm.error != null) { focus.clearFocus(); keyboard?.hide(); scroll.animateScrollTo(0) }
+    }
+    LaunchedEffect(vm.savedConfirmation) {
+        if (vm.savedConfirmation != null) { focus.clearFocus(); keyboard?.hide() }
+    }
+    vm.savedConfirmation?.let { result ->
+        AlertDialog(
+            onDismissRequest = vm::dismissSaved,
+            title = { Text(if (result.mode == "COSECHA") "Cosecha guardada" else "Despacho guardado") },
+            text = { Text("Se guardaron ${result.quantity} racimos. Puedes consultar el estado de sincronización en los registros del periodo.") },
+            confirmButton = { TextButton(onClick = vm::dismissSaved) { Text("Aceptar") } },
+            modifier = Modifier.testTag("production-saved-dialog"),
+        )
+    }
     val number = remember { DecimalFormat("#,##0.##") }
     BackHandler(enabled = vm.saving) {}
     InventoryScaffold(title = "Cosechas y despachos", pendingCount = 0, onBack = onBack, backEnabled = !vm.saving) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp)
+        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(scroll).padding(16.dp)
             .testTag("production-screen"), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             var parcelsOpen by remember { mutableStateOf(false) }
             ExposedDropdownMenuBox(parcelsOpen, onExpandedChange = { if (!vm.saving) parcelsOpen = !parcelsOpen }) {
@@ -78,7 +98,7 @@ fun ProductionScreen(vm: ProductionViewModel, parcels: List<ParcelSummary>, onBa
                         Text("Disponibles: ${period.available} racimos", fontWeight = FontWeight.Bold)
                         Text("Pendiente de cosechar: ${number.format(period.remaining)} racimos")
                         Text("Pendiente del plan de despacho: ${period.remainingDispatch} racimos")
-                        runCatching { ProductionRepository.packing(period.plan, period.dispatched, period.remainingDispatch, data.inventory) }
+                        runCatching { ProductionRepository.packing(period.plan, period.dispatched, period.remainingDispatch, data.inventory, period.consumedPacking) }
                             .getOrNull()?.forEach { Text("Empaque pendiente del plan: ${it.name} · ${it.quantity} unidades", style = MaterialTheme.typography.bodySmall) }
                         Text("El aforamiento es una estimación de plantas y no se descuenta.", style = MaterialTheme.typography.bodySmall)
                     }
@@ -103,7 +123,7 @@ fun ProductionScreen(vm: ProductionViewModel, parcels: List<ParcelSummary>, onBa
                     OutlinedTextField(form.time, { vm.change(form.copy(time = it)) }, label = { Text("Hora real (HH:mm), Colombia") }, enabled = !vm.saving, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(form.vehicle, { vm.change(form.copy(vehicle = it)) }, label = { Text("Vehículo") }, enabled = !vm.saving, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(form.order, { vm.change(form.copy(order = it)) }, label = { Text("Orden del envío") }, enabled = !vm.saving, modifier = Modifier.fillMaxWidth())
-                    val preview = runCatching { ProductionRepository.packing(period.plan, period.dispatched, form.quantity.toIntOrNull()?.coerceAtLeast(0) ?: 0, data.inventory) }
+                    val preview = runCatching { ProductionRepository.packing(period.plan, period.dispatched, form.quantity.toIntOrNull()?.coerceAtLeast(0) ?: 0, data.inventory, period.consumedPacking) }
                     Text("Empaques de este despacho", fontWeight = FontWeight.Bold)
                     preview.getOrNull()?.forEach { line ->
                         Text("${line.name}: ${line.quantity} unidades · disponible ${line.available}")

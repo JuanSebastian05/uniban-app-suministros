@@ -96,6 +96,8 @@ data class ParcelActivity(
     val cycleId: String,
     val syncStatus: String,
     val consumptionCount: Int,
+    val quantity: Int? = null,
+    val period: String? = null,
 )
 
 /** Actividad con el nombre de su parcela, para la lista de la pestaña Actividades (HU_08). */
@@ -108,6 +110,8 @@ data class ActivityListItem(
     val observation: String,
     val syncStatus: String,
     val consumptionCount: Int,
+    val quantity: Int? = null,
+    val period: String? = null,
 )
 
 /** Contexto de un inventario que se envía junto con su primer movimiento (HU_06). */
