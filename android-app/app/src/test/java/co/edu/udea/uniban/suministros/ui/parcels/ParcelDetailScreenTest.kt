@@ -1,6 +1,11 @@
 package co.edu.udea.uniban.suministros.ui.parcels
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
+import co.edu.udea.uniban.suministros.data.ProductionOverview
+import co.edu.udea.uniban.suministros.data.local.HarvestEntity
+import co.edu.udea.uniban.suministros.data.local.DispatchEntity
+import co.edu.udea.uniban.suministros.ui.production.productionFixture
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.onAllNodesWithText
@@ -41,6 +46,7 @@ class ParcelDetailScreenTest {
         onRetryAforamiento: () -> Unit = {},
         recommendation: RecommendationUiState? = null,
         onRequestRecommendation: () -> Unit = {},
+        production: ProductionOverview? = null,
     ) = compose.setContent {
         ParcelDetailScreen(
             parcelId = parcel.id,
@@ -54,6 +60,7 @@ class ParcelDetailScreenTest {
             onRetryAforamiento = onRetryAforamiento,
             recommendation = recommendation,
             onRequestRecommendation = onRequestRecommendation,
+            production = production,
         )
     }
 
@@ -66,6 +73,23 @@ class ParcelDetailScreenTest {
         compose.onNodeWithText("Estado del ciclo").assertIsDisplayed()
         compose.onNodeWithText("Fecha de fin").assertIsDisplayed()
         compose.onNodeWithText("Sin finalizar").assertIsDisplayed()
+    }
+
+    @Test fun cabeceraMuestraPendienteDelPeriodoYTodoElProductoDisponible() {
+        val data = productionFixture()
+        val period = data.periods.single().copy(dispatched = 40)
+        val old = period.copy(reference = period.reference.copy(id = "r0", period = "2026-W43"),
+            plan = period.plan.copy(id = "r0", period = "2026-W43"), harvested = 20, dispatched = 5)
+        fun harvest(id: String, qty: Int, week: String) = HarvestEntity(id, "p1", "c1", "r1", "af1", week, qty,
+            "2026-10-28", "", false, "2026-10-28T12:00:00Z")
+        fun dispatch(id: String, qty: Int, week: String) = DispatchEntity(id, "p1", "c1", "r1", week, qty,
+            "2026-10-28T08:00:00-05:00", "V-3", 1, "", "2026-10-28T13:00:00Z", "[]")
+        show(withCycle, production = data.copy(periods = listOf(period, old),
+            harvests = listOf(harvest("h1", 100, "2026-W44"), harvest("h0", 20, "2026-W43")),
+            dispatches = listOf(dispatch("d1", 40, "2026-W44"), dispatch("d0", 5, "2026-W43"))))
+        compose.onNodeWithTag("parcel-pending-harvest").assertTextContains("Por cosechar")
+        compose.onNodeWithTag("parcel-pending-harvest").assertTextContains("${java.text.DecimalFormat("#,##0.##").format(45.6)} racimos")
+        compose.onNodeWithTag("parcel-pending-dispatch").assertTextContains("75 racimos")
     }
 
     @Test fun indicaQueNoHayCicloActivo() {
@@ -186,6 +210,13 @@ class ParcelDetailScreenTest {
 
     private fun withData(r: ParcelRecommendation = recommendation) =
         RecommendationUiState(loading = false, recommendation = r)
+
+    @Test fun recomendacionMuestraEmpaquesEnterosHaciaArriba() {
+        val rounded = recommendation.copy(supplies = listOf(RecommendationSupply("bolsas", "2026-11-01", 100.2, 100.2, 0.0)))
+        show(withCycle, recommendation = withData(rounded))
+        compose.onNodeWithText("Requerido 101 · Disponible 100").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Déficit: 1").performScrollTo().assertIsDisplayed()
+    }
 
     @Test fun sinParametroDeRecomendacionesNoMuestraLaSeccion() {
         show(withCycle)

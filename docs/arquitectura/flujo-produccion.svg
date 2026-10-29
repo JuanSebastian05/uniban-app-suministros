@@ -47,7 +47,7 @@
 <text x="58" y="790" font-family="Segoe UI,Arial,sans-serif" font-size="18" font-weight="bold" fill="#1B5E20">Reglas del balance real</text>
 <text x="58" y="816" font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#24362A">Racimos cosechados − racimos despachados = racimos disponibles</text>
 <text x="58" y="838" font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#24362A">Un cupo por parcela + periodo; pedir otra recomendación no duplica la porción semanal</text>
-<text x="58" y="860" font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#24362A">Empaques proporcionales acumulados, con redondeo a 2 decimales y tope en el total del plan</text>
+<text x="58" y="860" font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#24362A">Empaques enteros acumulados: redondeo hacia arriba y tope en el total entero del plan</text>
 <text x="58" y="882" font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#24362A">Ningún faltante permite completar parcialmente un despacho; primero registrar una entrada</text>
 <path d="M420,115 H510" fill="none" stroke="#346C3A" stroke-width="2.5" marker-end="url(#arrow)"/>
 <path d="M890,115 H980" fill="none" stroke="#346C3A" stroke-width="2.5" marker-end="url(#arrow)"/>

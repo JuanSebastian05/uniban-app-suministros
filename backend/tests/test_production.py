@@ -58,7 +58,8 @@ def harvest(plan, quantity=100, **changes):
 
 
 def dispatch(plan, inventories, quantity=73, shipped=0, **changes):
-    before, after = packaging_targets(plan, shipped), packaging_targets(plan, shipped + quantity)
+    policy = changes.get("packingPolicy", "legacy_decimal")
+    before, after = packaging_targets(plan, shipped, policy), packaging_targets(plan, shipped + quantity, policy)
     consumptions = [{"id": new_uuid(), "type": "CONSUMO", "quantity": float(after[name] - before[name]),
                      "date": "2026-10-28", "observation": "Empaque del despacho", "createdAt": "2026-10-28T13:00:00Z",
                      "updatedAt": "2026-10-28T13:00:00Z", "inventory": inventories[name],
@@ -203,3 +204,67 @@ def test_peticiones_incompatibles_no_crean_cosechas(client, plan, session_factor
 def test_fracciones_de_empaque_se_redondean_acumuladas_sin_perder_centesimas():
     payload = {"plan": {"estimatedLoadBunches": 3}, "supplies": [{"name": "cajas", "requiredQuantity": 1}]}
     assert [packaging_targets(payload, count)["cajas"] for count in (0, 1, 2, 3, 4)] == [Decimal("0.00"), Decimal("0.33"), Decimal("0.67"), Decimal("1.00"), Decimal("1.00")]
+
+
+def fractional_plan(plan, session_factory):
+    for supply in plan["supplies"]:
+        supply["requiredQuantity"] += 0.2
+    with session_factory() as db:
+        db.get(Recommendation, uuid.UUID(plan["id"])).payload = copy.deepcopy(plan)
+        db.commit()
+
+
+def test_unidades_enteras_redondean_100_2_a_101_sin_duplicar_en_parciales(client, plan, inventories, session_factory):
+    fractional_plan(plan, session_factory)
+    assert client.post("/api/v1/harvests", json=harvest(plan, 146, exceptionConfirmed=True)).status_code == 201
+    first = dispatch(plan, inventories, packingPolicy="whole_units_v1")
+    assert [item["quantity"] for item in first["consumptions"]] == [51, 101, 151]
+    assert client.post("/api/v1/dispatches", json=first).status_code == 201
+    second = dispatch(plan, inventories, shipped=73, packingPolicy="whole_units_v1")
+    assert client.post("/api/v1/dispatches", json=second).status_code == 201
+    assert client.post("/api/v1/dispatches", json=first).status_code == 200
+    with session_factory() as db:
+        for name, total in (("cajas", 101), ("carton", 201), ("bolsas", 301)):
+            assert db.get(Inventory, uuid.UUID(inventories[name]["id"])).quantity == 501 - total
+        assert all(row.quantity == row.quantity.to_integral_value() for row in db.scalars(select(Movement).where(Movement.dispatch_id.is_not(None))))
+
+
+def test_version_nueva_no_modifica_un_parcial_historico_ni_repite_sus_empaques(client, plan, inventories, session_factory):
+    fractional_plan(plan, session_factory)
+    assert client.post("/api/v1/harvests", json=harvest(plan, 146, exceptionConfirmed=True)).status_code == 201
+    first = dispatch(plan, inventories)
+    assert client.post("/api/v1/dispatches", json=first).status_code == 201
+    second = dispatch(plan, inventories, shipped=73, packingPolicy="whole_units_v1")
+    assert client.post("/api/v1/dispatches", json=second).status_code == 201
+    # Un reintento del payload antiguo no cambia de política ni vuelve a descontar.
+    assert client.post("/api/v1/dispatches", json=dict(first, packingPolicy="legacy_decimal")).status_code == 200
+    with session_factory() as db:
+        old = db.get(Dispatch, uuid.UUID(first["id"]))
+        assert "packingPolicy" not in old.request_payload
+        assert db.get(Movement, uuid.UUID(first["consumptions"][0]["id"])).quantity == Decimal("50.10")
+        assert db.get(Inventory, uuid.UUID(inventories["cajas"]["id"])).quantity == Decimal("400.90")
+
+
+def test_politica_entera_rechaza_fracciones_sin_guardar_despacho(client, plan, inventories, session_factory):
+    assert client.post("/api/v1/harvests", json=harvest(plan)).status_code == 201
+    body = dispatch(plan, inventories, packingPolicy="whole_units_v1")
+    body["consumptions"][0]["quantity"] = 50.2
+    assert client.post("/api/v1/dispatches", json=body).status_code == 409
+    assert count(session_factory, Dispatch) == 0
+
+
+def test_faltante_de_empaque_entero_se_muestra_como_unidad_completa(client, plan, inventories, session_factory):
+    fractional_plan(plan, session_factory)
+    assert client.post("/api/v1/harvests", json=harvest(plan, 146, exceptionConfirmed=True)).status_code == 201
+    with session_factory() as db:
+        db.get(Inventory, uuid.UUID(inventories["cajas"]["id"])).quantity = Decimal("100.20")
+        db.commit()
+    reply = client.post("/api/v1/dispatches", json=dispatch(plan, inventories, quantity=146, packingPolicy="whole_units_v1"))
+    assert reply.status_code == 409
+    assert "Faltan 1" in reply.json()["detail"]
+    assert count(session_factory, Dispatch) == 0
+
+
+def test_objetivos_enteros_no_generan_fracciones_entre_parciales():
+    payload = {"plan": {"estimatedLoadBunches": 3}, "supplies": [{"name": "cajas", "requiredQuantity": 1.2}]}
+    assert [packaging_targets(payload, n, "whole_units_v1")["cajas"] for n in range(5)] == [0, 1, 2, 2, 2]

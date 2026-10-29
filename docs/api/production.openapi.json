@@ -577,6 +577,15 @@
             "type": "array",
             "maxItems": 100,
             "title": "Consumptions"
+          },
+          "packingPolicy": {
+            "type": "string",
+            "enum": [
+              "legacy_decimal",
+              "whole_units_v1"
+            ],
+            "title": "Packingpolicy",
+            "default": "legacy_decimal"
           }
         },
         "type": "object",
@@ -654,6 +663,15 @@
             "type": "array",
             "maxItems": 100,
             "title": "Consumptions"
+          },
+          "packingPolicy": {
+            "type": "string",
+            "enum": [
+              "legacy_decimal",
+              "whole_units_v1"
+            ],
+            "title": "Packingpolicy",
+            "default": "legacy_decimal"
           }
         },
         "type": "object",

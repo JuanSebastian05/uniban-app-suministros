@@ -41,6 +41,18 @@ class ProductionViewModelTest {
     @Before fun before() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun after() = Dispatchers.resetMain()
 
+    @Test fun laConfirmacionSobreviveARecrearLaPantallaHastaQueSeAcepta() {
+        val source = FakeProductionSource()
+        val saved = SavedStateHandle()
+        val vm = ProductionViewModel(source, saved)
+        vm.selectPlan(source.state.value.periods.single())
+        vm.save()
+        val restored = ProductionViewModel(source, saved)
+        assertEquals(ProductionSaved("COSECHA", 45), restored.savedConfirmation)
+        restored.dismissSaved()
+        assertNull(ProductionViewModel(source, saved).savedConfirmation)
+    }
+
     @Test fun reintentoTrasRecrearFormularioConservaIdentidadYCantidad() {
         val source = FakeProductionSource().apply { fail = true }
         val saved = SavedStateHandle(mapOf("parcelId" to "p1"))

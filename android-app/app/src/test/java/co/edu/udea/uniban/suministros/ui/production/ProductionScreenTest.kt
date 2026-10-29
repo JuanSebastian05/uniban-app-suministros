@@ -57,5 +57,29 @@ class ProductionScreenTest {
         compose.waitForIdle()
         assertEquals(46, source.lastQuantity)
         assertTrue(source.lastException)
+        compose.onNodeWithTag("production-saved-dialog").assertIsDisplayed()
+        compose.onNodeWithText("Cosecha guardada").assertIsDisplayed()
+        compose.onNodeWithText("Aceptar").performClick()
+        compose.onNodeWithTag("production-saved-dialog").assertDoesNotExist()
+    }
+
+    @Test fun elDespachoMuestraConfirmacionAunqueElFormularioEsteDesplazado() {
+        source.state.value = source.state.value.copy(inventory = listOf(
+            co.edu.udea.uniban.suministros.data.local.InventoryItem("i1", "cajas", "Empaque", "unidad", "Bodega", 500f),
+        ))
+        show()
+        compose.onNodeWithText("Despacho", substring = false).performScrollTo().performClick()
+        compose.onNodeWithTag("production-save").performScrollTo().performClick()
+        compose.onNodeWithText("Despacho guardado").assertIsDisplayed()
+        compose.onNodeWithText("Se guardaron 100 racimos.", substring = true).assertIsDisplayed()
+    }
+
+    @Test fun unErrorDeGuardadoSeHaceVisibleSinMostrarConfirmacion() {
+        show()
+        compose.onNodeWithTag("production-quantity").performScrollTo().performTextReplacement("1.5")
+        compose.onNodeWithTag("production-save").performScrollTo().performClick()
+        compose.onNodeWithTag("production-error").assertIsDisplayed()
+        compose.onNodeWithTag("production-saved-dialog").assertDoesNotExist()
+        assertTrue(source.calls.isEmpty())
     }
 }

@@ -8,7 +8,16 @@ El detalle del ciclo productivo distingue «Estado del ciclo: En curso» de «Fe
 
 La solución permite administrar inventario de forma local y sin conexión, registrar parcelas, ciclos y actividades, y sincronizar los datos con el backend. También están implementadas en el código ambas integraciones: se reciben aforamientos del Equipo 1 y se solicitan recomendaciones al Equipo 2.
 
-El código local contiene migraciones de backend hasta **0013** y Room versión **11**. Incluye cosecha real y despacho por periodo, además de la gestión de etapas y ciclos. Durante el descanso se permiten las demás actividades y despachos con producto disponible; siembra exige preparación y cosecha exige producción. El usuario informó que la migración **0010 llegó a main** y que **SERVICE_API_KEY está configurada en Render**. Esta revisión no consultó GitHub, Render ni Neon; por eso no confirma qué versión está desplegada ni la revisión actual de la base de producción.
+El código local contiene migraciones de backend hasta **0013** y Room versión **11**. Incluye cosecha real y despacho por periodo, además de la gestión de etapas y ciclos. Durante el descanso se permiten las demás actividades y despachos con producto disponible; siembra exige preparación y cosecha exige producción. El usuario informó que desplegó la ampliación de cosechas y despachos y encontró los detalles corregidos abajo. Esta revisión no consultó GitHub, Render ni Neon: el despliegue es un reporte del usuario y la revisión real de producción sigue sin comprobarse de forma independiente.
+
+## Correcciones de cosechas y despachos — 28/10/2026
+
+- Confirmación visible mediante un diálogo después de guardar una cosecha o despacho localmente. El estado de sincronización sigue visible por registro.
+- Los despachos aparecen en las actividades de la parcela y en la pestaña general, con cantidad, periodo y estado; se consultan desde sus registros reales sin crear actividades duplicadas.
+- La recomendación operativa de cajas, bolsas y cartón redondea hacia arriba a unidades enteras (100,2 → 101). Los nuevos despachos distribuyen esas unidades de forma acumulada, sin duplicar consumos entre parciales. Se preservan los consumos históricos fraccionarios y las colas anteriores mediante una política de empaque versionada.
+- La cabecera verde muestra «Por cosechar» del último periodo y «Por despachar» como cosecha real menos despachos de todos los periodos.
+
+Verificación de estas correcciones: **340 pruebas Android y 298 del backend aprobadas**, APK debug generado y lint sin errores (61 advertencias). Se usaron bases locales de prueba; no se modificó Neon. **No hay migración nueva:** Room continúa en 11 y Alembic en 0013. Para aplicar estas correcciones se debe desplegar primero el backend actualizado y luego instalar el APK; estos cambios todavía no fueron desplegados desde esta tarea.
 
 ## Funcionalidad implementada en el código
 

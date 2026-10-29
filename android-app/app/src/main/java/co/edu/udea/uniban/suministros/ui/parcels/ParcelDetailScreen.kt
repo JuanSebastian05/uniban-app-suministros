@@ -31,11 +31,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import co.edu.udea.uniban.suministros.data.CycleStatus
 import co.edu.udea.uniban.suministros.data.ParcelValidation
 import co.edu.udea.uniban.suministros.data.Quantity
+import co.edu.udea.uniban.suministros.data.ProductionOverview
 import co.edu.udea.uniban.suministros.data.local.ActivityType
 import co.edu.udea.uniban.suministros.data.local.ParcelActivity
 import co.edu.udea.uniban.suministros.data.local.ParcelConsumption
@@ -80,6 +82,7 @@ fun ParcelDetailScreen(
     onFinishCycle: ((LocalDate) -> Unit)? = null,
     onStartCycle: ((LocalDate) -> Unit)? = null,
     onProduction: (() -> Unit)? = null,
+    production: ProductionOverview? = null,
 ) {
     val parcel = state.parcels.find { it.id == parcelId }
     var showStageDialog by remember { mutableStateOf(false) }
@@ -99,7 +102,7 @@ fun ParcelDetailScreen(
             else -> Column(
                 Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).testTag("parcel-detail"),
             ) {
-                SummaryHeader(parcel)
+                SummaryHeader(parcel, production)
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
                         "CICLO PRODUCTIVO",
@@ -259,7 +262,7 @@ fun ParcelDetailScreen(
 
 /** Banda verde con los cuatro datos principales, como en el mockup. */
 @Composable
-private fun SummaryHeader(parcel: ParcelSummary) {
+private fun SummaryHeader(parcel: ParcelSummary, production: ProductionOverview?) {
     val status = CycleStatus.fromCode(parcel.currentStatus ?: parcel.cycleStatus)
     Column(
         Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.primary).padding(16.dp),
@@ -281,6 +284,29 @@ private fun SummaryHeader(parcel: ParcelSummary) {
             )
             HeaderTile("Inicio", parcel.cycleStartDate?.let(ParcelValidation::formatDate) ?: "—", Modifier.weight(1f))
         }
+        if (production != null) {
+            val period = production.periods.firstOrNull()
+            val available = production.harvests.sumOf { it.quantity.toLong() } - production.dispatches.sumOf { it.quantity.toLong() }
+            val numbers = java.text.DecimalFormat("#,##0.##")
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                HeaderTile("Por cosechar", when {
+                    production.loading -> "Cargando…"
+                    period == null -> "Sin plan"
+                    else -> "${numbers.format(period.remaining)} racimos"
+                }, Modifier.weight(1f).testTag("parcel-pending-harvest"))
+                HeaderTile("Por despachar", when {
+                    production.loading -> "Cargando…"
+                    available < 0 -> "Revisar saldo"
+                    else -> "${numbers.format(available)} racimos"
+                }, Modifier.weight(1f).testTag("parcel-pending-dispatch"))
+            }
+            if (!production.loading) Text(
+                (period?.let { "Cosecha estimada de ${it.reference.period}. " } ?: "") +
+                    "Por despachar: racimos ya cosechados de todos los periodos.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
+            )
+        }
     }
 }
 
@@ -290,7 +316,7 @@ private fun HeaderTile(label: String, value: String, modifier: Modifier = Modifi
         color = Color.White.copy(alpha = 0.14f),
         contentColor = MaterialTheme.colorScheme.onPrimary,
         shape = RoundedCornerShape(12.dp),
-        modifier = modifier,
+        modifier = modifier.semantics(mergeDescendants = true) {},
     ) {
         Column(Modifier.padding(12.dp)) {
             Text(label, style = MaterialTheme.typography.labelSmall)
@@ -360,7 +386,7 @@ private fun ActivityCard(activity: ParcelActivity, activeCycleId: String?) {
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-                ActivityType.fromCode(activity.type)?.label ?: activity.type,
+                if (activity.type == "DESPACHO") "Despacho" else ActivityType.fromCode(activity.type)?.label ?: activity.type,
                 style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
             )
             Text(
@@ -372,6 +398,8 @@ private fun ActivityCard(activity: ParcelActivity, activeCycleId: String?) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            activity.quantity?.let { Text("$it racimos", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold) }
+            activity.period?.let { Text("Periodo $it", style = MaterialTheme.typography.bodySmall) }
             if (activity.observation.isNotBlank()) Text(activity.observation, style = MaterialTheme.typography.bodyMedium)
             if (activeCycleId != null && activity.cycleId != activeCycleId) {
                 Text("Ciclo anterior", style = MaterialTheme.typography.labelSmall,

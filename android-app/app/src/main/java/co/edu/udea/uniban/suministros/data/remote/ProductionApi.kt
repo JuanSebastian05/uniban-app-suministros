@@ -12,6 +12,7 @@ data class DispatchDto(
     val id: String, val parcelId: String, val cycleId: String, val recommendationId: String,
     val dispatchedAt: String, val quantity: Int, val vehicleId: String, val order: Int,
     val observation: String, val createdAt: String, val consumptions: List<MovementDto>,
+    val packingPolicy: String? = null,
 )
 data class ProductionHistoryDto(
     val harvests: List<HarvestDto>, val dispatches: List<DispatchDto>, val recommendations: List<RecommendationDto>,
