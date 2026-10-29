@@ -44,7 +44,7 @@ Antes de cada despliegue que incorpore cambios de esquema:
 4. Despliega el código compatible con el esquema.
 5. Comprueba el estado del servicio, OpenAPI y el flujo funcional afectado.
 
-El usuario indicó que la migración 0010 llegó a main. No se conoce aquí si las migraciones 0011 y 0012 llegaron a main, se aplicaron en Neon o quedaron desplegadas. Consulta la [lista de verificación](lista-verificacion-despliegue.md) y el [estado del proyecto](estado-proyecto.md); no uses esta frase como evidencia de la revisión de producción.
+El usuario indicó que la migración 0010 llegó a main. No se conoce aquí si las migraciones 0011 y 0012 llegaron a main, se aplicaron en Neon o quedaron desplegadas. Consulta la [lista de verificación](lista-verificacion-despliegue.md) y el [estado del proyecto](../gestion/estado-proyecto.md); no uses esta frase como evidencia de la revisión de producción.
 
 ## Comprobaciones del servicio
 
