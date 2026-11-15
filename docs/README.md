@@ -8,7 +8,7 @@ Para conocer la situación actual, comienza por el [estado del proyecto](gestion
 | --- | --- |
 | [Gestión](gestion/) | [Estado del proyecto](gestion/estado-proyecto.md), [avisos y acuerdos](gestion/avisos-equipo.md). |
 | [Historias de usuario](historias-usuario/) | Especificación, implementación, pruebas y demostración de HU_01 a HU_16; listado completo abajo. |
-| [Integraciones](integraciones/) | [Guía entre equipos](integraciones/guia-integracion-equipos.md), contratos del [Equipo 1](integraciones/contrato-equipo1.md) y [Equipo 2](integraciones/contrato-equipo2.md), textos para compartir con [Equipo 1](integraciones/integracion-equipo1.txt) y [Equipo 2](integraciones/integracion-equipo2.txt). |
+| [Integraciones](integraciones/) | [Guía entre equipos](integraciones/guia-integracion-equipos.md), contratos del [Equipo 1](contrato-equipo1.md) y [Equipo 2](contrato-equipo2.md), textos para compartir con [Equipo 1](integraciones/integracion-equipo1.txt) y [Equipo 2](integraciones/integracion-equipo2.txt). |
 | [Operación](operacion/) | [Despliegue en Render y Neon](operacion/despliegue-render.md), [verificación de migraciones](operacion/lista-verificacion-despliegue.md) y [prueba en celular](operacion/guia-prueba-celular.md). |
 | [Arquitectura](arquitectura/) | [Arquitectura de la app y backend](arquitectura/README.md), [arquitectura integrada](<arquitectura/arquitecturaGeneral(Integrada).md>), [diseño de cosechas y despachos](arquitectura/cosecha-despacho-diseno.md) y [diagrama del flujo](arquitectura/flujo-produccion.svg). |
 | [Funcionalidades](funcionalidades/) | [Diseño y comportamiento de Inicio](funcionalidades/inicio.md), que complementa las historias de usuario. |

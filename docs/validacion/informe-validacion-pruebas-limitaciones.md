@@ -9,14 +9,14 @@ Presentar los resultados de las pruebas automatizadas y de la validación manual
 
 ## 2. Resultados de pruebas automatizadas
 
-Las pruebas del backend se ejecutaron el **2 de noviembre de 2026** sobre la revisión `e588e52`, con el entorno Python del proyecto y bases de prueba locales:
+Las dos suites se ejecutaron completas el **14 de noviembre de 2026** sobre la revisión `1e0be63` de `main` (la que se entrega), en un equipo con Windows 11. El backend usa bases de prueba locales (SQLite en memoria) y Android corre sus pruebas unitarias con Robolectric, sin emulador:
 
 | Componente | Resultado                 | Duración       | Observaciones                                                                                                          |
 | ---------- | ------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Backend    | **301 pruebas aprobadas** | 12,22 segundos | Una advertencia de deprecación de una dependencia de pruebas.                                                          |
-| Android    | **340 pruebas aprobadas** | No registrada  | Resultado de la ejecución local del 28 de octubre documentado en [estado del proyecto](../gestion/estado-proyecto.md). |
+| Backend    | **301 aprobadas, 0 fallidas** | 11,7 segundos | Una advertencia de deprecación de una dependencia de pruebas. |
+| Android    | **340 aprobadas, 0 fallidas, 0 omitidas** | 130 segundos | Conteo tomado de los reportes JUnit de Gradle (`app/build/test-results/testDebugUnitTest`). |
 
-El comando utilizado para el backend fue `python -m pytest -q`; para Android se ejecutó `gradlew.bat testDebugUnitTest --rerun-tasks` con Java 21. La duración indicada mide la ejecución del conjunto de pruebas del backend, no el tiempo de respuesta del servicio en producción.
+El comando utilizado para el backend fue `python -m pytest -q`; para Android se ejecutó `gradlew.bat testDebugUnitTest --rerun-tasks` con Java 17 (`--rerun-tasks` obliga a correr todas las pruebas, sin resultados en caché). Una ejecución anterior, del 2 de noviembre sobre `e588e52`, dio los mismos conteos. La duración indicada mide la ejecución del conjunto de pruebas del backend, no el tiempo de respuesta del servicio en producción.
 
 Las pruebas abarcan, entre otros aspectos, autenticación, inventario y movimientos, parcelas y ciclos, actividades, sincronización, aforamientos, recomendaciones, cosechas y despachos. Su código está disponible en `backend/tests` y `android-app/app/src/test`.
 
@@ -96,6 +96,23 @@ Para la misma parcela, la app presenta una recomendación de **0,7 racimos estim
 
 - **Contrato de integración con el Equipo 1:** https://github.com/JuanSebastian05/uniban-app-suministros/blob/main/docs/contrato-equipo1.md
 - **Contrato de integración con el Equipo 2:** https://github.com/JuanSebastian05/uniban-app-suministros/blob/main/docs/contrato-equipo2.md
+
+### 4.4. Escenarios simulados y pruebas conjuntas
+
+No hubo acceso a registros reales de cosecha de Unibán, así que la integración se comprobó con **escenarios simulados declarados como tales** y con pruebas conjuntas contra los servicios desplegados. El detalle está en el informe IEEE conjunto de los tres equipos (secciones E3, E4 y E5):
+
+| Prueba | Datos | Resultado |
+| --- | --- | --- |
+| Caso de referencia calculado a mano y repetido por el servicio | 1 850 plantas, confianza 0,87; inventario de 80 cajas, 120 de cartón y 200 bolsas; ventana de 06:00 a 16:00 | El servicio reprodujo exactamente el cálculo manual: 145,6 racimos, corte a las 12:55, 123,76 cajas requeridas (déficit de 43,76) y excedente de 54,4 bolsas. |
+| Flujo integrado en la app del productor | Parcela Clarita | Aforamiento de 94 plantas y recomendación de 4,9 racimos, con el plan de corte y los insumos requeridos. |
+| Operación sin conexión | 7 movimientos de inventario registrados en modo avión (emulador) | Al recuperar la red, el servidor respondió `201 Created` a las 7 solicitudes; la app terminó con 0 pendientes y 0 errores. |
+| Propagación del error | Conteo perturbado en ±5, ±10 y ±20 %; confianza entre 0,60 y 0,95 | Un error de 10 % en el conteo cambia el déficit de cajas en 28 %, y la confianza pesa todavía más. |
+
+**Defectos que encontraron las pruebas conjuntas** (y que las pruebas de cada componente no detectaban):
+
+1. Un aforamiento sin confianza, permitido por el contrato entre los Equipos 1 y 3, producía un error interno en vez de una respuesta de dato faltante. **Corregido.**
+2. Las tablas de la base de producción no existían porque las migraciones no corrían en el despliegue. **Corregido**: las migraciones se aplican antes de desplegar (ver [lista de verificación](../operacion/lista-verificacion-despliegue.md)).
+3. Una ventana de despacho derivada de la fecha del aforamiento podía quedar en el pasado y aun así reportarse como cumplida. **Corregido**: la ventana se calcula desde la fecha de consulta.
 
 ## 5. Indicadores observados
 
