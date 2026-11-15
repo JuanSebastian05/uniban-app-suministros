@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 560" role="img" aria-label="Arquitectura UNIBÁN: la app de campo del Equipo 1 consulta parcelas y envía aforamientos al backend del Equipo 3; el backend del Equipo 3 pide la recomendación al servicio del Equipo 2 y la muestra en la app del productor.">
+  <title>Arquitectura UNIBÁN</title>
+  <style>
+    .bg { fill: #F6F8F5; }
+    .p1 { fill: #EAF2F9; stroke: #2C6A99; stroke-width: 1.5; }
+    .p3 { fill: #E8F3EC; stroke: #2E7A4C; stroke-width: 1.5; }
+    .p2 { fill: #FBF1DF; stroke: #A86C10; stroke-width: 1.5; }
+    .box { fill: #FFFFFF; stroke: #C9D4CC; stroke-width: 1.2; }
+    .dash { fill: #FFFFFF; stroke: #7A8A7F; stroke-width: 1.2; stroke-dasharray: 5 4; }
+    text { font-family: "Segoe UI", Helvetica, Arial, sans-serif; }
+    .team { font-size: 17px; font-weight: 700; }
+    .c1 { fill: #2C6A99; } .c2 { fill: #A86C10; } .c3 { fill: #2E7A4C; }
+    .head { font-size: 14px; font-weight: 600; fill: #1B2620; }
+    .sub { font-size: 12px; fill: #5A6A5F; }
+    .lbl { font-family: Consolas, "Courier New", monospace; font-size: 12px; fill: #1B2620; }
+    .lblm { font-family: Consolas, "Courier New", monospace; font-size: 11px; fill: #5A6A5F; }
+    .hot { font-family: Consolas, "Courier New", monospace; font-size: 12px; font-weight: 700; fill: #A86C10; }
+    .ln { stroke: #1B2620; stroke-width: 1.4; fill: none; }
+    .lnm { stroke: #7A8A7F; stroke-width: 1.3; fill: none; stroke-dasharray: 5 4; }
+    .lnh { stroke: #A86C10; stroke-width: 2.6; fill: none; }
+    .title { font-size: 20px; font-weight: 700; fill: #1B2620; }
+    .note { font-size: 12px; fill: #5A6A5F; }
+  </style>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1B2620"/></marker>
+    <marker id="ahm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#7A8A7F"/></marker>
+    <marker id="ahh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#A86C10"/></marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1180" height="560" rx="16"/>
+  <text class="title" x="16" y="30">Arquitectura UNIBÁN</text>
+  <text class="note" x="1164" y="30" text-anchor="end">La línea dorada es la única llamada que recibe el Equipo 2</text>
+
+  <!-- Paneles -->
+  <rect class="p1" x="16" y="56" width="260" height="380" rx="14"/>
+  <rect class="p3" x="460" y="56" width="260" height="380" rx="14"/>
+  <rect class="p2" x="904" y="56" width="260" height="490" rx="14"/>
+  <text class="team c1" x="36" y="88">Equipo 1</text>
+  <text class="sub" x="36" y="106">Aforamiento digital</text>
+  <text class="team c3" x="480" y="88">Equipo 3</text>
+  <text class="sub" x="480" y="106">Gestión operativa</text>
+  <text class="team c2" x="924" y="88">Equipo 2</text>
+  <text class="sub" x="924" y="106">Logística e insumos</text>
+
+  <!-- Equipo 1 -->
+  <rect class="box" x="36" y="132" width="220" height="64" rx="10"/>
+  <text class="head" x="146" y="159" text-anchor="middle">Imagen UAV</text>
+  <text class="sub" x="146" y="178" text-anchor="middle">ortomosaico en nadir</text>
+  <rect class="box" x="36" y="242" width="220" height="64" rx="10"/>
+  <text class="head" x="146" y="269" text-anchor="middle">App de campo</text>
+  <text class="sub" x="146" y="288" text-anchor="middle">YOLO TFLite · cola sin conexión</text>
+  <rect class="box" x="36" y="352" width="220" height="64" rx="10"/>
+  <text class="head" x="146" y="379" text-anchor="middle">Imagen con detecciones</text>
+  <text class="sub" x="146" y="398" text-anchor="middle">conteo de plátano y banano</text>
+  <line class="ln" x1="146" y1="196" x2="146" y2="238" marker-end="url(#ah)"/>
+  <text class="lblm" x="156" y="222">detecta y cuenta</text>
+  <line class="ln" x1="146" y1="306" x2="146" y2="348" marker-end="url(#ah)"/>
+  <text class="lblm" x="156" y="332">dibuja cajas</text>
+
+  <!-- Equipo 3 -->
+  <rect class="box" x="480" y="132" width="220" height="64" rx="10"/>
+  <text class="head" x="590" y="159" text-anchor="middle">App Android</text>
+  <text class="sub" x="590" y="178" text-anchor="middle">única interfaz del productor</text>
+  <rect class="box" x="480" y="242" width="220" height="64" rx="10"/>
+  <text class="head" x="590" y="269" text-anchor="middle">Backend Equipo 3</text>
+  <text class="sub" x="590" y="288" text-anchor="middle">uniban-app-suministros</text>
+  <rect class="box" x="480" y="352" width="220" height="64" rx="10"/>
+  <text class="head" x="590" y="379" text-anchor="middle">Base de datos</text>
+  <text class="sub" x="590" y="398" text-anchor="middle">parcelas · inventario · aforamientos</text>
+  <line class="ln" x1="560" y1="196" x2="560" y2="238" marker-end="url(#ah)"/>
+  <text class="lblm" x="552" y="222" text-anchor="end">pide</text>
+  <line class="ln" x1="620" y1="238" x2="620" y2="200" marker-end="url(#ah)"/>
+  <text class="lblm" x="628" y="222">muestra</text>
+  <line class="ln" x1="590" y1="310" x2="590" y2="348" marker-start="url(#ah)" marker-end="url(#ah)"/>
+  <text class="lblm" x="600" y="332">lee y guarda</text>
+
+  <!-- Equipo 2 -->
+  <rect class="dash" x="924" y="132" width="220" height="64" rx="10"/>
+  <text class="head" x="1034" y="159" text-anchor="middle">Demo técnica</text>
+  <text class="sub" x="1034" y="178" text-anchor="middle">simulador y métricas</text>
+  <rect class="box" x="924" y="242" width="220" height="64" rx="10"/>
+  <text class="head" x="1034" y="269" text-anchor="middle">API Equipo 2</text>
+  <text class="sub" x="1034" y="288" text-anchor="middle">platano-logistica-api</text>
+  <rect class="box" x="924" y="352" width="220" height="64" rx="10"/>
+  <text class="head" x="1034" y="379" text-anchor="middle">Motor de dominio</text>
+  <text class="sub" x="1034" y="398" text-anchor="middle">cosecha · hora límite · insumos</text>
+  <rect class="box" x="924" y="462" width="220" height="64" rx="10"/>
+  <text class="head" x="1034" y="489" text-anchor="middle">parametros.yaml</text>
+  <text class="sub" x="1034" y="508" text-anchor="middle">tiempos y coeficientes</text>
+  <line class="lnm" x1="1034" y1="196" x2="1034" y2="238" marker-end="url(#ahm)"/>
+  <text class="lblm" x="1044" y="222">solo sustentación</text>
+  <line class="ln" x1="1034" y1="306" x2="1034" y2="348" marker-end="url(#ah)"/>
+  <text class="lblm" x="1044" y="332">calcula</text>
+  <line class="ln" x1="1034" y1="416" x2="1034" y2="458" marker-end="url(#ah)"/>
+  <text class="lblm" x="1044" y="442">lee</text>
+
+  <!-- Equipo 1 ↔ Equipo 3 -->
+  <line class="ln" x1="476" y1="260" x2="260" y2="260" marker-end="url(#ah)"/>
+  <text class="lbl" x="368" y="250" text-anchor="middle">GET /service/parcels</text>
+  <line class="ln" x1="260" y1="288" x2="476" y2="288" marker-end="url(#ah)"/>
+  <text class="lbl" x="368" y="306" text-anchor="middle">POST /aforamientos</text>
+  <text class="lblm" x="368" y="322" text-anchor="middle">cabecera X-API-Key</text>
+
+  <!-- Equipo 3 ↔ Equipo 2 -->
+  <line class="lnh" x1="704" y1="260" x2="918" y2="260" marker-end="url(#ahh)"/>
+  <text class="hot" x="812" y="250" text-anchor="middle">POST /recomendar</text>
+  <line class="ln" x1="920" y1="288" x2="706" y2="288" marker-end="url(#ah)"/>
+  <text class="lbl" x="812" y="306" text-anchor="middle">recomendación JSON</text>
+  <text class="lblm" x="812" y="322" text-anchor="middle">antes GET /salud</text>
+
+  <text class="note" x="16" y="540">Datos de prueba sintéticos · verificado contra los servicios desplegados el 28/10/2026</text>
+</svg>

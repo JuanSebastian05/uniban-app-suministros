@@ -1,7 +1,8 @@
 # Arquitectura de la solución integrada UNIBÁN
 
-> **Estado:** propuesta del Equipo 2 (enlace: David Arango) para validar con los enlaces
-> Juan José Monsalve (Equipo 3) y Andrés Felipe Flores (Equipo 1). Refleja lo que está
+> **Estado (14/11/2026):** implementada y desplegada. La redactó el Equipo 2 (enlace: David Arango)
+> con los enlaces Juan José Monsalve (Equipo 3) y Andrés Felipe Flores (Equipo 1), y es la
+> arquitectura que presenta el informe IEEE conjunto de los tres equipos (Fig. 1). Refleja lo
 > desplegado y verificado el 28/10/2026; lo que no está verificado se marca como tal.
 
 ## Componentes y responsabilidades
@@ -46,8 +47,9 @@ dorada es la única llamada que recibe el Equipo 2.
 
 ## Contratos
 
-- Equipo 1 → Equipo 3: `docs/integraciones/integracion-equipo1.txt` (repositorio del Equipo 3).
-- Equipo 3 → Equipo 2: `docs/integraciones/contrato-equipo2.md` (repositorio del Equipo 3), acordado por
+- Equipo 1 → Equipo 3: [`docs/contrato-equipo1.md`](../contrato-equipo1.md) y el resumen para compartir
+  [`docs/integraciones/integracion-equipo1.txt`](../integraciones/integracion-equipo1.txt) (repositorio del Equipo 3).
+- Equipo 3 → Equipo 2: [`docs/contrato-equipo2.md`](../contrato-equipo2.md) (repositorio del Equipo 3), acordado por
   ambos equipos. La referencia técnica del servicio está en `docs/contrato-integracion.md`
   (este repositorio).
 
